@@ -967,3 +967,4 @@ body.prompter-open { overflow: hidden; }
 .idea-box-text { flex: 1 1 220px; font-size: 14px; color: var(--muted); }
 .idea-box-text strong { color: #ffe08a; margin-right: 6px; }
 .idea-promote { background: #ffd23f; color: #2a1592; border-color: #ffd23f; font-weight: 700; }
+#project.is-idea .license-area { display: none; }

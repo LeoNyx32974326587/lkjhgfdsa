@@ -151,6 +151,7 @@
   // one button in the top bar: shows the status, a tap switches it
   function renderStatus() {
     var b = $('statusToggle'), st = isIdea(current) ? 'idea' : statusOf(current);
+    $('project').classList.toggle('is-idea', st === 'idea');
     b.textContent = STATUS[st];
     b.className = 'status-pill status-pill--' + st;
     b.disabled = !may('status');
@@ -1836,6 +1837,7 @@
 
   // what to watch out for with this project's beat license (no legal advice)
   function licenseWarnings(p) {
+    if (isIdea(p)) return [];   // ideas have no license part
     var l = p.license, out = [], type = l.type, hasBeat = !!(p.beat || p.youtube);
     if (!hasLicense(l)) {
       if (hasBeat) out.push(['warn', 'Für diesen Beat ist keine Lizenz hinterlegt. Ohne Lizenz darfst du den Song nicht veröffentlichen – auch YouTube-Beats nur, wenn die Bedingungen es ausdrücklich erlauben.']);
@@ -3361,7 +3363,7 @@
   // ---------- beats & licenses of all projects ----------
   var libFilter = 'all';
   function libEntries() {
-    return activeProjects().filter(function (p) { return p.beat || p.youtube || hasLicense(p.license); }).map(function (p) {
+    return activeProjects().filter(function (p) { return !isIdea(p) && (p.beat || p.youtube || hasLicense(p.license)); }).map(function (p) {
       var w = licenseWarnings(p);
       return { p: p, warnings: w, warn: w.some(function (x) { return x[0] === 'warn'; }) };
     });
