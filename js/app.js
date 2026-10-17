@@ -2676,6 +2676,7 @@
     $('logout').hidden = !account;
     $('deleteAccount').hidden = !account;
     profileMsg('');
+    renderPush();
     $('profileDlg').showModal();
   });
   $('closeProfile').addEventListener('click', function () { $('profileDlg').close(); });
@@ -2732,6 +2733,85 @@
       profileMsg(RaimCloud.message(err));
     }).then(function () { $('profileSave').disabled = false; });
   });
+
+  // ---------- push notifications: chat messages, requests and invitations while Barbook is closed ----------
+  function base64UrlBytes(s) {
+    var pad = '='.repeat((4 - s.length % 4) % 4), raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, function (c) { return c.charCodeAt(0); });
+  }
+  function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!RaimCloud.pushKey() && /^https:|^http:\/\/localhost/.test(location.href); }
+  var iosBrowser = /iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  function pushSubscription() {
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); });
+  }
+  function renderPush() {
+    var field = $('pushField');
+    field.hidden = !account;
+    if (!account) return;
+    var btn = $('pushToggle'), state = $('pushState'), note = $('pushNote');
+    if (!pushSupported()) {
+      state.textContent = 'Nicht verfügbar';
+      btn.hidden = true;
+      note.textContent = iosBrowser ? 'Auf dem iPhone: Barbook erst über „Teilen → Zum Home-Bildschirm“ installieren, dort öffnen und hier einschalten.'
+        : 'Dieser Browser kann keine Benachrichtigungen empfangen.';
+      return;
+    }
+    btn.hidden = false;
+    if (Notification.permission === 'denied') {
+      state.textContent = 'Blockiert';
+      btn.hidden = true;
+      note.textContent = 'Benachrichtigungen sind für Barbook blockiert. Erlaube sie in den Einstellungen des Browsers bzw. Handys.';
+      return;
+    }
+    pushSubscription().then(function (sub) {
+      state.textContent = sub ? 'An' : 'Aus';
+      state.classList.toggle('is-on', !!sub);
+      btn.textContent = sub ? 'Ausschalten' : 'Einschalten';
+      note.textContent = sub ? 'Chat-Nachrichten, Anfragen und Einladungen kommen auch, wenn Barbook geschlossen ist.'
+        : 'Schalte sie ein, um Chat-Nachrichten, Anfragen und Einladungen auch bei geschlossener App zu bekommen.';
+    });
+  }
+  $('pushToggle').addEventListener('click', function () {
+    var btn = $('pushToggle');
+    btn.disabled = true;
+    pushSubscription().then(function (sub) {
+      if (sub) {
+        return RaimCloud.pushUnsubscribe(sub.endpoint).catch(function () {}).then(function () { return sub.unsubscribe(); })
+          .then(function () { toast('Benachrichtigungen ausgeschaltet.'); });
+      }
+      return Notification.requestPermission().then(function (perm) {
+        if (perm !== 'granted') throw new Error('Ohne deine Erlaubnis kann Barbook keine Benachrichtigungen schicken.');
+        return navigator.serviceWorker.ready;
+      }).then(function (reg) {
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlBytes(RaimCloud.pushKey()) });
+      }).then(function (s) { return RaimCloud.pushSubscribe(s); }).then(function () { toast('Benachrichtigungen sind an.'); });
+    }).catch(function (err) {
+      var m = (err && err.message) || '';
+      toast(/schema cache|does not exist|could not find/i.test(m) ? RaimCloud.message(err)
+        : err && (err.name === 'NotAllowedError' || err.name === 'AbortError' || /permission|push service|registration failed/i.test(m))
+          ? 'Der Browser hat die Benachrichtigungen nicht erlaubt. Prüf in den Einstellungen des Browsers bzw. Handys, ob Benachrichtigungen für Barbook erlaubt sind.'
+          : m || 'Das hat nicht geklappt.');
+    }).then(function () { btn.disabled = false; renderPush(); });
+  });
+  // a device that is subscribed tells the server again who uses it (account switch, renewed subscription)
+  function refreshPush() {
+    if (!account || !pushSupported() || Notification.permission !== 'granted') return;
+    pushSubscription().then(function (sub) { if (sub) RaimCloud.pushSubscribe(sub).catch(function () {}); });
+  }
+  // opened from a notification: app.html#chat=<id> or #friends
+  function openFromHash() {
+    var h = location.hash, m = /^#chat=([\w-]+)/.exec(h);
+    if (!m && h !== '#friends') return;
+    history.replaceState(null, '', location.pathname + location.search);
+    if (current) closeProject();
+    if (!$('chat').hidden) closeChat();
+    $('openFriends').click();
+    if (m) {
+      var x = personById(m[1]);
+      if (x) openChat(x);
+    }
+  }
+  window.addEventListener('hashchange', openFromHash);
 
   // ---------- light or dark design (js/theme.js) ----------
   function renderThemePick() {
@@ -4053,7 +4133,8 @@
     loadProfile();
     loadBars().then(function () { if (homeTab === 'ideas') renderBarsPage(); });
     $('openFriends').hidden = !account;
-    loadFriends();
+    loadFriends().then(openFromHash);
+    refreshPush();
     return RaimDB.projects();
   }).then(function (list) {
     projects = list.map(normalize);

@@ -285,6 +285,16 @@
       });
     },
 
+    // ---------- push notifications: this device's subscription ----------
+    pushKey: function () { return cfg.vapidPublicKey || ''; },
+    pushSubscribe: function (sub) {
+      var j = sub.toJSON();
+      return sb.rpc('push_subscribe', { ep: j.endpoint, key: j.keys.p256dh, secret: j.keys.auth }).then(ok);
+    },
+    pushUnsubscribe: function (endpoint) {
+      return sb.rpc('push_unsubscribe', { ep: endpoint }).then(ok);
+    },
+
     // ---------- deleting the account ----------
     // the password is asked again before anything goes
     checkPassword: function (email, password) {

@@ -82,12 +82,19 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
         <li><strong>Account:</strong> E-Mail-Adresse und Passwort (nur verschlüsselt als Hash), Zeitpunkte von Registrierung und Anmeldung.</li>
         <li><strong>Profil:</strong> Name, Künstlername, Profilbild und deine Barbook-ID.</li>
         <li><strong>Inhalte:</strong> Projekte und Ideen mit Songtexten, Song-Infos, Status, Release-Checkliste, Beat-Markern; Dateien, die du hochlädst (Beats, Lizenzdateien, Aufnahmen, fertige Songs); Bars; Versionsverlauf (bis zu 100 Stände pro Song); Kommentare.</li>
-        <li><strong>Freunde und Features:</strong> Freundschaftsanfragen, Freundschaften, Einladungen zu Songs und die vergebenen Rechte.</li>
+        <li><strong>Freunde und Features:</strong> Freundschaftsanfragen, Freundschaften, Einladungen zu Songs und die vergebenen Rechte, Nachrichten im Freunde-Bereich (z. B. „hat deine Anfrage angenommen“).</li>
+        <li><strong>Chat:</strong> Nachrichten zwischen Freunden mit Zeitpunkt und Lesestatus, mitgeschickte Songs und Bars (als Kopie). Lesen können sie nur die beiden Beteiligten.</li>
+        <li><strong>Alben:</strong> welche Songs zu welchem Album gehören.</li>
+        <li><strong>Benachrichtigungen:</strong> wenn du sie einschaltest, die Push-Adresse deines Geräts.</li>
         <li><strong>Leselinks:</strong> welcher Song über welchen Link lesbar ist.</li>
       </ul>
       <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Erfüllung des Nutzungsvertrags). Deine Inhalte sind nur für dich sichtbar – außer für Freunde, die du zu einem Song einlädst (sie sehen diesen Song und können ihn im Rahmen der vergebenen Rechte bearbeiten), und für alle, denen du einen Leselink gibst (sie sehen Titel, Text, BPM, Tonart, Genre und deinen Künstlernamen). Freunde sehen außerdem deinen Namen, Künstlernamen und dein Profilbild.</p>
 
-      <h2>4. E-Mails</h2>
+      <h2>4. Live-Funktionen und Push-Benachrichtigungen</h2>
+      <p>Damit Chat, Nachrichten und gemeinsames Schreiben sofort ankommen, hält die App eine Verbindung zu Supabase Realtime. Beim gemeinsamen Schreiben sehen die Beteiligten eines Songs, wer gerade im Song ist und in welchem Abschnitt er schreibt; diese Angaben werden nicht gespeichert.</p>
+      <p>Schaltest du im Profil <strong>Benachrichtigungen</strong> ein, speichern wir die Push-Adresse deines Geräts. Benachrichtigungen (Absender, kurzer Text) laufen über den Push-Dienst deines Browser- bzw. Geräteherstellers (z. B. Google bei Chrome und Android, Apple bei Safari und iPhone, Mozilla bei Firefox); der Inhalt ist dabei verschlüsselt. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Ausschalten geht jederzeit im Profil oder in den Einstellungen des Geräts.</p>
+
+      <h2>4a. E-Mails</h2>
       <p>Bestätigungs- und „Passwort vergessen“-Mails werden über den Mail-Server von Google (Gmail) verschickt (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland). Verarbeitet werden deine E-Mail-Adresse und der Inhalt der Mail. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Eine Übermittlung an Google LLC in den USA ist möglich; sie erfolgt auf Grundlage des EU-US Data Privacy Framework.</p>
 
       <h2>5. Speicher auf deinem Gerät</h2>

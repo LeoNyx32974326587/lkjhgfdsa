@@ -144,6 +144,21 @@ alter table public.chat_messages add constraint chat_messages_attachment_size ch
 create index if not exists chat_messages_pair on public.chat_messages (least(sender, recipient), greatest(sender, recipient), id desc);
 create index if not exists chat_messages_unread on public.chat_messages (recipient) where read_at is null;
 
+-- Push notifications to phones and computers (Web Push): one row per device that switched them on
+create table if not exists public.push_subscriptions (
+  endpoint text primary key,
+  user_id uuid not null references auth.users on delete cascade,
+  p256dh text not null,
+  auth text not null,
+  created timestamptz not null default now()
+);
+-- each event is pushed once (the Edge Function "push" writes here)
+create table if not exists public.push_sent (key text primary key, at timestamptz not null default now());
+-- where the database reaches the Edge Function "push"
+create table if not exists public.push_config (id int primary key default 1 check (id = 1), url text not null);
+insert into public.push_config (id, url) values (1, 'https://pfveinhwrptajnqclhtw.supabase.co/functions/v1/push')
+  on conflict (id) do nothing;
+
 -- AI requests per account and day (the Edge Function "claude" counts them; nobody reads this table directly)
 create table if not exists public.ai_usage (
   user_id uuid not null references auth.users on delete cascade,
@@ -423,7 +438,10 @@ alter table public.bars enable row level security;
 alter table public.share_links enable row level security;
 alter table public.notifications enable row level security;
 alter table public.chat_messages enable row level security;
-alter table public.ai_usage enable row level security;   -- no policies: only ai_take() touches it
+alter table public.ai_usage enable row level security;
+alter table public.push_subscriptions enable row level security;   -- only push_subscribe()/push_unsubscribe() and the Edge Function
+alter table public.push_sent enable row level security;
+alter table public.push_config enable row level security;   -- no policies: only ai_take() touches it
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;
@@ -534,6 +552,52 @@ drop policy if exists "own links" on public.share_links;
 create policy "own links" on public.share_links for all to authenticated
   using (auth.uid() = owner)
   with check (auth.uid() = owner and exists (select 1 from public.projects p where p.user_id = owner and p.id = project_id));
+
+-- ---------- push notifications ----------
+create or replace function public.push_subscribe(ep text, key text, secret text) returns void
+language sql security definer set search_path = public as $$
+  insert into push_subscriptions (endpoint, user_id, p256dh, auth) values (ep, auth.uid(), key, secret)
+  on conflict (endpoint) do update set user_id = auth.uid(), p256dh = excluded.p256dh, auth = excluded.auth, created = now();
+$$;
+create or replace function public.push_unsubscribe(ep text) returns void
+language sql security definer set search_path = public as $$
+  delete from push_subscriptions where endpoint = ep and user_id = auth.uid();
+$$;
+revoke execute on function public.push_subscribe(text, text, text) from anon, public;
+revoke execute on function public.push_unsubscribe(text) from anon, public;
+grant execute on function public.push_subscribe(text, text, text) to authenticated;
+grant execute on function public.push_unsubscribe(text) to authenticated;
+
+-- new chat message, message, friend request or song invitation: tell the Edge Function which row (it reads the rest itself)
+do $$ begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_net') then create extension if not exists pg_net; end if;
+end $$;
+create or replace function public.push_event() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare target text; ref jsonb; r jsonb := to_jsonb(new);   -- as JSON: the four tables have different columns
+begin
+  select url into target from push_config where id = 1;
+  if target is null or not exists (select 1 from pg_extension where extname = 'pg_net') then return new; end if;
+  if tg_table_name = 'friendships' and r ->> 'status' <> 'pending' then return new; end if;
+  ref := case tg_table_name
+    when 'friendships' then jsonb_build_object('requester', r -> 'requester', 'addressee', r -> 'addressee')
+    when 'project_members' then jsonb_build_object('owner', r -> 'owner', 'project_id', r -> 'project_id', 'member', r -> 'member')
+    else jsonb_build_object('id', r -> 'id') end;
+  execute 'select net.http_post(url := $1, body := $2, headers := $3)'
+    using target, jsonb_build_object('table', tg_table_name, 'ref', ref), '{"Content-Type": "application/json"}'::jsonb;
+  return new;
+exception when others then
+  return new;   -- a push must never stop the real work
+end;
+$$;
+drop trigger if exists push_chat on public.chat_messages;
+create trigger push_chat after insert on public.chat_messages for each row execute function public.push_event();
+drop trigger if exists push_message on public.notifications;
+create trigger push_message after insert on public.notifications for each row execute function public.push_event();
+drop trigger if exists push_request on public.friendships;
+create trigger push_request after insert on public.friendships for each row execute function public.push_event();
+drop trigger if exists push_invite on public.project_members;
+create trigger push_invite after insert on public.project_members for each row execute function public.push_event();
 
 -- ---------- live updates (Supabase Realtime) ----------
 -- new messages, friend requests and song invitations reach the open app right away; the rules above still apply

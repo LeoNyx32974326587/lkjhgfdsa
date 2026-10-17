@@ -63,6 +63,22 @@ Die KI läuft über eine kleine Supabase-Funktion. Der Anthropic-API-Schlüssel 
 
 Danach gehen KI-Ideen und das Auslesen von Lizenzen für alle angemeldeten Nutzer, ohne Einstellungen. Die Kosten laufen über dein Anthropic-Konto; dort kannst du unter *Limits* zusätzlich ein Monatslimit setzen.
 
+## 7. Benachrichtigungen aufs Handy (Push)
+
+Damit Chat-Nachrichten, Freundschaftsanfragen und Einladungen auch bei geschlossener App ankommen:
+
+1. **Secrets** (Edge Functions → Secrets → Add new secret):
+   - `VAPID_PUBLIC_KEY` = der öffentliche Push-Schlüssel (steht auch in `js/config.js` als `vapidPublicKey`)
+   - `VAPID_PRIVATE_KEY` = der private Push-Schlüssel (geheim halten, nie in den Code)
+   - optional `VAPID_SUBJECT` = `mailto:deine@adresse.de`
+2. **Funktion anlegen:** Edge Functions → Deploy a new function → Via Editor, Name genau `push`, Inhalt von `supabase/functions/push/index.ts` → Deploy. In ihren Einstellungen **„Verify JWT“ ausschalten** (die Datenbank ruft sie ohne Anmeldung auf; die Funktion liest jeden Inhalt selbst aus der Datenbank, deshalb kann niemand falsche Texte verschicken).
+3. **Database → Extensions → `pg_net` einschalten** (setup.sql versucht das auch selbst).
+4. `supabase/setup.sql` ausführen. Darin steht die Adresse der Funktion (`push_config`); bei einem anderen Supabase-Projekt dort anpassen.
+
+Auf dem iPhone gehen Benachrichtigungen nur, wenn Barbook über „Teilen → Zum Home-Bildschirm“ installiert ist (iOS 16.4 oder neuer). Eingeschaltet werden sie im Profil.
+
+Neue Schlüssel erzeugen (falls nötig): `npx web-push generate-vapid-keys`.
+
 ## Wie die Daten laufen
 
 - Jede Änderung wird sofort auf dem Gerät gespeichert und im Hintergrund hochgeladen. Offline geht alles weiter; hochgeladen wird beim nächsten Öffnen mit Internet.
