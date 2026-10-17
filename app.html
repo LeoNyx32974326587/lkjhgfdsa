@@ -12,6 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Barbook">
+  <script src="js/theme.js"></script>
   <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="app.css">
   <!-- accounts: leave for the login page before anything else loads -->
@@ -715,6 +716,13 @@
         <span class="chip-label">Deine ID</span>
         <strong id="profileCode"></strong>
         <button class="link-btn" type="button" id="profileCopy">Kopieren</button>
+      </div>
+      <div class="field">Design
+        <div class="seg seg--wide theme-pick" role="group" aria-label="Design">
+          <button type="button" class="seg-btn" data-theme-pick="dark">Dunkel</button>
+          <button type="button" class="seg-btn" data-theme-pick="light">Hell</button>
+          <button type="button" class="seg-btn" data-theme-pick="auto" title="Wie im Handy oder Computer eingestellt">System</button>
+        </div>
       </div>
       <p class="hint" id="profileEmail"></p>
       <p class="hint" id="profileMsg" role="status" hidden></p>

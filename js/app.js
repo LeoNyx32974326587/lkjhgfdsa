@@ -2630,6 +2630,20 @@
     }).then(function () { $('profileSave').disabled = false; });
   });
 
+  // ---------- light or dark design (js/theme.js) ----------
+  function renderThemePick() {
+    var c = RaimTheme.get();
+    document.querySelectorAll('[data-theme-pick]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.themePick === c); });
+  }
+  document.querySelectorAll('[data-theme-pick]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      RaimTheme.set(b.dataset.themePick);
+      renderThemePick();
+      RaimBeats.redraw();
+    });
+  });
+  renderThemePick();
+
   // ---------- deleting the account ----------
   $('deleteAccount').addEventListener('click', function () {
     $('profileDlg').close();

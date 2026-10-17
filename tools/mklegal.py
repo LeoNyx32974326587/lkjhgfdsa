@@ -13,6 +13,7 @@ def page(file, title, body):
   <title>%(title)s – Barbook</title>
   <meta name="theme-color" content="#07060f">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <script src="js/theme.js"></script>
   <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="app.css">
 </head>

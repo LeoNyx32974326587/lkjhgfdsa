@@ -239,12 +239,12 @@
       g.fillRect(x1 - 1.5, 0, 3, h);
       g.fillRect(x2 - 1.5, 0, 3, h);
     }
-    var n = peaks.length || 80, bw = w / n;
+    var n = peaks.length || 80, bw = w / n, light = root.RaimTheme && RaimTheme.isLight();
     var played = dur ? audio.currentTime / dur * w : 0;
     for (var i = 0; i < n; i++) {
       var p = peaks.length ? 0.12 + 0.88 * peaks[i] : 0.15;
       var bh = p * h * 0.9, x = i * bw;
-      g.fillStyle = x < played ? '#ffffff' : 'rgba(255, 255, 255, .55)';
+      g.fillStyle = light ? (x < played ? '#4a2bd0' : 'rgba(74, 43, 208, .35)') : (x < played ? '#ffffff' : 'rgba(255, 255, 255, .55)');
       g.fillRect(x + bw * 0.2, (h - bh) / 2, Math.max(1, bw * 0.6), bh);
     }
     if (dur) {
@@ -259,7 +259,7 @@
         g.fillStyle = '#07060f';
         g.fillText(m.s, Math.min(x, w - tw - 8) + 4, 2);
       });
-      g.fillStyle = '#5ee7ff';
+      g.fillStyle = light ? '#0a7ea0' : '#5ee7ff';
       g.fillRect(played - 1, 0, 2, h);
     }
   }

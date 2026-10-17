@@ -5,7 +5,7 @@ var CACHE = 'barbook-v3';
 var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest', 'assets/fonts/fonts.css',
   'assets/icon.svg', 'assets/icon-192.png', 'js/config.js', 'js/cloud.js', 'js/login.js', 'js/words.js', 'js/rhyme.js',
   'js/song.js', 'js/store.js', 'js/db.js', 'js/ai.js', 'js/license-reader.js', 'js/wav.js', 'js/prompter.js',
-  'js/analyze.js', 'js/beats.js', 'js/dictate.js', 'js/app.js'];
+  'js/analyze.js', 'js/beats.js', 'js/dictate.js', 'js/theme.js', 'js/app.js'];
 
 self.addEventListener('install', function (e) {
   // 'reload' skips the browser's HTTP cache, so the offline copy is one consistent version
