@@ -1003,3 +1003,45 @@ body.prompter-open { overflow: hidden; }
 .app-legal a:hover { color: var(--muted); }
 .login-note a { color: var(--muted); }
 .profile-delete { justify-self: center; margin: 6px auto 0; display: block; }
+
+/* ---------- phones: nothing wider than the screen, comfortable tap targets ---------- */
+.projects > li { min-width: 0; }
+.project-card { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.project-top { flex-wrap: wrap; row-gap: 6px; }
+.project-top strong { flex: 1 1 60%; }
+.project-line, .project-meta { min-width: 0; overflow-wrap: anywhere; }
+.title-input { text-overflow: ellipsis; }
+.text-tools-right { flex-wrap: wrap; justify-content: flex-end; }
+.tool-btn { white-space: nowrap; }
+.app-legal a { display: inline-block; padding: 8px 4px; }
+.legal-foot a, .legal .legal-nav a { display: inline-block; }
+@media (pointer: coarse) {
+  .link-btn { padding: 8px 2px; }
+  .seg-btn { min-height: 36px; }
+  .profile-delete { padding: 10px 6px; }
+}
+@media (max-width: 480px) {
+  .topbar--project { gap: 0; padding-left: 8px; padding-right: 8px; }
+  .topbar--project .icon-btn { padding: 7px; }
+  .topbar--project .title-input { font-size: 18px; padding: 0 4px; }
+  .status-pill { padding: 5px 9px; font-size: 12px; }
+  .text-tools { gap: 8px; }
+  .text-tools-right { gap: 6px; margin-left: 0; width: 100%; justify-content: flex-start; }
+  .tool-btn { padding: 8px 11px; }
+  .marker-row #markerSet { flex: 1 1 100%; }
+  .marker-row .mini-field { flex: 1 1 auto; }
+  .marker-row select { min-width: 0; flex: 1; }
+  .rec-row { row-gap: 12px; }
+  .view-head h1 { font-size: 30px; }
+  .view-head .btn { padding-left: 16px; padding-right: 16px; }
+}
+.legal-foot a { padding: 6px 0; }
+/* installed app on iPhone: the bar starts below the clock and the notch */
+.topbar { padding-top: calc(12px + env(safe-area-inset-top)); padding-left: max(var(--gutter), env(safe-area-inset-left)); padding-right: max(var(--gutter), env(safe-area-inset-right)); }
+@media (max-width: 480px) {
+  .topbar--project { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+}
+/* iPhone Safari zooms into fields with text smaller than 16px; keep them at 16px there */
+@supports (-webkit-touch-callout: none) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
+}
