@@ -837,3 +837,21 @@ body.prompter-open { overflow: hidden; }
 }
 .thread-form input:focus { border-color: var(--violet); }
 .read-lost { border-style: dashed; }
+
+/* ---------- version history ---------- */
+.history-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+.history-item {
+  width: 100%; display: grid; gap: 3px; text-align: left; cursor: pointer; padding: 12px 14px; border-radius: 16px;
+  border: 1px solid var(--border); background: rgba(10, 8, 30, .45); color: var(--text);
+}
+.history-item:hover { border-color: rgba(160, 140, 255, .6); }
+.history-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.history-head span:not(.badge) { color: var(--dim); }
+.history-first { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-diff { font-size: 12px; color: var(--dim); }
+.history-detail { display: grid; gap: 10px; justify-items: start; }
+.history-meta { margin: 0; color: var(--muted); font-size: 14px; }
+.history-text {
+  width: 100%; margin: 0; max-height: 50vh; overflow: auto; padding: 14px 16px; border-radius: 16px; white-space: pre-wrap;
+  font: 16px/1.6 Roboto, system-ui, sans-serif; background: rgba(10, 8, 30, .55); border: 1px solid var(--border);
+}

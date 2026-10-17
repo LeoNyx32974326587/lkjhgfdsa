@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  var DB_NAME = 'raim', VERSION = 1;   // 'raim': projects from before accounts
+  var DB_NAME = 'raim', VERSION = 2;   // 'raim': projects from before accounts; 2: text versions
   var dbPromise = null, cloud = null, user = null;
 
   function openNamed(name) {
@@ -15,6 +15,9 @@
         if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('files')) {
           db.createObjectStore('files', { keyPath: 'id' }).createIndex('project', 'project');
+        }
+        if (!db.objectStoreNames.contains('versions')) {
+          db.createObjectStore('versions', { keyPath: 'id' }).createIndex('project', 'project');
         }
       };
       req.onsuccess = function () { resolve(req.result); };
@@ -48,7 +51,9 @@
   function pending() {
     var x = null;
     try { x = JSON.parse(localStorage.getItem(pendingKey()) || 'null'); } catch (e) { /* private mode */ }
-    return x || { projects: [], files: [], delProjects: [], delFiles: [] };
+    x = x || { projects: [], files: [], delProjects: [], delFiles: [] };
+    x.versions = x.versions || [];
+    return x;
   }
   function setPending(fn) {
     if (!user) return;
@@ -112,6 +117,11 @@
       return cloud.deleteProject(id).then(function () { setPending(function (y) { drop(y.delProjects, id); }); }, function () {});
     }).concat(x.delFiles.map(function (id) {
       return cloud.deleteFile(id).then(function () { setPending(function (y) { drop(y.delFiles, id); }); }, function () {});
+    })).concat(x.versions.map(function (id) {
+      return run('versions', 'readonly', function (s) { return s.get(id); }).then(function (v) {
+        if (!v) { setPending(function (y) { drop(y.versions, id); }); return; }
+        return cloud.addVersion(v).then(function () { setPending(function (y) { drop(y.versions, id); }); }, function () {});
+      });
     })).concat(x.files.map(function (id) {
       return localFile(id).then(function (rec) {
         if (!rec) { setPending(function (y) { drop(y.files, id); }); return; }
@@ -157,6 +167,14 @@
         var c = req.result;
         if (c) { c.delete(); c.continue(); }
       };
+    }).then(function () {
+      return run('versions', 'readwrite', function (s) {
+        var req = s.index('project').openCursor(IDBKeyRange.only(id));
+        req.onsuccess = function () {
+          var c = req.result;
+          if (c) { c.delete(); c.continue(); }
+        };
+      });
     }).then(function () {
       return run('projects', 'readwrite', function (s) { return s.delete(id); });
     });
@@ -209,6 +227,25 @@
     },
     sync: sync,
     legacy: legacy,
+    // a saved state of the song text: { id, project, owner, title, text, author_name, created }
+    addVersion: function (p, authorName) {
+      var v = { id: uid(), project: p.id, owner: p._owner || user || '', title: p.title || '', text: p.text || '',
+        author_name: authorName || '', created: Date.now() };
+      return putLocal('versions', v).then(function () {
+        if (user) push('versions', v.id, function () { return cloud.addVersion(v); });
+        return v;
+      });
+    },
+    // newest first; with an account also the ones featured friends saved
+    versions: function (p) {
+      var local = run('versions', 'readonly', function (s) { return s.index('project').getAll(p.id); });
+      var remote = user && cloud && cloud.online() ? cloud.versions(p._owner || user, p.id).catch(function () { return []; }) : Promise.resolve([]);
+      return Promise.all([local, remote]).then(function (r) {
+        var all = {}, list = [];
+        r[1].concat(r[0] || []).forEach(function (v) { if (!all[v.id]) { all[v.id] = 1; list.push(v); } });
+        return list.sort(function (a, b) { return b.created - a.created; });
+      });
+    },
     // fetch one project fresh before opening it (a featured friend may have changed it); -> newest version
     refreshProject: function (p) {
       if (!cloud || !cloud.online() || !p._cloud) return Promise.resolve(p);

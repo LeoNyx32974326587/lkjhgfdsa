@@ -133,6 +133,7 @@
   function scheduleSave() {
     if (!current) return;
     current.updated = Date.now();
+    if (Date.now() - lastVersionAt > VERSION_EVERY) { var pv = current; setTimeout(function () { saveVersion(pv); }, 1500); }
     clearTimeout(saveTimer);
     var p = current;
     saveTimer = setTimeout(function () { saveNow(p); }, 400);
@@ -319,6 +320,8 @@
     RaimBeats.open(p);
     setTextMode('write');
     loadComments();
+    lastVersionAt = Date.now();
+    saveVersion(p);
     showTab('text');
     window.scrollTo(0, 0);
     try { sessionStorage.setItem('raim.project', p.id); } catch (e) { /* private mode */ }
@@ -334,6 +337,7 @@
     RaimBeats.close();
     $('miniBar').hidden = true;
     if (snapshot(p) !== openedAs) saveNow(p);
+    saveVersion(p);
     current = null;
     $('project').hidden = true;
     $('home').hidden = false;
@@ -652,6 +656,102 @@
     confirmDialog('Abschnitt entfernen?', '„' + s.name + '“ mit ' + RaimSong.lines(s.body).length + ' Zeilen wird aus dem Song entfernt.', 'Entfernen')
       .then(function (ok) { if (ok) go(); });
   }
+
+  // ---------- version history of the song text ----------
+  // Saved automatically when a project opens and closes, every 10 minutes while writing and when the
+  // app goes to the background – but only when the text differs from the last saved state.
+  var VERSION_EVERY = 10 * 60000, lastVersionAt = 0, historyList = [], historyPick = null;
+  function textHash(t) { var h = 5381; for (var i = 0; i < t.length; i++) h = (h * 33 + t.charCodeAt(i)) | 0; return String(h); }
+  function versionKey(p) { return 'barbook.version.' + p.id; }
+  function saveVersion(p) {
+    if (!p || !p.text.trim() || (p._owner && !(p._rights && p._rights.text))) return Promise.resolve();
+    var h = textHash(p.text), last = null;
+    try { last = localStorage.getItem(versionKey(p)); } catch (e) { /* private mode */ }
+    if (h === last) return Promise.resolve();
+    lastVersionAt = Date.now();
+    try { localStorage.setItem(versionKey(p), h); } catch (e) { /* private mode */ }
+    return RaimDB.addVersion(p, profile.artist || profile.name || (account ? account.email : '')).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden && current) saveVersion(current); });
+
+  function whenText(ms) {
+    var d = new Date(ms), today = new Date(), y = new Date(Date.now() - 86400000);
+    var time = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    if (d.toDateString() === today.toDateString()) return 'Heute ' + time;
+    if (d.toDateString() === y.toDateString()) return 'Gestern ' + time;
+    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' }) + ' ' + time;
+  }
+  // "+3 / −1 Zeilen" compared with the text now
+  function lineDiff(a, b) {
+    var la = RaimSong.lines(a), lb = RaimSong.lines(b);
+    var plus = lb.filter(function (l) { return la.indexOf(l) < 0; }).length, minus = la.filter(function (l) { return lb.indexOf(l) < 0; }).length;
+    return plus || minus ? '+' + plus + ' / −' + minus + ' Zeilen gegenüber jetzt' : 'wie jetzt';
+  }
+
+  function openHistory() {
+    var p = current;
+    $('historyDetail').hidden = true;
+    $('historyListBox').hidden = false;
+    $('historyTitle').textContent = 'Verlauf';
+    var list = $('historyList');
+    list.textContent = '';
+    list.append(el('li', 'empty', 'Lade …'));
+    $('historyDlg').showModal();
+    saveVersion(p).then(function () { return RaimDB.versions(p); }).then(function (vs) {
+      if (current !== p) return;
+      // the same text saved twice in a row (e.g. by two people) shows once
+      vs = vs.filter(function (v, i) { return i === 0 || v.text !== vs[i - 1].text; });
+      historyList = vs;
+      list.textContent = '';
+      if (!vs.length) { list.append(el('li', 'empty', 'Noch keine Fassungen – sobald du schreibst, sichert Barbook sie hier.')); return; }
+      vs.forEach(function (v) {
+        var li = el('li'), b = el('button', 'history-item');
+        b.type = 'button';
+        var head = el('div', 'history-head');
+        head.append(el('strong', '', whenText(v.created)));
+        if (v.author_name) head.append(el('span', '', v.author_name));
+        if (v.text === p.text) head.append(el('span', 'badge badge--done', 'Aktuell'));
+        var first = RaimSong.lines(v.text)[0] || '';
+        b.append(head, el('span', 'history-first', first), el('span', 'history-diff', RaimSong.lines(v.text).length + ' Zeilen · ' + lineDiff(p.text, v.text)));
+        b.addEventListener('click', function () { showVersion(v); });
+        li.append(b);
+        list.append(li);
+      });
+    });
+  }
+  function showVersion(v) {
+    historyPick = v;
+    $('historyListBox').hidden = true;
+    $('historyDetail').hidden = false;
+    $('historyTitle').textContent = 'Fassung ansehen';
+    $('historyMeta').textContent = whenText(v.created) + (v.author_name ? ' · gesichert von ' + v.author_name : '') + ' · ' + lineDiff(current.text, v.text);
+    $('historyText').textContent = v.text;
+    var same = v.text === current.text;
+    $('historyRestore').hidden = same || !may('text');
+    $('historyNote').textContent = same ? 'Das ist der aktuelle Text.' : !may('text') ? 'Wiederherstellen kann nur, wer den Text ändern darf.'
+      : 'Der jetzige Text wird vorher selbst als Fassung gesichert – du verlierst nichts.';
+  }
+  $('historyBtn').addEventListener('click', openHistory);
+  $('closeHistory').addEventListener('click', function () { $('historyDlg').close(); });
+  $('historyBack').addEventListener('click', function () {
+    $('historyDetail').hidden = true;
+    $('historyListBox').hidden = false;
+    $('historyTitle').textContent = 'Verlauf';
+  });
+  $('historyRestore').addEventListener('click', function () {
+    var v = historyPick, p = current;
+    if (!v || !p || !may('text')) return;
+    saveVersion(p).then(function () {
+      p.text = v.text;
+      loadSections();
+      if (textMode === 'read') renderReadView();
+      updateStats();
+      scheduleSave();
+      try { localStorage.setItem(versionKey(p), textHash(p.text)); } catch (e) { /* private mode */ }
+      $('historyDlg').close();
+      toast('Fassung von ' + whenText(v.created).replace(/^Heute/, 'heute').replace(/^Gestern/, 'gestern') + ' wiederhergestellt – der vorherige Text ist im Verlauf gesichert.');
+    });
+  });
 
   // ---------- reading view: rhyme scheme and comments ----------
   // "Lesen" shows the song with rhyming words in the same colour (line ends and inside the lines)

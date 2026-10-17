@@ -83,6 +83,20 @@ create table if not exists public.project_comments (
 );
 create index if not exists project_comments_project on public.project_comments (owner, project_id);
 
+-- Saved states of a song's text (version history), the newest 100 per song
+create table if not exists public.project_versions (
+  owner uuid not null references auth.users on delete cascade,
+  id text not null,
+  project_id text not null,
+  author uuid not null default auth.uid() references auth.users on delete cascade,
+  author_name text not null default '',
+  title text not null default '',
+  text text not null default '',
+  created bigint not null,
+  primary key (owner, id)
+);
+create index if not exists project_versions_project on public.project_versions (owner, project_id, created desc);
+
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
 create or replace function public.are_friends(a uuid, b uuid) returns boolean
@@ -169,12 +183,27 @@ language plpgsql security definer set search_path = public as $$
 begin
   delete from project_members where owner = old.user_id and project_id = old.id;
   delete from project_comments where owner = old.user_id and project_id = old.id;
+  delete from project_versions where owner = old.user_id and project_id = old.id;
   return old;
 end;
 $$;
 drop trigger if exists drop_project_members on public.projects;
 create trigger drop_project_members after delete on public.projects
   for each row execute function public.drop_project_members();
+
+-- keep the newest 100 saved states per song
+create or replace function public.trim_versions() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from project_versions v where v.owner = new.owner and v.project_id = new.project_id
+    and v.id not in (select id from project_versions where owner = new.owner and project_id = new.project_id
+                     order by created desc limit 100);
+  return null;
+end;
+$$;
+drop trigger if exists trim_versions on public.project_versions;
+create trigger trim_versions after insert on public.project_versions
+  for each row execute function public.trim_versions();
 
 -- find someone by their ID ("#K7M2QX" or "k7m2qx")
 create or replace function public.find_profile(c text)
@@ -194,6 +223,7 @@ alter table public.profiles enable row level security;
 alter table public.friendships enable row level security;
 alter table public.project_members enable row level security;
 alter table public.project_comments enable row level security;
+alter table public.project_versions enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;
@@ -271,6 +301,16 @@ create policy "comments write" on public.project_comments for insert to authenti
   with check (author = auth.uid() and (auth.uid() = owner or public.is_member(owner, project_id)));
 create policy "comments delete" on public.project_comments for delete to authenticated
   using (author = auth.uid() or owner = auth.uid());
+
+drop policy if exists "versions read" on public.project_versions;
+drop policy if exists "versions write" on public.project_versions;
+drop policy if exists "versions delete" on public.project_versions;
+create policy "versions read" on public.project_versions for select to authenticated
+  using (auth.uid() = owner or public.is_member(owner, project_id));
+create policy "versions write" on public.project_versions for insert to authenticated
+  with check (author = auth.uid() and (auth.uid() = owner or public.member_can(owner, project_id, 'text')));
+create policy "versions delete" on public.project_versions for delete to authenticated
+  using (auth.uid() = owner);
 
 -- ---------- file storage: private bucket, a folder per user ----------
 

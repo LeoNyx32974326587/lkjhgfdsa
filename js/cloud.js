@@ -181,6 +181,16 @@
       return sb.from('project_members').delete().eq('owner', owner).eq('project_id', projectId).eq('member', uid).then(ok);
     },
 
+    // ---------- saved states of the song text ----------
+    versions: function (owner, projectId) {
+      return sb.from('project_versions').select('id,author_name,title,text,created').eq('owner', owner).eq('project_id', projectId).then(ok)
+        .then(function (rows) { return rows.map(function (r) { r.project = projectId; return r; }); });
+    },
+    addVersion: function (v) {
+      return sb.from('project_versions').upsert({ owner: v.owner || uid, project_id: v.project, id: v.id, author_name: v.author_name,
+        title: v.title, text: v.text, created: v.created }, { onConflict: 'owner,id', ignoreDuplicates: true }).then(ok);
+    },
+
     // ---------- comments on lines (owner and featured friends) ----------
     comments: function (owner, projectId) {
       return sb.from('project_comments').select('id,author,author_name,section,line,line_no,body,created_at')

@@ -189,6 +189,10 @@
             <button type="button" class="seg-btn" data-textmode="read">Lesen <span class="comment-count" id="commentCount" hidden></span></button>
           </div>
           <span class="text-tools-right">
+            <button type="button" class="tool-btn" id="historyBtn" title="Frühere Fassungen des Textes">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+              Verlauf
+            </button>
             <button type="button" class="tool-btn" id="collapseAll">Alle einklappen</button>
             <button type="button" class="tool-btn" id="exportPdf">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M12 11v6m-3-3 3 3 3-3"/></svg>
@@ -521,6 +525,28 @@
         <label class="btn">Importieren<input type="file" id="importAll" accept="application/json,.json" hidden></label>
       </div>
       <p class="hint" id="storageInfo"></p>
+    </div>
+  </dialog>
+
+  <dialog id="historyDlg" class="sheet">
+    <div class="sheet-head">
+      <h2 id="historyTitle">Verlauf</h2>
+      <button class="icon-btn" type="button" id="closeHistory" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div id="historyListBox">
+      <p class="hint">Barbook sichert den Text automatisch: beim Öffnen und Schließen, alle 10 Minuten beim Schreiben und bevor eine alte Fassung zurückgeholt wird.</p>
+      <ul class="history-list" id="historyList"></ul>
+    </div>
+    <div class="history-detail" id="historyDetail" hidden>
+      <button class="link-btn" type="button" id="historyBack">← Alle Fassungen</button>
+      <p class="history-meta" id="historyMeta"></p>
+      <pre class="history-text" id="historyText"></pre>
+      <div class="row">
+        <button class="btn btn--primary" type="button" id="historyRestore">Diese Fassung wiederherstellen</button>
+      </div>
+      <p class="hint" id="historyNote"></p>
     </div>
   </dialog>
 
