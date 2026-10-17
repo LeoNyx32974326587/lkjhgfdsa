@@ -648,15 +648,54 @@
   }
 
   // ---------- KI-Ideen ----------
-  var aiLineCount = 2, aiProposal = null, aiBusy = false;
-  document.querySelectorAll('[data-lines]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      aiLineCount = parseInt(b.dataset.lines, 10);
-      document.querySelectorAll('[data-lines]').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+  // First ask what for: continue at the caret, or a new Intro/Hook/Part/Bridge/Outro for the song.
+  var AI_LEN = { continue: 2, Intro: 4, Hook: 8, Part: 16, Bridge: 4, Outro: 4 };
+  var aiKind = 'continue', aiProposal = null, aiBusy = false, aiReq = null;
+  // "eine neue Hook, die … Sie", "einen neuen Part, der … Er", "ein neues Intro, das … Es"
+  var AI_GRAMMAR = {
+    Intro: ['ein neues Intro', 'das', 'Es'], Hook: ['eine neue Hook', 'die', 'Sie'], Part: ['einen neuen Part', 'der', 'Er'],
+    Bridge: ['eine neue Bridge', 'die', 'Sie'], Outro: ['ein neues Outro', 'das', 'Es']
+  };
+
+  function sectionLabel(i) {
+    var s = sections[i];
+    return s ? s.name || 'Text' : '';
+  }
+
+  function setAiKind(kind) {
+    var canContinue = sections.length > 0;
+    if (kind === 'continue' && !canContinue) kind = 'Intro';
+    aiKind = kind;
+    document.querySelectorAll('[data-kind]').forEach(function (b) {
+      b.classList.toggle('is-on', b.dataset.kind === kind);
+      b.disabled = b.dataset.kind === 'continue' && !canContinue;
     });
+    $('aiLen').value = AI_LEN[kind];
+    $('aiRhymeLabel').hidden = kind !== 'continue';
+    var here = sectionLabel(activeIndex());
+    $('aiKindHint').textContent = kind === 'continue'
+      ? 'Claude liest deinen ganzen Text und schreibt an der Stelle deines Cursors im Abschnitt „' + here + '“ weiter.'
+      : 'Claude liest deinen ganzen Text und schreibt ' + AI_GRAMMAR[kind][0] + ', ' + AI_GRAMMAR[kind][1] + ' dazu passt. ' +
+        AI_GRAMMAR[kind][2] + ' kommt als eigener Abschnitt ' + (sections.length ? 'nach „' + here + '“.' : 'in deinen Song.');
+  }
+  document.querySelectorAll('[data-kind]').forEach(function (b) {
+    b.addEventListener('click', function () { setAiKind(b.dataset.kind); });
   });
 
+  function openAiSetup() {
+    hideAi();
+    $('aiSetup').hidden = false;
+    $('aiGo').hidden = true;
+    setAiKind(sections.length ? aiKind : 'Intro');
+  }
+  function closeAiSetup() {
+    $('aiSetup').hidden = true;
+    $('aiGo').hidden = false;
+  }
+  $('aiSetupCancel').addEventListener('click', closeAiSetup);
+
   function hideAi() {
+    closeAiSetup();
     aiProposal = null;
     $('aiResult').hidden = true;
     $('aiMsg').hidden = true;
@@ -680,18 +719,20 @@
   }
   $('ageOk').addEventListener('change', function (e) { $('consentYes').disabled = !e.target.checked; });
 
-  // whole song up to the end of the caret's line (repeats filled in): what the new lines continue
-  function textBeforeInsertPoint() {
-    if (!sections.length) return '';
+  // the song split at the end of the caret's line (repeats filled in): what continued lines go between
+  function songAroundCaret() {
+    if (!sections.length) return { before: '', after: '' };
     var ta = activeTA, i = activeIndex();
-    var v = ta ? ta.value : '', nl = ta ? v.indexOf('\n', ta.selectionStart) : -1;
-    var upTo = sections.slice(0, i).concat([{ name: sections[i].name, body: nl < 0 ? v : v.slice(0, nl) }]);
-    return RaimSong.serialize(RaimSong.expand(upTo));
+    var v = ta ? ta.value : sections[i].body, nl = ta ? v.indexOf('\n', ta.selectionStart) : -1;
+    var head = nl < 0 ? v : v.slice(0, nl), tail = nl < 0 ? '' : v.slice(nl + 1);
+    var all = RaimSong.expand(sections);
+    var before = all.slice(0, i).concat([{ name: sections[i].name, body: head }]);
+    var after = (tail.trim() ? [{ name: null, body: tail }] : []).concat(all.slice(i + 1));
+    return { before: RaimSong.serialize(before), after: RaimSong.serialize(after) };
   }
 
-  function runAi() {
+  function runAi(again) {
     if (aiBusy) return;
-    if (!sections.length) { toast('Füge zuerst einen Abschnitt hinzu, z. B. Intro oder Hook.'); return; }
     var key = Store.apiKey();
     if (!key) {
       toast('Trag zuerst deinen API-Schlüssel in den Einstellungen ein.');
@@ -701,17 +742,30 @@
     }
     ensureConsent().then(function (ok) {
       if (!ok) return;
-      var p = current, text = textBeforeInsertPoint();
-      var lines = RaimSong.lines(text);
-      var lastLineWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
-      var rhymeWord = $('aiRhymeEnd').checked && lastLineWords ? lastLineWords[lastLineWords.length - 1] : '';
-      var hints = [];
-      if (rhymeWord && engine.ready('de')) {
-        // the project's saved words go first when they rhyme
-        var found = searchRhymes(rhymeWord, 15).results.map(function (h) { return h.word; });
-        hints = p.rhymes.saved.filter(function (w) { return found.indexOf(w) >= 0; }).concat(found);
-        hints = hints.filter(function (w, i) { return hints.indexOf(w) === i; }).slice(0, 15);
+      var p = current, req = again && aiReq ? aiReq : null;
+      if (!req) {
+        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), lang: p.lang, apiKey: key };
+        if (req.kind === 'continue') {
+          var around = songAroundCaret(), lines = RaimSong.lines(around.before);
+          var lastWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
+          req.before = around.before;
+          req.after = around.after;
+          req.rhymeWord = $('aiRhymeEnd').checked && lastWords ? lastWords[lastWords.length - 1] : '';
+          req.rhymeHints = [];
+          if (req.rhymeWord && engine.ready('de')) {
+            // the project's saved words go first when they rhyme
+            var found = searchRhymes(req.rhymeWord, 15).results.map(function (h) { return h.word; });
+            var hints = p.rhymes.saved.filter(function (w) { return found.indexOf(w) >= 0; }).concat(found);
+            req.rhymeHints = hints.filter(function (w, i) { return hints.indexOf(w) === i; }).slice(0, 15);
+          }
+        } else {
+          req.before = RaimSong.serialize(RaimSong.expand(sections));
+        }
+        req.at = sections.length ? activeIndex() : -1;
       }
+      req.apiKey = key;
+      aiReq = req;
+      closeAiSetup();
 
       aiBusy = true;
       $('aiGo').disabled = true;
@@ -720,15 +774,17 @@
       var box = $('aiLines');
       box.textContent = '';
       box.classList.add('is-loading');
-      box.append(el('p', '', 'Claude schreibt …'));
+      box.append(el('p', '', req.kind === 'continue' ? 'Claude schreibt weiter …' : 'Claude schreibt ' + (req.kind === 'Hook' ? 'eine Hook' : req.kind === 'Part' ? 'einen Part' : req.kind === 'Bridge' ? 'eine Bridge' : 'ein ' + req.kind) + ' …'));
       setAiButtons(false);
+      $('aiAccept').lastChild.textContent = req.kind === 'continue' ? 'Übernehmen' : 'Als ' + req.kind + ' einfügen';
 
-      RaimAI.suggest({ apiKey: key, text: text, lineCount: aiLineCount, rhymeWord: rhymeWord, rhymeHints: hints, lang: p.lang })
+      RaimAI.suggest(req)
         .then(function (out) {
           if (current !== p) return;
           aiProposal = out;
           box.classList.remove('is-loading');
           box.textContent = '';
+          if (req.kind !== 'continue') box.append(el('h4', 'ai-kind', req.kind));
           out.forEach(function (l) { var para = el('p'); para.append(el('span', '', l)); box.append(para); });
           setAiButtons(true);
         }, function (err) {
@@ -745,16 +801,31 @@
     $('aiRetry').disabled = !on;
   }
 
-  $('aiGo').addEventListener('click', runAi);
-  $('aiRetry').addEventListener('click', runAi);
+  $('aiGo').addEventListener('click', openAiSetup);
+  $('aiStart').addEventListener('click', function () { runAi(false); });
+  $('aiRetry').addEventListener('click', function () { runAi(true); });
   $('aiDiscard').addEventListener('click', hideAi);
   $('aiAccept').addEventListener('click', function () {
-    if (!aiProposal || !activeTA) return;
-    var ta = activeTA, v = ta.value, nl = v.indexOf('\n', ta.selectionStart);
-    var at = nl < 0 ? v.length : nl;
-    var ins = (v.slice(0, at).trim() ? '\n' : '') + aiProposal.join('\n');
+    if (!aiProposal || !aiReq) return;
+    var lines = aiProposal, req = aiReq;
     hideAi();
-    setActiveValue(v.slice(0, at) + ins + v.slice(at), at + ins.length);
+    if (req.kind !== 'continue') {
+      // a new section after the one that was active when asking
+      var name = req.kind;
+      if (name === 'Part') name = 'Part ' + (sections.filter(function (s) { return /^part\b/i.test(s.name || ''); }).length + 1);
+      var at = Math.min(req.at + 1, sections.length);
+      sections.splice(at, 0, { name: name, body: lines.join('\n') });
+      activeIdx = at;
+      collapsed = new Set();
+      syncText();
+      renderSections(at);
+      return;
+    }
+    if (!activeTA) return;
+    var ta = activeTA, v = ta.value, nl = v.indexOf('\n', ta.selectionStart);
+    var pos = nl < 0 ? v.length : nl;
+    var ins = (v.slice(0, pos).trim() ? '\n' : '') + lines.join('\n');
+    setActiveValue(v.slice(0, pos) + ins + v.slice(pos), pos + ins.length);
   });
 
   // ---------- license ----------

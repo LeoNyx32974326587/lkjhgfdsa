@@ -99,15 +99,33 @@
 
 
         <div class="ai-bar">
-          <div class="seg" role="group" aria-label="Anzahl Zeilen">
-            <button type="button" class="seg-btn is-on" data-lines="2">2 Zeilen</button>
-            <button type="button" class="seg-btn" data-lines="4">4 Zeilen</button>
-          </div>
-          <label class="check"><input type="checkbox" id="aiRhymeEnd" checked> auf mein Reimende</label>
           <button class="btn btn--ai" id="aiGo" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6Z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8Z"/></svg>
             KI-Idee
           </button>
+        </div>
+
+        <div class="ai-setup" id="aiSetup" hidden>
+          <strong>Wofür soll die KI-Idee sein?</strong>
+          <div class="chips chips--wrap" id="aiKind">
+            <button type="button" class="chip chip--pick" data-kind="continue">Weiterschreiben</button>
+            <button type="button" class="chip chip--pick" data-kind="Intro">Intro</button>
+            <button type="button" class="chip chip--pick" data-kind="Hook">Hook</button>
+            <button type="button" class="chip chip--pick" data-kind="Part">Part</button>
+            <button type="button" class="chip chip--pick" data-kind="Bridge">Bridge</button>
+            <button type="button" class="chip chip--pick" data-kind="Outro">Outro</button>
+          </div>
+          <p class="ai-kind-hint" id="aiKindHint"></p>
+          <div class="ai-setup-row">
+            <label class="mini-field">Länge
+              <select id="aiLen"><option value="2">2 Zeilen</option><option value="4">4 Zeilen</option><option value="8">8 Zeilen</option><option value="12">12 Zeilen</option><option value="16">16 Zeilen</option></select>
+            </label>
+            <label class="check" id="aiRhymeLabel"><input type="checkbox" id="aiRhymeEnd" checked> auf mein Reimende</label>
+          </div>
+          <div class="row">
+            <button class="btn btn--ai" id="aiStart" type="button">Ideen erzeugen</button>
+            <button class="btn" id="aiSetupCancel" type="button">Abbrechen</button>
+          </div>
         </div>
 
         <div class="ai-result" id="aiResult" hidden>
@@ -398,7 +416,7 @@
   <dialog id="consentDlg">
     <form method="dialog">
       <h2>KI-Ideen aktivieren?</h2>
-      <p>Für eine KI-Idee werden bis zu 24 Zeilen deines Songs an Claude von Anthropic geschickt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von RAIM gespeichert.</p>
+      <p>Für eine KI-Idee wird dein Songtext (bis zu 80 Zeilen) an Claude von Anthropic geschickt, damit die Idee zum ganzen Song passt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von RAIM gespeichert.</p>
       <label class="check"><input type="checkbox" id="ageOk"> Ich bin mindestens 18 Jahre alt.</label>
       <div class="row">
         <button class="btn" value="no">Abbrechen</button>

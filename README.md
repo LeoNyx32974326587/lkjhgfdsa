@@ -20,7 +20,7 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat d
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
   - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
   - Sprache des Songs: **Deutsch** oder **English**.
-  - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).
+  - **KI-Ideen** (Claude von Anthropic, eigener API-Schlüssel): erst „Wofür?“ wählen – **Weiterschreiben** (Claude liest den ganzen Song und schreibt an der Cursorstelle weiter, auf Wunsch auf dein Reimende) oder ein neues **Intro, Hook, Part, Bridge oder Outro**, das zum ganzen Song passt und als eigener Abschnitt eingefügt wird. Länge 2–16 Zeilen; es werden bis zu 80 Zeilen des Songs gesendet.
   - **PDF**: Songtext mit BPM und Tonart als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.

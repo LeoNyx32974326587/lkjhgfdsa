@@ -575,3 +575,16 @@ body.prompter-open { overflow: hidden; }
 .license-read.is-ok { color: #8ff0c0 !important; }
 .license-read.is-warn { color: #ffd27a !important; }
 .field .is-filled, .field input.is-filled, .field select.is-filled, .field textarea.is-filled { border-color: #8ff0c0; box-shadow: 0 0 0 3px rgba(143, 240, 192, .18); transition: box-shadow .3s; }
+
+/* KI-Idee: what for */
+.ai-setup {
+  margin: 14px 0; padding: 16px 18px; border-radius: 22px;
+  border: 1px solid rgba(94, 231, 255, .35); background: rgba(40, 26, 120, .55);
+  display: grid; gap: 12px;
+}
+.ai-setup > strong { font-size: 16px; }
+.ai-setup .chip--pick:disabled { opacity: .35; cursor: default; }
+.ai-kind-hint { margin: 0; font-size: 14px; color: var(--muted); }
+.ai-setup-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: #e0d8ff; }
+.ai-setup .row { margin-top: 0; }
+.ai-lines .ai-kind { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--cyan); }

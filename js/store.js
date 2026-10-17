@@ -18,7 +18,8 @@
     clearLegacySongs: function () { try { localStorage.removeItem('raim.songs'); localStorage.removeItem('raim.blocked'); } catch (e) { /* ignore */ } },
     apiKey: function () { return read('raim.apiKey', ''); },
     saveApiKey: function (k) { return write('raim.apiKey', k); },
-    consent: function () { return read('raim.aiConsent', false); },
-    saveConsent: function (v) { return write('raim.aiConsent', v); }
+    // v2: the AI now gets the whole song (up to 80 lines), so it asks again
+    consent: function () { return read('raim.aiConsent2', false); },
+    saveConsent: function (v) { return write('raim.aiConsent2', v); }
   };
 })(this);
