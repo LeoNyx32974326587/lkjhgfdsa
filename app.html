@@ -32,6 +32,26 @@
         <p>Ein Projekt pro Song: Text, Beat mit Lizenz und deine Reime an einem Ort.</p>
         <button class="btn btn--primary" type="button" data-new-project>Erstes Projekt anlegen</button>
       </div>
+      <button type="button" class="trash-link" id="openTrash" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
+        Papierkorb <span id="trashCount"></span>
+      </button>
+    </main>
+  </div>
+
+  <!-- ================= Papierkorb ================= -->
+  <div id="trash" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="closeTrash" type="button" aria-label="Zurück zu den Projekten">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="topbar-title">Papierkorb</span>
+    </header>
+    <main>
+      <p class="hint">Gelöschte Projekte bleiben 28 Tage hier und werden danach automatisch endgültig gelöscht.</p>
+      <ul class="trash-list" id="trashList"></ul>
+      <p class="empty" id="trashEmpty" hidden>Der Papierkorb ist leer.</p>
+      <button type="button" class="btn btn--danger" id="emptyTrash" hidden>Papierkorb leeren</button>
     </main>
   </div>
 
@@ -117,17 +137,6 @@
             <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen, am besten mit Kabel.</p>
           </div>
         </div>
-
-        <details class="lyrics" id="lyricsBox">
-          <summary>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
-            Songtext
-            <span class="lyrics-meta" id="lyricsMeta"></span>
-            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </summary>
-          <div class="lyrics-body" id="lyricsBody"></div>
-          <button type="button" class="link-btn" id="editLyrics">Im Bereich „Text“ bearbeiten</button>
-        </details>
 
         <div id="beatYt" hidden>
           <form class="search" id="ytForm" autocomplete="off">
@@ -290,9 +299,10 @@
       </label>
       <div class="row">
         <button class="btn btn--primary" id="saveKey" type="button">Speichern</button>
+        <button class="btn" id="testKey" type="button">Schlüssel testen</button>
         <button class="btn" id="revokeConsent" type="button">Zustimmung widerrufen</button>
       </div>
-      <p class="ok" id="keySaved" hidden>Gespeichert.</p>
+      <p class="key-result" id="keyResult" role="status" hidden></p>
     </div>
     <div class="card">
       <h2>Sicherung</h2>
@@ -303,6 +313,17 @@
       </div>
       <p class="hint" id="storageInfo"></p>
     </div>
+  </dialog>
+
+  <dialog id="confirmDlg">
+    <form method="dialog">
+      <h2 id="confirmTitle"></h2>
+      <p id="confirmText"></p>
+      <div class="row">
+        <button class="btn" value="no">Abbrechen</button>
+        <button class="btn btn--danger" value="yes" id="confirmYes"></button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="consentDlg">

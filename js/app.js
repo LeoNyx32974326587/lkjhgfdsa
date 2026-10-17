@@ -59,10 +59,12 @@
 
   function blockedSet() { return new Set(current ? current.rhymes.blocked : []); }
 
+  function activeProjects() { return projects.filter(function (p) { return !p.deletedAt; }); }
+
   function renderProjects() {
-    var ul = $('projects');
+    var ul = $('projects'), active = activeProjects(), trashed = projects.length - active.length;
     ul.textContent = '';
-    projects.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
+    active.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
       var li = el('li'), b = el('button', 'project-card');
       b.type = 'button';
       var top = el('div', 'project-top');
@@ -84,8 +86,10 @@
       li.append(b);
       ul.append(li);
     });
-    $('projectsEmpty').hidden = projects.length > 0;
-    $('newProject').hidden = projects.length === 0;
+    $('projectsEmpty').hidden = active.length > 0;
+    $('newProject').hidden = active.length === 0;
+    $('openTrash').hidden = !trashed;
+    $('trashCount').textContent = '(' + trashed + ')';
   }
 
   function createProject() {
@@ -134,17 +138,100 @@
   }
   $('backHome').addEventListener('click', closeProject);
 
+  // ---------- confirm dialog ----------
+  function confirmDialog(title, text, yesLabel) {
+    return new Promise(function (resolve) {
+      var dlg = $('confirmDlg');
+      $('confirmTitle').textContent = title;
+      $('confirmText').textContent = text;
+      $('confirmYes').textContent = yesLabel;
+      dlg.returnValue = '';
+      dlg.addEventListener('close', function onClose() {
+        dlg.removeEventListener('close', onClose);
+        resolve(dlg.returnValue === 'yes');
+      });
+      dlg.showModal();
+    });
+  }
+
+  // ---------- trash ----------
+  var TRASH_DAYS = 28, DAY = 86400000;
+
+  function daysLeft(p) { return Math.max(0, Math.ceil((p.deletedAt + TRASH_DAYS * DAY - Date.now()) / DAY)); }
+
   $('deleteProject').addEventListener('click', function () {
-    if (!current || !confirm('Projekt „' + (current.title || 'Ohne Titel') + '“ mit Beat, Lizenz und Aufnahmen löschen?')) return;
     var p = current;
-    clearTimeout(saveTimer);
-    RaimBeats.close();
-    current = null;
-    projects = projects.filter(function (x) { return x !== p; });
-    RaimDB.deleteProject(p.id).then(function () { toast('Projekt gelöscht.'); });
-    $('project').hidden = true;
+    if (!p) return;
+    confirmDialog(
+      'Projekt löschen?',
+      'Bist du sicher, dass du „' + (p.title || 'Ohne Titel') + '“ löschen möchtest? Es wird mit Text, Beat, Lizenz und Aufnahmen in den Papierkorb verschoben und nach ' + TRASH_DAYS + ' Tagen endgültig gelöscht.',
+      'In den Papierkorb'
+    ).then(function (ok) {
+      if (!ok || current !== p) return;
+      p.deletedAt = Date.now();
+      closeProject();
+      toast('In den Papierkorb verschoben.');
+    });
+  });
+
+  function renderTrash() {
+    var ul = $('trashList'), list = projects.filter(function (p) { return p.deletedAt; });
+    ul.textContent = '';
+    list.sort(function (a, b) { return b.deletedAt - a.deletedAt; }).forEach(function (p) {
+      var li = el('li', 'trash-item');
+      var info = el('div', 'trash-info');
+      info.append(el('strong', '', p.title || 'Ohne Titel'));
+      var left = daysLeft(p);
+      info.append(el('span', '', 'Gelöscht am ' + new Date(p.deletedAt).toLocaleDateString('de-DE') + ' · ' +
+        (left <= 1 ? 'wird morgen endgültig gelöscht' : 'noch ' + left + ' Tage')));
+      var restore = el('button', 'btn', 'Wiederherstellen');
+      restore.type = 'button';
+      restore.addEventListener('click', function () {
+        delete p.deletedAt;
+        saveNow(p);
+        renderTrash();
+        toast('„' + (p.title || 'Ohne Titel') + '“ wiederhergestellt.');
+      });
+      var purge = el('button', 'link-btn link-btn--danger', 'Endgültig löschen');
+      purge.type = 'button';
+      purge.addEventListener('click', function () {
+        confirmDialog('Endgültig löschen?', '„' + (p.title || 'Ohne Titel') + '“ wird mit Beat, Lizenz und Aufnahmen unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.', 'Endgültig löschen')
+          .then(function (ok) { if (ok) purgeProjects([p]).then(renderTrash); });
+      });
+      var actions = el('div', 'trash-actions');
+      actions.append(restore, purge);
+      li.append(info, actions);
+      ul.append(li);
+    });
+    $('trashEmpty').hidden = list.length > 0;
+    $('emptyTrash').hidden = !list.length;
+  }
+
+  function purgeProjects(list) {
+    var ids = list.map(function (p) { return p.id; });
+    projects = projects.filter(function (p) { return ids.indexOf(p.id) < 0; });
+    return Promise.all(ids.map(function (id) { return RaimDB.deleteProject(id); }))
+      .catch(function () { toast('Löschen fehlgeschlagen.'); });
+  }
+
+  $('openTrash').addEventListener('click', function () {
+    $('home').hidden = true;
+    $('trash').hidden = false;
+    renderTrash();
+    window.scrollTo(0, 0);
+  });
+  $('closeTrash').addEventListener('click', function () {
+    $('trash').hidden = true;
     $('home').hidden = false;
     renderProjects();
+  });
+  $('emptyTrash').addEventListener('click', function () {
+    var list = projects.filter(function (p) { return p.deletedAt; });
+    confirmDialog('Papierkorb leeren?', list.length + (list.length === 1 ? ' Projekt wird' : ' Projekte werden') + ' unwiderruflich gelöscht. Das kann nicht rückgängig gemacht werden.', 'Endgültig löschen')
+      .then(function (ok) {
+        if (!ok) return;
+        purgeProjects(list).then(function () { renderTrash(); toast('Papierkorb geleert.'); });
+      });
   });
 
   $('projectTitle').addEventListener('input', function (e) { current.title = e.target.value; scheduleSave(); });
@@ -155,30 +242,12 @@
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
-    if (name === 'beat') { RaimBeats.redraw(); renderLyrics(); }
+    if (name === 'beat') RaimBeats.redraw();
     if (name === 'rhymes') renderRhymeBlocks();
     if (name === 'text') { renderSavedChips(); chipsFor = null; updateChips(); }
   }
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () { showTab(t.dataset.tab); window.scrollTo(0, 0); });
-  });
-
-  // ---------- read-only lyrics in the beat tab ----------
-  function renderLyrics() {
-    var body = $('lyricsBody'), text = current.text.replace(/\s+$/, '');
-    body.textContent = text || 'Noch kein Text. Schreib ihn im Bereich „Text“.';
-    body.classList.toggle('is-empty', !text);
-    var lines = text ? text.split('\n').filter(function (l) { return l.trim(); }).length : 0;
-    $('lyricsMeta').textContent = lines ? lines + (lines === 1 ? ' Zeile' : ' Zeilen') : '';
-  }
-  try { $('lyricsBox').open = localStorage.getItem('raim.lyricsOpen') !== '0'; } catch (e) { $('lyricsBox').open = true; }
-  $('lyricsBox').addEventListener('toggle', function () {
-    try { localStorage.setItem('raim.lyricsOpen', $('lyricsBox').open ? '1' : '0'); } catch (e) { /* private mode */ }
-  });
-  $('editLyrics').addEventListener('click', function () {
-    showTab('text');
-    window.scrollTo(0, 0);
-    $('songText').focus();
   });
 
   // ---------- text ----------
@@ -734,6 +803,7 @@
   // ---------- settings ----------
   function openSettings() {
     $('apiKey').value = Store.apiKey();
+    keyResult('');
     $('storageInfo').textContent = '';
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then(function (e) {
@@ -744,10 +814,26 @@
   }
   $('openSettings').addEventListener('click', openSettings);
   $('closeSettings').addEventListener('click', function () { $('settingsDlg').close(); });
+  function keyResult(text, ok) {
+    var r = $('keyResult');
+    r.textContent = text;
+    r.className = 'key-result' + (ok === true ? ' is-ok' : ok === false ? ' is-error' : '');
+    r.hidden = !text;
+  }
   $('saveKey').addEventListener('click', function () {
     Store.saveApiKey($('apiKey').value.trim());
-    $('keySaved').hidden = false;
-    setTimeout(function () { $('keySaved').hidden = true; }, 2000);
+    keyResult('Gespeichert.', true);
+  });
+  $('testKey').addEventListener('click', function () {
+    var key = $('apiKey').value.trim(), btn = $('testKey');
+    btn.disabled = true;
+    keyResult('Teste Schlüssel …');
+    RaimAI.testKey(key).then(function (msg) {
+      Store.saveApiKey(key);
+      keyResult(msg + ' (gespeichert)', true);
+    }, function (err) {
+      keyResult(err.message, false);
+    }).then(function () { btn.disabled = false; });
   });
   $('revokeConsent').addEventListener('click', function () {
     Store.saveConsent(false);
@@ -845,12 +931,13 @@
 
   RaimDB.projects().then(function (list) {
     projects = list.map(normalize);
-    return migrate();
+    var expired = projects.filter(function (p) { return p.deletedAt && Date.now() - p.deletedAt > TRASH_DAYS * DAY; });
+    return Promise.all([migrate(), expired.length ? purgeProjects(expired) : null]);
   }).then(function () {
     renderProjects();
     var openId = null;
     try { openId = sessionStorage.getItem('raim.project'); } catch (e) { /* private mode */ }
-    var p = projects.find(function (x) { return x.id === openId; });
+    var p = projects.find(function (x) { return x.id === openId && !x.deletedAt; });
     if (p) openProject(p);
   }).catch(function () {
     toast('Speicher nicht verfügbar – ist der private Modus aktiv?');

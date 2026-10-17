@@ -10,8 +10,12 @@
   var sdkPromise = null;
   function loadSdk() {
     if (!sdkPromise) {
-      sdkPromise = import(SDK_URL).then(function (m) { return m.default; });
-      sdkPromise.catch(function () { sdkPromise = null; });
+      sdkPromise = import(SDK_URL).then(function (m) { return m.default; }, function () {
+        sdkPromise = null;
+        var e = new Error('Die Claude-Verbindung konnte nicht geladen werden. Bist du online? Blockiert ein Werbeblocker esm.sh?');
+        e.sdkLoad = true;
+        throw e;
+      });
     }
     return sdkPromise;
   }
@@ -71,15 +75,38 @@
   }
 
   function describe(err) {
-    var status = err && err.status;
-    if (status === 401) return 'Der API-Schlüssel ist ungültig. Prüf ihn unter „Mehr“.';
+    var status = err && err.status, msg = (err && err.message) || '';
+    if (err && err.sdkLoad) return err.message;
+    if (status === 401) return 'Der API-Schlüssel wird nicht akzeptiert. Prüf ihn in den Einstellungen (Zahnrad).';
     if (status === 403) return 'Dein API-Schlüssel hat keinen Zugriff auf dieses Modell.';
-    if (status === 429) return 'Zu viele Anfragen gerade. Warte kurz und versuch es nochmal.';
+    if (status === 400 && /credit balance/i.test(msg)) return 'Dein Anthropic-Konto hat kein Guthaben. Lade unter console.anthropic.com → Billing Guthaben auf.';
+    if (status === 404) return 'Das Modell ist für deinen Schlüssel nicht verfügbar.';
+    if (status === 429) return 'Zu viele Anfragen oder Limit erreicht. Warte kurz und versuch es nochmal.';
     if (status === 529 || status >= 500) return 'Claude ist gerade überlastet. Bitte gleich nochmal versuchen.';
-    if (status === 400) return 'Anfrage abgelehnt: ' + (err.message || 'ungültige Anfrage');
+    if (status === 400) return 'Anfrage abgelehnt: ' + (msg || 'ungültige Anfrage');
     if (!status) return 'Keine Verbindung zu Claude. Bist du online?';
-    return err.message || 'Unbekannter Fehler.';
+    return msg || 'Unbekannter Fehler.';
   }
 
-  root.RaimAI = { suggest: suggest };
+  // checks the key's format, then makes one tiny real request (costs a fraction of a cent)
+  function testKey(key) {
+    if (!key) return Promise.reject(new Error('Bitte zuerst einen Schlüssel einfügen.'));
+    if (/\s|["'„“]/.test(key)) return Promise.reject(new Error('Der Schlüssel enthält Leerzeichen oder Anführungszeichen. Kopier ihn nochmal ohne diese.'));
+    if (!/^sk-ant-/.test(key)) return Promise.reject(new Error('Ein Anthropic-API-Schlüssel beginnt mit „sk-ant-“. Ist das der richtige Schlüssel?'));
+    return loadSdk().then(function (Anthropic) {
+      var client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 0 });
+      return client.messages.create({
+        model: MODEL,
+        max_tokens: 256,
+        output_config: { effort: 'low' },
+        messages: [{ role: 'user', content: 'Antworte nur mit: OK' }]
+      });
+    }).then(function () {
+      return 'Der Schlüssel funktioniert. KI-Ideen sind bereit.';
+    }, function (err) {
+      throw new Error(describe(err));
+    });
+  }
+
+  root.RaimAI = { suggest: suggest, testKey: testKey };
 })(this);
