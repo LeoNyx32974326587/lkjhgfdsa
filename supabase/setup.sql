@@ -97,6 +97,15 @@ create table if not exists public.project_versions (
 );
 create index if not exists project_versions_project on public.project_versions (owner, project_id, created desc);
 
+-- Bars: lines and ideas that do not belong to a song yet, private to their author
+create table if not exists public.bars (
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  id text not null,
+  data jsonb not null,
+  updated bigint not null,
+  primary key (user_id, id)
+);
+
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
 create or replace function public.are_friends(a uuid, b uuid) returns boolean
@@ -224,6 +233,7 @@ alter table public.friendships enable row level security;
 alter table public.project_members enable row level security;
 alter table public.project_comments enable row level security;
 alter table public.project_versions enable row level security;
+alter table public.bars enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;
@@ -311,6 +321,10 @@ create policy "versions write" on public.project_versions for insert to authenti
   with check (author = auth.uid() and (auth.uid() = owner or public.member_can(owner, project_id, 'text')));
 create policy "versions delete" on public.project_versions for delete to authenticated
   using (auth.uid() = owner);
+
+drop policy if exists "own bars" on public.bars;
+create policy "own bars" on public.bars for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ---------- file storage: private bucket, a folder per user ----------
 

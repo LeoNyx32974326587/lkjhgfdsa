@@ -49,7 +49,11 @@
         <h1>Projekte</h1>
         <button class="btn btn--primary" id="newProject" type="button">+ Neues Projekt</button>
       </div>
-      <div class="home-links" id="homeLinks" hidden>
+      <div class="home-links" id="homeLinks">
+        <button type="button" class="home-link" id="openBars">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h4v4c0 3-1.5 5-4 6M14 7h4v4c0 3-1.5 5-4 6"/></svg>
+          Bars <span class="home-count" id="barsCount"></span>
+        </button>
         <button type="button" class="home-link" id="openLibrary">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           Beats &amp; Lizenzen <span id="libraryWarn" class="warn-dot" hidden>!</span>
@@ -127,6 +131,27 @@
     </main>
   </div>
 
+  <!-- ================= Bars ================= -->
+  <div id="barsPage" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="closeBars" type="button" aria-label="Zurück zu den Projekten">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="topbar-title">Bars</span>
+    </header>
+    <main>
+      <form class="bar-new" id="barNew" autocomplete="off">
+        <textarea id="barNewText" rows="3" placeholder="Neue Bar, Punchline oder Idee … mit #hook #liebe als Schlagworte"></textarea>
+        <button class="btn btn--primary" type="submit">Speichern</button>
+      </form>
+      <div class="bar-tools">
+        <input type="search" id="barSearch" placeholder="Bars durchsuchen" enterkeyhint="search">
+        <div class="chips chips--wrap bar-tags" id="barTags"></div>
+      </div>
+      <ul class="bar-list" id="barList"></ul>
+    </main>
+  </div>
+
   <!-- ================= Beats & Lizenzen ================= -->
   <div id="library" hidden>
     <header class="topbar topbar--project">
@@ -189,6 +214,10 @@
             <button type="button" class="seg-btn" data-textmode="read">Lesen <span class="comment-count" id="commentCount" hidden></span></button>
           </div>
           <span class="text-tools-right">
+            <button type="button" class="tool-btn" id="barsBtn" title="Bars aus deiner Sammlung einfügen">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h4v4c0 3-1.5 5-4 6M14 7h4v4c0 3-1.5 5-4 6"/></svg>
+              Bars
+            </button>
             <button type="button" class="tool-btn" id="historyBtn" title="Frühere Fassungen des Textes">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
               Verlauf
@@ -526,6 +555,24 @@
       </div>
       <p class="hint" id="storageInfo"></p>
     </div>
+  </dialog>
+
+  <dialog id="barsDlg" class="sheet">
+    <div class="sheet-head">
+      <h2>Bars einfügen</h2>
+      <button class="icon-btn" type="button" id="closeBarsDlg" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <form class="bar-quick" id="barQuick" autocomplete="off">
+      <input id="barQuickText" placeholder="Idee schnell festhalten … #hook" maxlength="400">
+      <button class="btn btn--small" type="submit">Merken</button>
+    </form>
+    <div class="bar-tools">
+      <input type="search" id="barPickSearch" placeholder="Suchen" enterkeyhint="search">
+      <div class="chips chips--wrap bar-tags" id="barPickTags"></div>
+    </div>
+    <ul class="bar-list bar-list--pick" id="barPickList"></ul>
   </dialog>
 
   <dialog id="exportDlg" class="sheet">

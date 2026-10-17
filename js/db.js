@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  var DB_NAME = 'raim', VERSION = 2;   // 'raim': projects from before accounts; 2: text versions
+  var DB_NAME = 'raim', VERSION = 3;   // 'raim': projects from before accounts; 2: text versions; 3: bars
   var dbPromise = null, cloud = null, user = null;
 
   function openNamed(name) {
@@ -16,6 +16,7 @@
         if (!db.objectStoreNames.contains('files')) {
           db.createObjectStore('files', { keyPath: 'id' }).createIndex('project', 'project');
         }
+        if (!db.objectStoreNames.contains('bars')) db.createObjectStore('bars', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('versions')) {
           db.createObjectStore('versions', { keyPath: 'id' }).createIndex('project', 'project');
         }
@@ -53,6 +54,8 @@
     try { x = JSON.parse(localStorage.getItem(pendingKey()) || 'null'); } catch (e) { /* private mode */ }
     x = x || { projects: [], files: [], delProjects: [], delFiles: [] };
     x.versions = x.versions || [];
+    x.bars = x.bars || [];
+    x.delBars = x.delBars || [];
     return x;
   }
   function setPending(fn) {
@@ -156,7 +159,40 @@
           stats.up++;
         }
       });
-      return Promise.all(jobs).then(function () { return stats; });
+      return Promise.all(jobs).then(function () { return syncBars().catch(function () {}); }).then(function () { return stats; });
+    });
+  }
+
+  // ---------- bars: lines and ideas without a song ----------
+  function pushBar(b) {
+    push('bars', b.id, function () {
+      return cloud.saveBar(b).then(function () {
+        if (!b._cloud) { b._cloud = true; return putLocal('bars', b); }
+      });
+    });
+  }
+  // same rules as projects: newer wins, gone in the cloud after being there = deleted elsewhere
+  function syncBars() {
+    var x = pending();
+    return Promise.all(x.delBars.map(function (id) {
+      return cloud.deleteBar(id).then(function () { setPending(function (y) { drop(y.delBars, id); }); }, function () {});
+    })).then(function () {
+      return Promise.all([cloud.listBars(), run('bars', 'readonly', function (s) { return s.getAll(); })]);
+    }).then(function (both) {
+      var remote = {}, jobs = [];
+      both[0].forEach(function (r) { remote[r.id] = r; });
+      var local = {};
+      both[1].forEach(function (b) { local[b.id] = b; });
+      Object.keys(remote).forEach(function (id) {
+        var r = remote[id], l = local[id];
+        if (!l || r.updated > (l.updated || 0)) { r.data._cloud = true; jobs.push(putLocal('bars', r.data)); }
+      });
+      Object.keys(local).forEach(function (id) {
+        var l = local[id], r = remote[id];
+        if (!r && l._cloud) jobs.push(run('bars', 'readwrite', function (s) { return s.delete(id); }));
+        else if (!r || (l.updated || 0) > r.updated) pushBar(l);
+      });
+      return Promise.all(jobs);
     });
   }
 
@@ -227,6 +263,14 @@
     },
     sync: sync,
     legacy: legacy,
+    bars: function () { return run('bars', 'readonly', function (s) { return s.getAll(); }); },
+    saveBar: function (b) { return putLocal('bars', b).then(function () { pushBar(b); }); },
+    deleteBar: function (id) {
+      return run('bars', 'readwrite', function (s) { return s.delete(id); }).then(function () {
+        setPending(function (x) { drop(x.bars, id); });
+        push('delBars', id, function () { return cloud.deleteBar(id); });
+      });
+    },
     // a saved state of the song text: { id, project, owner, title, text, author_name, created }
     addVersion: function (p, authorName) {
       var v = { id: uid(), project: p.id, owner: p._owner || user || '', title: p.title || '', text: p.text || '',

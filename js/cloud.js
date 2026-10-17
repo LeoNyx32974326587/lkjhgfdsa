@@ -181,6 +181,17 @@
       return sb.from('project_members').delete().eq('owner', owner).eq('project_id', projectId).eq('member', uid).then(ok);
     },
 
+    // ---------- bars (ideas without a song), only the user's own ----------
+    listBars: function () {
+      return sb.from('bars').select('id,data,updated').then(ok);
+    },
+    saveBar: function (b) {
+      return sb.from('bars').upsert({ user_id: uid, id: b.id, data: b, updated: b.updated }, { onConflict: 'user_id,id' }).then(ok);
+    },
+    deleteBar: function (id) {
+      return sb.from('bars').delete().eq('user_id', uid).eq('id', id).then(ok);
+    },
+
     // ---------- saved states of the song text ----------
     versions: function (owner, projectId) {
       return sb.from('project_versions').select('id,author_name,title,text,created').eq('owner', owner).eq('project_id', projectId).then(ok)

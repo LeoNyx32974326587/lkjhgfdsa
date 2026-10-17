@@ -60,6 +60,8 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 **Release-Checkliste:** Steht ein Song auf „Fertig“, erscheint oben im Projekt die Karte „Release“: Aufgenommen, Gemischt, Gemastert, Cover fertig, Lizenz geklärt, Beim Distributor hochgeladen – dazu das Veröffentlichungsdatum. Der Stand steht auch auf der Projektkarte („Release am 1.12.2026 · 3/6“). Ist bei der Lizenz noch etwas offen, weist die Checkliste darauf hin.
 
+**Bars:** Über den Knopf „Bars“ unter „Projekte“ sammelst du Zeilen, Punchlines und Ideen, die noch zu keinem Song gehören. Wörter mit # (z. B. #hook, #liebe) werden zu Schlagworten zum Filtern; dazu eine Suche. Im Song öffnet „Bars“ im Text-Bereich die Sammlung: „Einfügen“ setzt die Bar an der Cursor-Stelle bzw. ans Ende des offenen Abschnitts (ohne die #Schlagworte), und oben lässt sich schnell eine neue Idee festhalten. Jede Bar zeigt, in welchen Songs sie schon steckt. Mit Account sind die Bars auf allen Geräten (nur für dich sichtbar).
+
 **Beats & Lizenzen:** Über den Knopf unter „Projekte“ siehst du alle Beats und Lizenzen aus allen Projekten auf einer Seite – Lizenzart, Produzent, Kaufdatum, ob die Lizenzdatei da ist, und alle Warnungen. Filter: „Lizenz prüfen“, „Ohne Lizenz“, „Lease / Free“.
 
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.

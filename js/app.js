@@ -237,7 +237,7 @@
     });
     $('projectsEmpty').hidden = active.length > 0;
     $('newProject').hidden = active.length === 0;
-    $('homeLinks').hidden = active.length === 0;
+    $('openLibrary').hidden = active.length === 0;
     $('libraryWarn').hidden = !libEntries().some(function (e) { return e.warn; });
     $('openTrash').hidden = !trashed;
     $('trashCount').textContent = '(' + trashed + ')';
@@ -2926,6 +2926,176 @@
     });
   }
 
+  // ---------- bars: lines and ideas without a song ----------
+  // #words in a bar are its tags; inserted into a song the bar goes in without them
+  var bars = [], barFilter = { page: { q: '', tag: '' }, pick: { q: '', tag: '' } };
+  var TAG = /#[\p{L}\d_]+/gu;
+  function barTags(text) { return (text.match(TAG) || []).map(function (t) { return t.slice(1).toLowerCase(); }); }
+  function barText(text) { return text.replace(TAG, '').replace(/[ \t]+$/gm, '').replace(/^[ \t]+/gm, '').trim(); }
+  function loadBars() {
+    return RaimDB.bars().then(function (list) {
+      bars = list.sort(function (a, b) { return b.updated - a.updated; });
+      $('barsCount').textContent = bars.length ? String(bars.length) : '';
+    });
+  }
+  function addBar(text) {
+    var t = text.trim();
+    if (!t) return Promise.resolve();
+    var b = { id: RaimDB.uid(), text: t, tags: barTags(t), created: Date.now(), updated: Date.now(), used: [] };
+    bars.unshift(b);
+    $('barsCount').textContent = String(bars.length);
+    return RaimDB.saveBar(b);
+  }
+  function filteredBars(f) {
+    var q = f.q.trim().toLowerCase();
+    return bars.filter(function (b) {
+      return (!f.tag || b.tags.indexOf(f.tag) >= 0) && (!q || b.text.toLowerCase().indexOf(q) >= 0);
+    });
+  }
+  function renderBarTags(boxId, f, rerender) {
+    var count = {};
+    bars.forEach(function (b) { b.tags.forEach(function (t) { count[t] = (count[t] || 0) + 1; }); });
+    var box = $(boxId), tags = Object.keys(count).sort(function (a, b) { return count[b] - count[a] || a.localeCompare(b); });
+    box.textContent = '';
+    box.hidden = !tags.length;
+    if (f.tag && !count[f.tag]) f.tag = '';
+    tags.forEach(function (t) {
+      var c = el('button', 'chip chip--pick' + (f.tag === t ? ' is-on' : ''), '#' + t + ' ' + count[t]);
+      c.type = 'button';
+      c.addEventListener('click', function () { f.tag = f.tag === t ? '' : t; rerender(); });
+      box.append(c);
+    });
+  }
+  function barCard(b, mode) {
+    var li = el('li', 'bar-card');
+    li.append(el('p', 'bar-text', barText(b.text) || b.text));
+    var meta = el('div', 'bar-meta');
+    b.tags.forEach(function (t) { meta.append(el('span', 'bar-tag', '#' + t)); });
+    var info = whenText(b.updated);
+    if (b.used && b.used.length) info += ' · in ' + b.used.map(function (u) { return '„' + u.title + '“'; }).join(', ');
+    meta.append(el('span', 'bar-info', info));
+    li.append(meta);
+    var acts = el('div', 'bar-actions');
+    function btn(label, cls, fn) {
+      var x = el('button', cls, label);
+      x.type = 'button';
+      x.addEventListener('click', fn);
+      acts.append(x);
+    }
+    if (mode === 'pick') {
+      btn('Einfügen', 'btn btn--primary btn--small', function () { insertBar(b); });
+    } else {
+      btn('Bearbeiten', 'btn btn--small', function () { editBar(li, b); });
+      btn('Kopieren', 'btn btn--small', function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(barText(b.text)) : Promise.reject()).then(function () { toast('Bar kopiert.'); }, function () {});
+      });
+      btn('Löschen', 'link-btn link-btn--danger', function () {
+        confirmDialog('Bar löschen?', '„' + barText(b.text).slice(0, 80) + '“ wird gelöscht.', 'Löschen').then(function (yes) {
+          if (!yes) return;
+          bars = bars.filter(function (x) { return x !== b; });
+          RaimDB.deleteBar(b.id).then(function () { $('barsCount').textContent = bars.length ? String(bars.length) : ''; renderBarsPage(); });
+        });
+      });
+    }
+    li.append(acts);
+    return li;
+  }
+  function editBar(li, b) {
+    li.textContent = '';
+    var ta = el('textarea', 'bar-edit');
+    ta.value = b.text;
+    ta.rows = Math.max(2, b.text.split('\n').length);
+    var acts = el('div', 'bar-actions'), save = el('button', 'btn btn--primary btn--small', 'Speichern'), cancel = el('button', 'btn btn--small', 'Abbrechen');
+    save.type = cancel.type = 'button';
+    save.addEventListener('click', function () {
+      var t = ta.value.trim();
+      if (!t) return;
+      b.text = t;
+      b.tags = barTags(t);
+      b.updated = Date.now();
+      RaimDB.saveBar(b).then(function () { loadBars().then(renderBarsPage); });
+    });
+    cancel.addEventListener('click', renderBarsPage);
+    acts.append(save, cancel);
+    li.append(ta, acts);
+    ta.focus();
+  }
+  function renderBarList(listId, mode) {
+    var f = barFilter[mode], list = $(listId), shown = filteredBars(f);
+    list.textContent = '';
+    shown.forEach(function (b) { list.append(barCard(b, mode)); });
+    if (!shown.length) {
+      list.append(el('li', 'empty', bars.length ? 'Keine Bar passt zur Suche.'
+        : mode === 'pick' ? 'Noch keine Bars – halt oben deine erste Idee fest.' : 'Noch keine Bars. Schreib oben eine Zeile, Punchline oder Idee – mit #hook, #liebe … als Schlagworte.'));
+    }
+  }
+  function renderBarsPage() {
+    renderBarTags('barTags', barFilter.page, renderBarsPage);
+    renderBarList('barList', 'page');
+  }
+  function renderBarPick() {
+    renderBarTags('barPickTags', barFilter.pick, renderBarPick);
+    renderBarList('barPickList', 'pick');
+    if (!sections.length) $('barPickList').prepend(el('li', 'hint', 'Füg im Song zuerst einen Abschnitt hinzu (Intro, Hook, Part …) – dann kannst du Bars einfügen. Ideen festhalten geht schon jetzt.'));
+  }
+
+  $('openBars').addEventListener('click', function () {
+    $('home').hidden = true;
+    $('barsPage').hidden = false;
+    loadBars().then(renderBarsPage);
+    window.scrollTo(0, 0);
+  });
+  $('closeBars').addEventListener('click', function () {
+    $('barsPage').hidden = true;
+    $('home').hidden = false;
+    renderProjects();
+  });
+  $('barNew').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = $('barNewText').value;
+    if (!t.trim()) return;
+    addBar(t).then(function () { $('barNewText').value = ''; renderBarsPage(); toast('Bar gespeichert.'); });
+  });
+  $('barSearch').addEventListener('input', function (e) { barFilter.page.q = e.target.value; renderBarList('barList', 'page'); });
+
+  // inside a song: pick a bar and put it at the cursor (end of the cursor's line) or the open section
+  $('barsBtn').addEventListener('click', function () {
+    if (!may('text')) { toast('Du darfst den Text dieses Songs nicht ändern.'); return; }
+    $('barQuickText').value = '';
+    loadBars().then(function () { renderBarPick(); $('barsDlg').showModal(); });
+  });
+  $('closeBarsDlg').addEventListener('click', function () { $('barsDlg').close(); });
+  $('barPickSearch').addEventListener('input', function (e) { barFilter.pick.q = e.target.value; renderBarList('barPickList', 'pick'); });
+  $('barQuick').addEventListener('submit', function (e) {
+    e.preventDefault();
+    addBar($('barQuickText').value).then(function () { $('barQuickText').value = ''; renderBarPick(); toast('Bar gemerkt.'); });
+  });
+  function insertBar(b) {
+    var text = barText(b.text) || b.text;
+    if (!sections.length) { toast('Füg zuerst einen Abschnitt hinzu (Intro, Hook, Part …).'); return; }
+    $('barsDlg').close();
+    if (textMode === 'read') setTextMode('write');
+    var i = activeIndex(), ta = activeTA;
+    if (ta && document.body.contains(ta) && !collapsed.has(i)) {
+      var v = ta.value, nl = v.indexOf('\n', ta.selectionStart), pos = nl < 0 ? v.length : nl;
+      var ins = (v.slice(0, pos).trim() ? '\n' : '') + text;
+      setActiveValue(v.slice(0, pos) + ins + v.slice(pos), pos + ins.length);
+    } else {
+      var s = sections[i];
+      s.body = s.body.trim() ? s.body.replace(/\s+$/, '') + '\n' + text : text;
+      collapseAll(i);
+      syncText();
+      renderSections(i);
+    }
+    if (!b.used) b.used = [];
+    if (!b.used.some(function (u) { return u.id === current.id; })) {
+      b.used.push({ id: current.id, title: current.title || 'Ohne Titel' });
+      b.updated = Date.now();
+      RaimDB.saveBar(b);
+    }
+    toast('Bar eingefügt' + (sections[i].name ? ' in „' + sections[i].name + '“' : '') + '.');
+  }
+
   // ---------- beats & licenses of all projects ----------
   var libFilter = 'all';
   function libEntries() {
@@ -3016,6 +3186,7 @@
   startAccount().then(takeOverLegacy).then(function () {
     renderAccount();
     loadProfile();
+    loadBars();
     $('openFriends').hidden = !account;
     loadFriends();
     return RaimDB.projects();
