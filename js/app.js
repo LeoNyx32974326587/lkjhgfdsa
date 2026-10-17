@@ -2200,7 +2200,25 @@
       return loadFriends();
     }, function (err) { toast(RaimCloud.message(err)); renderFriends(); });
   }
-  function ask(x) { friendAction(RaimCloud.askFriend(x.id), 'Anfrage an ' + personName(x) + ' gesendet.'); $('friendResult').textContent = ''; }
+  // A request between the two may already exist (sent earlier, or the other one asked first):
+  // then answer the other one's request instead of failing
+  function ask(x) {
+    $('friendResult').textContent = '';
+    RaimCloud.askFriend(x.id).then(function () {
+      toast('Anfrage an ' + personName(x) + ' gesendet.');
+      return loadFriends();
+    }, function (err) {
+      if (!/friendships_pair|duplicate|23505/i.test((err && (err.code + ' ' + err.message)) || '')) {
+        toast(RaimCloud.message(err));
+        return;
+      }
+      return loadFriends().then(function () {
+        var known = personById(x.id), state = known && known.status;
+        if (state === 'incoming') return accept(known);
+        toast(state === 'friend' ? 'Ihr seid schon befreundet.' : 'Du hast ' + personName(x) + ' schon eine Anfrage geschickt.');
+      });
+    });
+  }
   function accept(x) { friendAction(RaimCloud.acceptFriend(x.id), 'Du bist jetzt mit ' + personName(x) + ' befreundet.'); }
   function unfriend(x, text) { friendAction(RaimCloud.endFriendship(x.id), text); }
 
