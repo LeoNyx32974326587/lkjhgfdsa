@@ -442,16 +442,15 @@
         <label class="field">BPM *
           <input name="bpm" inputmode="decimal" placeholder="z. B. 140">
         </label>
-        <label class="field">Tonart *
-          <select name="key"></select>
-        </label>
-      </div>
-      <div class="key-style">
-        <span class="field-note">Schreibweise</span>
-        <div class="seg" id="keyStyle" role="group" aria-label="Schreibweise der Tonart">
-          <button type="button" class="seg-btn" data-key-style="de">Moll / Dur</button>
-          <button type="button" class="seg-btn" data-key-style="en">Minor / Major</button>
-          <button type="button" class="seg-btn" data-key-style="short">Am / A</button>
+        <div class="field">
+          <label class="field">Tonart *
+            <select name="key"></select>
+          </label>
+          <div class="seg key-style" id="keyStyle" role="group" aria-label="Schreibweise der Tonart">
+            <button type="button" class="seg-btn" data-key-style="de" title="Fis-Moll, A-Dur">Moll</button>
+            <button type="button" class="seg-btn" data-key-style="en" title="F# Minor, A Major">Minor</button>
+            <button type="button" class="seg-btn" data-key-style="short" title="F#m, A">Am</button>
+          </div>
         </div>
       </div>
       <div class="field">Genre * <span class="field-note">mehrere möglich</span>
