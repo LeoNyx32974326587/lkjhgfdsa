@@ -955,3 +955,10 @@ body.prompter-open { overflow: hidden; }
 .dictate-live { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 14px; }
 .dictate-stop { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: #fff; color: #2a1592; font-weight: 700; cursor: pointer; }
 .mini-field input.marker-time { width: 72px; font-variant-numeric: tabular-nums; }
+
+/* ---------- home tabs: Projekte / Ideen ---------- */
+.home-tabs { margin: 16px 0 0; max-width: 420px; }
+.projects--ideas { margin-top: 10px; }
+.ideas-empty { margin: 8px 2px 0; }
+#homeIdeas .bar-new { margin-top: 10px; }
+.status-pill--idea { background: rgba(255, 210, 63, .14); border-color: rgba(255, 210, 63, .55); color: #ffe08a; }
