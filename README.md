@@ -68,6 +68,8 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 **Bars:** Unter „Ideen“ sammelst du Zeilen, Punchlines und Ideen, die noch zu keinem Song gehören. Wörter mit # (z. B. #hook, #liebe) werden zu Schlagworten zum Filtern; dazu eine Suche. Im Song öffnet „Bars“ im Text-Bereich die Sammlung: „Einfügen“ setzt die Bar an der Cursor-Stelle bzw. ans Ende des offenen Abschnitts (ohne die #Schlagworte), und oben lässt sich schnell eine neue Idee festhalten. Jede Bar zeigt, in welchen Songs sie schon steckt. Mit Account sind die Bars auf allen Geräten (nur für dich sichtbar).
 
+**Alben:** Über „Alben“ unter „Projekte“ fasst du Songs zu einem **Album, einer EP oder einem Mixtape** zusammen: Reihenfolge mit ↑/↓, Songs hinzufügen oder herausnehmen, Release-Fortschritt aller Songs, Release-Termine und **Tracklist kopieren**. Die Projektkarten zeigen „EP „Name“ #2“. Umbenennen oder auflösen über ⋯ (die Songs bleiben). Alben gehören dem Song-Besitzer – Feature-Freunde ändern sie nicht.
+
 **Beats & Lizenzen:** Über den Knopf unter „Projekte“ siehst du alle Beats und Lizenzen aus allen Projekten auf einer Seite – Lizenzart, Produzent, Kaufdatum, ob die Lizenzdatei da ist, und alle Warnungen. Filter: „Lizenz prüfen“, „Ohne Lizenz“, „Lease / Free“.
 
 **Beat-Marker:** Im Bereich Beat merkst du dir, wo Intro, Hook, Part oder Bridge im Beat anfangen – Abschnitt wählen, auf der Wellenform an die Stelle tippen oder die Zeit eintippen (z. B. 1:24), „Marker hier setzen“. Die Marker stehen auf der Wellenform. Wählst du im Teleprompter einen Abschnitt, startet der Beat an seinem Marker.

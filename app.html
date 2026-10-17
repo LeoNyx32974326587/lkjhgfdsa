@@ -53,6 +53,10 @@
 
       <div id="homeProjects">
         <div class="home-links" id="homeLinks">
+          <button type="button" class="home-link" id="openAlbums">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>
+            Alben <span class="home-count" id="albumsCount"></span>
+          </button>
           <button type="button" class="home-link" id="openLibrary">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
             Beats &amp; Lizenzen <span id="libraryWarn" class="warn-dot" hidden>!</span>
@@ -186,6 +190,55 @@
 
 
   <!-- ================= Beats & Lizenzen ================= -->
+  <div id="albums" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="closeAlbums" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="topbar-title" id="albumsTitle">Alben</span>
+      <button class="icon-btn" id="albumMenu" type="button" aria-label="Album umbenennen oder auflösen" hidden>
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      </button>
+    </header>
+    <main>
+      <!-- all albums -->
+      <div id="albumOverview">
+        <button class="btn btn--primary album-new" id="albumNew" type="button">+ Neues Album</button>
+        <ul class="album-list" id="albumList"></ul>
+        <p class="empty" id="albumsEmpty">Noch keine Alben. Fass Songs zu einem Album, einer EP oder einem Mixtape zusammen – mit Reihenfolge und Release-Stand.</p>
+      </div>
+      <!-- one album -->
+      <div id="albumDetail" hidden>
+        <div class="album-head card">
+          <div class="seg album-type" id="albumType" role="group" aria-label="Art">
+            <button type="button" class="seg-btn" data-album-type="Album">Album</button>
+            <button type="button" class="seg-btn" data-album-type="EP">EP</button>
+            <button type="button" class="seg-btn" data-album-type="Mixtape">Mixtape</button>
+          </div>
+          <p class="album-sum" id="albumSum"></p>
+          <div class="album-progress"><span id="albumBar"></span></div>
+          <p class="hint" id="albumRelease"></p>
+        </div>
+        <ol class="album-tracks" id="albumTracks"></ol>
+        <div class="row">
+          <button class="btn btn--primary" id="albumAdd" type="button">+ Songs hinzufügen</button>
+          <button class="btn" id="albumCopy" type="button">Tracklist kopieren</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="albumPickDlg" class="sheet">
+    <div class="sheet-head">
+      <h2>Songs hinzufügen</h2>
+      <button class="icon-btn" type="button" id="closeAlbumPick" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <ul class="attach-list" id="albumPickList"></ul>
+    <div class="row"><button class="btn btn--primary" type="button" id="albumPickDone">Fertig</button></div>
+  </dialog>
+
   <div id="library" hidden>
     <header class="topbar topbar--project">
       <button class="icon-btn" id="closeLibrary" type="button" aria-label="Zurück zu den Projekten">

@@ -1308,3 +1308,26 @@ html[data-theme="light"] .rec-start { background: rgba(10, 126, 160, .08); borde
 html[data-theme="light"] .marker-chip { background: rgba(255, 190, 0, .14); border-color: rgba(200, 140, 0, .45); }
 html[data-theme="light"] .idea-box { background: #fff8e6; }
 html[data-theme="light"] .message.is-new { background: #fff1f3; }
+
+/* ---------- albums ---------- */
+#albums .topbar-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.album-new { margin: 6px 0 14px; }
+.album-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.album-head { display: grid; gap: 10px; margin: 6px 0 14px; }
+.album-sum { margin: 0; font-weight: 500; }
+.album-progress { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.album-progress span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #5ee7ff, #7b5cff); border-radius: 999px; transition: width .3s; }
+html[data-theme="light"] .album-progress { background: rgba(60, 40, 150, .1); }
+.album-tracks { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 8px; }
+.album-track { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 18px; border: 1px solid var(--border); background: rgba(28, 20, 70, .6); }
+html[data-theme="light"] .album-track { background: #fff; }
+.album-no { flex: none; width: 24px; font-family: "Roboto Mono", monospace; font-size: 15px; color: var(--cyan); text-align: right; }
+.album-song { flex: 1; min-width: 0; display: grid; text-align: left; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 2px 0; }
+.album-song strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.album-song span { font-size: 13px; color: var(--dim); }
+.album-tools { display: inline-flex; gap: 2px; flex: none; }
+.album-pick { display: flex; align-items: center; gap: 12px; }
+.album-pick input { width: 20px; height: 20px; accent-color: var(--violet-2); flex: none; }
+.album-pick-text { display: grid; min-width: 0; }
+.album-pick-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.album-pick-text span { font-size: 13px; color: var(--dim); }

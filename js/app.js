@@ -359,6 +359,9 @@
     $('projectsEmpty').hidden = active.length > 0;
     $('newProject').hidden = !onIdeas && active.length === 0;
     $('openLibrary').hidden = active.length === 0;
+    var albumCount = albumList().length;
+    $('albumsCount').textContent = albumCount ? String(albumCount) : '';
+    $('openAlbums').hidden = !active.some(function (p) { return !p._owner; });
     $('libraryWarn').hidden = !libEntries().some(function (e) { return e.warn; });
     $('openTrash').hidden = !trashed;
     $('trashCount').textContent = '(' + trashed + ')';
@@ -382,6 +385,7 @@
     if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
     else if (p.youtube) meta.push('♪ YouTube-Beat');
     if (p.license.producer) meta.push(p.license.producer);
+    if (p.album && !p._owner) meta.push((p.album.type || 'Album') + ' „' + p.album.name + '“' + (p.albumPos ? ' #' + albumTrackNo(p) : ''));
     var lines = RaimSong.lines(p.text).length;
     meta.push(lines + (lines === 1 ? ' Zeile' : ' Zeilen'));
     if (p.takes.length) meta.push(p.takes.length + (p.takes.length === 1 ? ' Aufnahme' : ' Aufnahmen'));
@@ -3716,6 +3720,211 @@
       renderLibrary();
     });
   });
+  // ---------- albums: own songs grouped as Album / EP / Mixtape, stored on each song (p.album, p.albumPos) ----------
+  var albumOpen = null;   // name of the album shown, null = overview
+  function albumKey(name) { return String(name || '').trim().toLowerCase(); }
+  function albumList() {
+    var map = {};
+    activeProjects().forEach(function (p) {
+      if (p._owner || !p.album || !p.album.name) return;
+      var k = albumKey(p.album.name);
+      if (!map[k]) map[k] = { name: p.album.name, type: p.album.type || 'Album', songs: [] };
+      map[k].songs.push(p);
+    });
+    return Object.keys(map).map(function (k) {
+      var a = map[k];
+      a.songs.sort(function (x, y) { return (x.albumPos || 0) - (y.albumPos || 0) || (x.title || '').localeCompare(y.title || '', 'de'); });
+      return a;
+    }).sort(function (a, b) { return a.name.localeCompare(b.name, 'de'); });
+  }
+  function albumByName(name) { return albumList().filter(function (a) { return albumKey(a.name) === albumKey(name); })[0] || null; }
+  function albumTrackNo(p) {
+    var a = albumByName(p.album.name);
+    return a ? a.songs.indexOf(p) + 1 : 0;
+  }
+  function touch(p) { p.updated = Date.now(); saveNow(p); }
+  // keep positions 1, 2, 3 … in the shown order
+  function renumber(songs) { songs.forEach(function (p, i) { if (p.albumPos !== i + 1) { p.albumPos = i + 1; touch(p); } }); }
+  function releaseDoneCount(p) { return RELEASE.filter(function (k) { return p.release && p.release[k[0]]; }).length; }
+
+  function openAlbums(name) {
+    albumOpen = name || null;
+    $('home').hidden = true;
+    $('albums').hidden = false;
+    renderAlbums();
+    window.scrollTo(0, 0);
+  }
+  function renderAlbums() {
+    var list = albumList(), a = albumOpen ? albumByName(albumOpen) : null;
+    if (albumOpen && !a && !pendingAlbum) albumOpen = null;
+    $('albumOverview').hidden = !!albumOpen;
+    $('albumDetail').hidden = !albumOpen;
+    $('albumMenu').hidden = !albumOpen;
+    $('albumsTitle').textContent = albumOpen ? (a ? a.name : pendingAlbum.name) : 'Alben';
+    if (!albumOpen) {
+      var ul = $('albumList');
+      ul.textContent = '';
+      $('albumsEmpty').hidden = list.length > 0;
+      list.forEach(function (al) {
+        var done = al.songs.filter(function (p) { return statusOf(p) === 'done'; }).length;
+        var b = el('button', 'project-card album-card');
+        b.type = 'button';
+        var top = el('div', 'project-top');
+        top.append(el('strong', '', al.name), el('span', 'badge', al.type));
+        b.append(top, el('span', 'project-meta', al.songs.length + (al.songs.length === 1 ? ' Song' : ' Songs') + ' · ' + done + ' fertig · ' +
+          al.songs.slice(0, 4).map(function (p) { return p.title || 'Ohne Titel'; }).join(', ') + (al.songs.length > 4 ? ' …' : '')));
+        b.addEventListener('click', function () { albumOpen = al.name; renderAlbums(); window.scrollTo(0, 0); });
+        var li = el('li');
+        li.append(b);
+        ul.append(li);
+      });
+      return;
+    }
+    var songs = a ? a.songs : [], type = a ? a.type : pendingAlbum.type;
+    document.querySelectorAll('[data-album-type]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.albumType === type); });
+    var done = songs.filter(function (p) { return statusOf(p) === 'done'; }).length;
+    var checks = songs.reduce(function (n, p) { return n + releaseDoneCount(p); }, 0), all = songs.length * RELEASE.length;
+    $('albumSum').textContent = songs.length ? songs.length + (songs.length === 1 ? ' Song' : ' Songs') + ' · ' + done + ' fertig · Release ' + checks + '/' + all : 'Noch keine Songs – füg welche hinzu.';
+    $('albumBar').style.width = all ? Math.round(checks / all * 100) + '%' : '0';
+    var dates = songs.map(function (p) { return p.release && p.release.date; }).filter(Boolean).sort();
+    $('albumRelease').textContent = dates.length ? 'Release-Termine: ' + new Date(dates[0] + 'T12:00:00').toLocaleDateString('de-DE') +
+      (dates.length > 1 && dates[dates.length - 1] !== dates[0] ? ' bis ' + new Date(dates[dates.length - 1] + 'T12:00:00').toLocaleDateString('de-DE') : '') : '';
+    $('albumRelease').hidden = !dates.length;
+    var ol = $('albumTracks');
+    ol.textContent = '';
+    songs.forEach(function (p, i) {
+      var li = el('li', 'album-track');
+      li.append(el('span', 'album-no', String(i + 1)));
+      var open = el('button', 'album-song');
+      open.type = 'button';
+      var facts = [statusOf(p) === 'done' ? 'Fertig · Release ' + releaseDoneCount(p) + '/' + RELEASE.length : isIdea(p) ? 'Idee' : 'In Bearbeitung'];
+      if (songBpm(p)) facts.push(songBpm(p) + ' BPM');
+      if (songKey(p)) facts.push(songKey(p));
+      open.append(el('strong', '', p.title || 'Ohne Titel'), el('span', '', facts.join(' · ')));
+      open.addEventListener('click', function () { $('albums').hidden = true; openFresh(p); });
+      var tools = el('span', 'album-tools');
+      [['↑', 'Nach oben', -1], ['↓', 'Nach unten', 1]].forEach(function (m) {
+        var b = el('button', 'sec-tool', m[0]);
+        b.type = 'button';
+        b.title = m[1];
+        b.disabled = i + m[2] < 0 || i + m[2] >= songs.length;
+        b.addEventListener('click', function () {
+          var order = songs.slice(), j = i + m[2];
+          order[i] = songs[j]; order[j] = p;
+          renumber(order);
+          renderAlbums();
+        });
+        tools.append(b);
+      });
+      var del = el('button', 'sec-tool', '✕');
+      del.type = 'button';
+      del.title = 'Aus dem Album nehmen';
+      del.addEventListener('click', function () {
+        if (songs.length === 1) pendingAlbum = { name: p.album.name, type: p.album.type || 'Album' };
+        delete p.album;
+        delete p.albumPos;
+        touch(p);
+        renumber(songs.filter(function (x) { return x !== p; }));
+        renderAlbums();
+      });
+      tools.append(del);
+      li.append(open, tools);
+      ol.append(li);
+    });
+  }
+  // an album without songs yet exists only while it is open
+  var pendingAlbum = null;
+  $('albumNew').addEventListener('click', function () {
+    var name = prompt('Name des Albums, der EP oder des Mixtapes');
+    if (name === null || !name.trim()) return;
+    name = name.trim();
+    var existing = albumByName(name);
+    pendingAlbum = existing ? null : { name: name, type: 'Album' };
+    albumOpen = existing ? existing.name : name;
+    renderAlbums();
+    if (!existing) openAlbumPick();
+  });
+  $('closeAlbums').addEventListener('click', function () {
+    if (albumOpen) { albumOpen = null; pendingAlbum = null; renderAlbums(); window.scrollTo(0, 0); return; }
+    $('albums').hidden = true;
+    $('home').hidden = false;
+    renderProjects();
+  });
+  $('openAlbums').addEventListener('click', function () { openAlbums(null); });
+  document.querySelectorAll('[data-album-type]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var a = albumByName(albumOpen);
+      if (pendingAlbum) pendingAlbum.type = b.dataset.albumType;
+      if (a) a.songs.forEach(function (p) { p.album = { name: a.name, type: b.dataset.albumType }; touch(p); });
+      renderAlbums();
+    });
+  });
+  function openAlbumPick() {
+    var ul = $('albumPickList'), name = albumOpen;
+    ul.textContent = '';
+    var mine = activeProjects().filter(function (p) { return !p._owner; }).sort(function (a, b) { return b.updated - a.updated; });
+    if (!mine.length) ul.append(el('li', 'empty', 'Noch keine Songs.'));
+    mine.forEach(function (p) {
+      var inThis = p.album && albumKey(p.album.name) === albumKey(name);
+      var label = el('label', 'attach-item album-pick');
+      var cb = el('input');
+      cb.type = 'checkbox';
+      cb.checked = !!inThis;
+      var txt = el('span', 'album-pick-text');
+      txt.append(el('strong', '', p.title || 'Ohne Titel'),
+        el('span', '', (isIdea(p) ? 'Idee' : statusOf(p) === 'done' ? 'Fertig' : 'In Bearbeitung') + (p.album && !inThis ? ' · jetzt in „' + p.album.name + '“' : '')));
+      cb.addEventListener('change', function () {
+        var a = albumByName(name), type = a ? a.type : (pendingAlbum ? pendingAlbum.type : 'Album');
+        if (cb.checked) {
+          p.album = { name: a ? a.name : name, type: type };
+          p.albumPos = (a ? a.songs.length : 0) + 1;
+          pendingAlbum = null;
+        } else {
+          if (a && a.songs.length === 1) pendingAlbum = { name: a.name, type: a.type };
+          delete p.album;
+          delete p.albumPos;
+        }
+        touch(p);
+        var now = albumByName(name);
+        if (now) renumber(now.songs);
+        renderAlbums();
+      });
+      label.append(cb, txt);
+      var li = el('li');
+      li.append(label);
+      ul.append(li);
+    });
+    $('albumPickDlg').showModal();
+  }
+  $('albumAdd').addEventListener('click', openAlbumPick);
+  $('albumPickDone').addEventListener('click', function () { $('albumPickDlg').close(); });
+  $('closeAlbumPick').addEventListener('click', function () { $('albumPickDlg').close(); });
+  $('albumCopy').addEventListener('click', function () {
+    var a = albumByName(albumOpen);
+    if (!a) return;
+    var text = a.name + ' (' + a.type + ')\n' + a.songs.map(function (p, i) { return (i + 1) + '. ' + (p.title || 'Ohne Titel'); }).join('\n');
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Tracklist kopiert.'); }, function () { prompt('Tracklist zum Kopieren', text); });
+  });
+  $('albumMenu').addEventListener('click', function () {
+    var a = albumByName(albumOpen);
+    if (!a) { albumOpen = null; pendingAlbum = null; renderAlbums(); return; }
+    var name = prompt('Neuer Name – oder leer lassen und OK drücken, um das Album aufzulösen (die Songs bleiben erhalten)', a.name);
+    if (name === null) return;
+    name = name.trim();
+    if (!name) {
+      confirmDialog('Album auflösen?', '„' + a.name + '“ wird aufgelöst. Die ' + a.songs.length + ' Songs bleiben erhalten.', 'Auflösen').then(function (yes) {
+        if (!yes) return;
+        a.songs.forEach(function (p) { delete p.album; delete p.albumPos; touch(p); });
+        albumOpen = null;
+        renderAlbums();
+      });
+      return;
+    }
+    a.songs.forEach(function (p) { p.album = { name: name, type: a.type }; touch(p); });
+    albumOpen = name;
+    renderAlbums();
+  });
+
   $('openLibrary').addEventListener('click', function () {
     $('home').hidden = true;
     $('library').hidden = false;

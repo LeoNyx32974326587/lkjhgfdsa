@@ -186,7 +186,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   r jsonb;
   k text;
-  locked text[] := array['features', 'featureOn', 'ownerName', 'deletedAt'];   -- only the owner
+  locked text[] := array['features', 'featureOn', 'ownerName', 'deletedAt', 'album', 'albumPos'];   -- only the owner
 begin
   -- the version time never goes back (an old copy must not look newer than the latest save)
   new.updated := greatest(old.updated, new.updated);
