@@ -16,22 +16,40 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat drei Bereiche:
 
-- **Text**: Songtext schreiben. Unter dem Text erscheinen Reime auf dein letztes Wort, darunter deine gemerkten Wörter. Antippen fügt sie ein. Dazu **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song, auf Wunsch auf dein Reimende (Claude von Anthropic, eigener API-Schlüssel in den Einstellungen, Zustimmung ab 18, höchstens 24 Zeilen werden gesendet).
-- **Beat**: Beat-Datei hochladen (bleibt im Projekt gespeichert) oder YouTube-Link. Loop-Bereich auf der Wellenform ziehen, Tempo ändern, dich zum Beat aufnehmen. Aufnahmen bleiben im Projekt; Stimme und Beat werden getrennt und sampelgenau aufgezeichnet und erst danach gemischt. Die Verzögerung von Kopfhörer und Mikrofon wird automatisch ausgeglichen („Sync-Ausgleich“) und lässt sich pro Aufnahme nachträglich verschieben. Download als Mix oder nur Stimme (WAV). Dazu die **Lizenz**: Produzent, Lizenzart, BPM, Tonart, Kaufdatum, Notizen und die Lizenzdatei (PDF, Bild …). Nach dem Speichern erscheint sie als schmale Leiste, die per Klick alle Angaben zeigt.
-- **Reime**: Reimsuche nach Klang, eigene für jedes Projekt. Oben stehen die Reimenden aus deinem Text, farbig markiert, wenn sie miteinander reimen; antippen sucht Reime darauf. Mit ★ merkst du dir Wörter fürs Projekt, mit ✕ („Passt nicht“) oder Wischen blendest du Reime in diesem Projekt aus. Die letzten Suchen werden pro Projekt gespeichert.
+- **Text**
+  - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
+  - **Hook wiederholen**: ein leerer Abschnitt mit gleichem Namen wiederholt den Hook von oben (im Teleprompter und PDF ausgeschrieben).
+  - Sprache des Songs: **Deutsch** oder **English**.
+  - Unten Reime auf dein letztes Wort (rosa = andere Sprache) und deine gemerkten Wörter.
+  - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).
+  - **PDF**: Songtext mit Beat- und Lizenzinfos als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
+- **Beat**
+  - Beat-Datei oder YouTube-Link, Loop, Tempo, Aufnahmen mit Sync-Ausgleich (Download als Mix oder nur Stimme).
+  - **Aufnahme ab Startpunkt**: Tipp auf die Wellenform, die Aufnahme startet dort (oder am Loop-Anfang).
+  - **Einzähler** (1 oder 2 Takte) nach BPM; BPM eintragen oder **erkennen** lassen.
+  - **Teleprompter**: beim Aufnehmen (oder mit „Probe mit Text“) läuft der Text groß mit, eine Zeile pro Takt; Tempo mit − / +, Zeile antippen zum Springen.
+  - **Lizenz** als schmale Leiste mit allen Angaben und Datei, dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
+- **Reime**
+  - Reimsuche nach Klang auf **Deutsch und Englisch**, auch über beide Sprachen hinweg (z. B. „Money“ → honey, funny, Manie). Sprachen per DE/EN an- und ausschalten.
+  - Häufige Wörter stehen bei gleich guten Reimen weiter oben.
+  - **Synonyme**: Bedeutung eingeben, optional „reimt auf“ – dann nach Reim sortiert. Deutsch offline (OpenThesaurus), Englisch online (Datamuse).
+  - Reimenden aus deinem Text (farbig gruppiert), Gemerkt-Liste, Verlauf, „Passt nicht“.
 
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
-Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert (Format, Gültigkeit, Guthaben).
+Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.
 
-Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen (Zahnrad) kannst du **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren. Mach das regelmäßig: Wenn du die Browserdaten löschst, sind die Projekte weg.
+Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kannst du **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren. Mach das regelmäßig: Wenn du die Browserdaten löschst, sind die Projekte weg.
 
 ## Dateien
 
 - `index.html`, `styles.css`, `script.js`: Startseite
 - `app.html`, `app.css`: App
 - `js/rhyme.js`: Reim-Engine (deutsche Aussprache-Näherung und Bewertung)
-- `js/words.js`: Wortliste (239.279 Wörter)
+- `js/words.js`, `js/words-en.js`: Wortlisten Deutsch/Englisch
+- `js/thesaurus-de.js`: deutsche Synonyme
+- `js/song.js`: Song-Abschnitte
+- `js/prompter.js`: Teleprompter
 - `js/ai.js`: KI-Ideen über die Claude API
 - `js/beats.js`: Beat-Player, Loop, Tempo, Aufnahmen, YouTube
 - `js/wav.js`: WAV-Kodierung der Aufnahmen
@@ -39,6 +57,15 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen (Zahn
 - `js/store.js`: Einstellungen
 - `js/app.js`: Oberfläche
 
-## Wortliste
+## Daten und Lizenzen
 
-Aus [davidak/wortliste](https://github.com/davidak/wortliste), erzeugt aus DWDS (CC BY-ND), Leipzig Corpora Collection (CC BY) und DeReWo (CC BY-NC). Für eine kommerzielle Nutzung sollte die Wortliste ersetzt oder die Lizenz geklärt werden.
+Die Dateien in `js/words.js`, `js/words-en.js` und `js/thesaurus-de.js` erzeugt `tools/build_data.py` aus:
+
+- Deutsche Wörter: [davidak/wortliste](https://github.com/davidak/wortliste) (DWDS CC BY-ND, Leipzig Corpora CC BY, DeReWo CC BY-NC)
+- Worthäufigkeiten: [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0)
+- Englische Aussprache: [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (BSD-Lizenz)
+- Deutsche Synonyme: [OpenThesaurus](https://www.openthesaurus.de) (LGPL)
+- Englische Synonyme: [Datamuse API](https://www.datamuse.com/api/) (online)
+- PDF: [jsPDF](https://github.com/parallax/jsPDF) (MIT, per CDN)
+
+Wegen DeReWo (nicht-kommerziell) sollte die deutsche Wortliste für eine kommerzielle Nutzung ersetzt oder die Lizenz geklärt werden.

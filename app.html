@@ -70,8 +70,33 @@
     <main>
       <!-- ---------- Text ---------- -->
       <section class="view" data-view="text">
-        <div class="paper">
-          <textarea id="songText" spellcheck="false" placeholder="Schreib deine erste Zeile …"></textarea>
+        <div class="text-tools">
+          <div class="seg" role="group" aria-label="Sprache des Songs">
+            <button type="button" class="seg-btn" data-lang="de">Deutsch</button>
+            <button type="button" class="seg-btn" data-lang="en">English</button>
+          </div>
+          <span class="text-tools-right">
+            <button type="button" class="tool-btn" id="collapseAll">Alle einklappen</button>
+            <button type="button" class="tool-btn" id="exportPdf">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M12 11v6m-3-3 3 3 3-3"/></svg>
+              PDF
+            </button>
+          </span>
+        </div>
+
+        <div class="sections" id="sections"></div>
+
+        <div class="add-section" id="addSection">
+          <span>Abschnitt +</span>
+          <button type="button" data-add="Intro">Intro</button>
+          <button type="button" data-add="Hook">Hook</button>
+          <button type="button" data-add="Part">Part</button>
+          <button type="button" data-add="Bridge">Bridge</button>
+          <button type="button" data-add="Outro">Outro</button>
+          <button type="button" data-add="repeat" id="addRepeat" hidden>Hook wiederholen</button>
+        </div>
+
+        <div class="chip-dock" id="chipDock">
           <div class="chips" id="rhymeChips" aria-live="polite"></div>
           <div class="chips chips--saved" id="savedChips" hidden></div>
         </div>
@@ -128,6 +153,19 @@
               <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
               <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
             </div>
+            <div class="rec-row">
+              <span class="rec-start" id="recStart">Aufnahme ab 0:00</span>
+              <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
+              <button type="button" class="link-btn" id="bpmDetect">erkennen</button>
+              <label class="mini-field">Einzähler
+                <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
+              </label>
+              <label class="check"><input type="checkbox" id="prompterOn" checked> Teleprompter</label>
+            </div>
+            <button type="button" class="pill-btn practice" id="practiceBtn">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              Probe mit Text
+            </button>
             <div class="sync-row">
               <label for="latency">Sync-Ausgleich</label>
               <input type="range" id="latency" min="0" max="600" step="5">
@@ -168,6 +206,7 @@
               <strong id="licenseTitle"></strong>
               <span id="licenseSub"></span>
             </span>
+            <span class="warn-dot" id="licenseWarnDot" title="Lizenz prüfen" hidden>!</span>
             <svg class="clip" id="licenseClip" viewBox="0 0 24 24" aria-label="Lizenzdatei vorhanden"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>
             <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
@@ -179,6 +218,8 @@
             </div>
           </div>
         </div>
+
+        <div class="license-warn" id="licenseWarn" hidden></div>
 
         <form class="card license" id="licenseForm" autocomplete="off" hidden>
           <div class="grid2">
@@ -235,6 +276,27 @@
 
       <!-- ---------- Reime ---------- -->
       <section class="view" data-view="rhymes" hidden>
+        <div class="seg seg--wide" role="tablist" aria-label="Suche">
+          <button type="button" class="seg-btn is-on" data-mode="rhymes">Reime</button>
+          <button type="button" class="seg-btn" data-mode="syn">Synonyme</button>
+        </div>
+
+        <div id="synPanel" hidden>
+          <form class="syn-form" id="synForm" autocomplete="off">
+            <label class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+              <input id="synInput" type="search" placeholder="Bedeutung, z. B. Geld" enterkeyhint="search">
+            </label>
+            <label class="syn-target">reimt auf
+              <input id="synTarget" type="search" placeholder="optional, z. B. Lage" enterkeyhint="search">
+            </label>
+            <button type="submit" class="btn btn--primary">Suchen</button>
+          </form>
+          <p class="hint" id="synInfo"></p>
+          <div id="synOut"></div>
+        </div>
+
+        <div id="rhymePanel">
         <form class="search" id="searchForm" autocomplete="off">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
           <input id="searchInput" type="search" placeholder="Wort oder Wortgruppe" enterkeyhint="search">
@@ -253,11 +315,15 @@
           <div class="chips chips--wrap" id="historyChips"></div>
         </div>
 
-        <div class="filters" id="filters" hidden>
+        <div class="filters" id="filters">
           <button type="button" class="seg-btn is-on" data-filter="all">Alle</button>
           <button type="button" class="seg-btn" data-filter="multi">Doppel- &amp; Mehrsilbenreime</button>
+          <span class="filter-sep" aria-hidden="true"></span>
+          <button type="button" class="seg-btn lang-chip" data-rlang="de" aria-pressed="true">DE</button>
+          <button type="button" class="seg-btn lang-chip" data-rlang="en" aria-pressed="true">EN</button>
         </div>
         <div id="searchOut"></div>
+        </div>
       </section>
     </main>
 
@@ -338,14 +404,40 @@
     </form>
   </dialog>
 
+  <div class="prompter" id="prompter" hidden role="dialog" aria-label="Teleprompter">
+    <div class="prompter-top">
+      <span class="prompter-time" id="prompterTime">0:00</span>
+      <span class="prompter-speed">
+        <button type="button" id="prompterSlower" aria-label="Langsamer">−</button>
+        <span id="prompterSpeed"></span>
+        <button type="button" id="prompterFaster" aria-label="Schneller">+</button>
+      </span>
+      <button type="button" class="icon-btn" id="prompterClose" aria-label="Teleprompter schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="prompter-text" id="prompterText"></div>
+    <div class="prompter-count" id="prompterCount" hidden></div>
+    <div class="prompter-bottom">
+      <button type="button" class="round" id="prompterPlay" aria-label="Abspielen">
+        <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+      </button>
+      <button type="button" class="rec" id="prompterRec" aria-label="Aufnahme starten oder stoppen"><span></span></button>
+    </div>
+    <p class="prompter-hint">Tipp auf eine Zeile, um dort weiterzulesen.</p>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <script src="js/words.js"></script>
   <script src="js/rhyme.js"></script>
+  <script src="js/song.js"></script>
   <script src="js/store.js"></script>
   <script src="js/db.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/wav.js"></script>
+  <script src="js/prompter.js"></script>
   <script src="js/beats.js"></script>
   <script src="js/app.js"></script>
 </body>

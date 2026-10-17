@@ -15,7 +15,8 @@
   audio.mozPreservesPitch = true;
   audio.webkitPreservesPitch = true;
   var ctx = null, mediaSrc = null;
-  var peaks = [], loop = null, looping = false, beatUrl = null, takeUrls = [];
+  var peaks = [], loop = null, looping = false, beatUrl = null, takeUrls = [], decoded = null;
+  var countTimers = [];
   var canvas, g;
   var openId = null; // project currently shown, guards against late async results
 
@@ -32,7 +33,8 @@
   function open(project) {
     close();
     openId = project.id;
-    loop = null; looping = false; peaks = [];
+    loop = null; looping = false; peaks = []; decoded = null;
+    $('bpmInput').value = project.bpm || project.license.bpm || '';
     $('loopBtn').setAttribute('aria-pressed', 'false');
     $('tempo').value = 1; audio.playbackRate = 1; $('tempoOut').textContent = '100 %';
     $('deck').hidden = true;
@@ -53,6 +55,8 @@
 
   function close() {
     stopRec();
+    cancelCount();
+    RaimPrompter.hide();
     audio.pause();
     audio.removeAttribute('src');
     if (beatUrl) { URL.revokeObjectURL(beatUrl); beatUrl = null; }
@@ -77,9 +81,10 @@
     var id = openId;
     blob.arrayBuffer().then(function (buf) {
       return audioCtx().decodeAudioData(buf);
-    }).then(function (decoded) {
+    }).then(function (buf) {
       if (openId !== id) return;
-      peaks = computePeaks(decoded, 160);
+      decoded = buf;
+      peaks = computePeaks(buf, 160);
       draw();
     }).catch(function () {
       peaks = [];
@@ -98,6 +103,7 @@
     RaimDB.putFile(p.id, file).then(function (fileId) {
       p.beat = { fileId: fileId, name: file.name };
       hooks.save();
+      if (hooks.changed) hooks.changed();
       loop = null; setLoop(false);
       if (openId === p.id) showBeat(file, file.name);
       return RaimDB.deleteFile(old);
@@ -144,6 +150,8 @@
       g.fillRect(played - 1, 0, 2, h);
     }
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
+    RaimPrompter.setTime(fmt(audio.currentTime));
+    if (!rec) $('recStart').textContent = 'Aufnahme ab ' + fmt(startPos());
     $('tDur').textContent = fmt(dur);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
@@ -181,9 +189,69 @@
     $('latencyAuto').textContent = auto ? 'Auto (an)' : 'Auto';
   }
 
+  // ---------- start point, tempo, count-in ----------
+  // recording starts where the playhead is (or at the loop start)
+  function startPos() {
+    if (looping && loop) return loop[0];
+    var d = audio.duration || 0;
+    return d && audio.currentTime < d - 0.5 ? audio.currentTime : 0;
+  }
+  function bpm() {
+    var b = parseFloat(String($('bpmInput').value).replace(',', '.'));
+    return b >= 40 && b <= 250 ? b * audio.playbackRate : 0;
+  }
+  // one lyric line per bar of four beats
+  function secPerLine() { var b = bpm(); return b ? 4 * 60 / b : 2.6; }
+
+  function cancelCount() {
+    countTimers.forEach(clearTimeout);
+    countTimers = [];
+    RaimPrompter.count('');
+  }
+
+  // clicks for `bars` bars, then done(); without BPM it just waits a moment
+  function countIn(done) {
+    cancelCount();
+    var bars = parseInt($('countIn').value, 10), b = bpm();
+    if (!bars) { done(); return; }
+    var beat = b ? 60 / b : 0.6, n = bars * 4, ac = audioCtx(), t0 = ac.currentTime + 0.1;
+    for (var k = 0; k < n; k++) {
+      var osc = ac.createOscillator(), gain = ac.createGain(), t = t0 + k * beat;
+      osc.frequency.value = k % 4 === 0 ? 1600 : 1100;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.5, t + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.start(t); osc.stop(t + 0.08);
+      (function (k) {
+        countTimers.push(setTimeout(function () { RaimPrompter.count(String(k % 4 + 1)); }, (t - ac.currentTime) * 1000));
+      })(k);
+    }
+    countTimers.push(setTimeout(function () { RaimPrompter.count(''); done(); }, (t0 + n * beat - ac.currentTime) * 1000));
+  }
+
+  function lyrics() { return hooks.lyrics(); }
+
+  // beat starts (after the count-in): play and scroll the prompter
+  function rollFrom(pos, onStart) {
+    if (audio.src) audio.currentTime = pos;
+    countIn(function () {
+      if (onStart && onStart() === false) return;
+      if (audio.src) audio.play();
+      if (RaimPrompter.isOpen()) RaimPrompter.start(secPerLine());
+    });
+  }
+
+  function practice() {
+    RaimPrompter.show(lyrics());
+    rollFrom(startPos());
+  }
+
   function startRec() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Aufnehmen wird in diesem Browser nicht unterstützt.'); return; }
     var ac = audioCtx();
+    audio.pause();
+    RaimPrompter.stop();
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 } })
       .then(function (stream) {
         var hasBeat = !!audio.src;
@@ -209,40 +277,74 @@
         merger.connect(proc);
         proc.connect(ac.destination); // outputs silence; needed so the processor runs
 
-        var manual = savedLatency();
+        var manual = savedLatency(), pos = startPos();
         rec = {
           project: hooks.project(), stream: stream, hasBeat: hasBeat, sampleRate: ac.sampleRate,
           offsetMs: manual === null ? autoLatencyMs(ac, stream) : manual,
           nodes: [beatIn, split, merger, micSrc, micIn, proc],
-          beatL: [], beatR: [], mic: []
+          beatL: [], beatR: [], mic: [], capturing: false, from: pos
         };
         if (manual === null) showLatency(rec.offsetMs, true);
         proc.onaudioprocess = function (e) {
-          if (!rec) return;
+          if (!rec || !rec.capturing) return;
           var b = e.inputBuffer;
           rec.beatL.push(new Float32Array(b.getChannelData(0)));
           rec.beatR.push(new Float32Array(b.getChannelData(1)));
           rec.mic.push(new Float32Array(b.getChannelData(2)));
         };
-        $('recBtn').classList.add('is-rec');
-        $('miniRec').classList.add('is-rec');
-        if (looping && loop) audio.currentTime = loop[0];
-        if (hasBeat) audio.play();
+        setRecUi(true);
+        $('recStart').textContent = 'Aufnahme läuft ab ' + fmt(pos);
+        if ($('prompterOn').checked && !RaimPrompter.isOpen()) RaimPrompter.show(lyrics());
+        var r = rec;
+        rollFrom(pos, function () {
+          if (rec !== r) return false;
+          r.capturing = true;
+        });
       })
       .catch(function () { toast('Kein Zugriff aufs Mikrofon.'); });
+  }
+
+  function setRecUi(on) {
+    $('recBtn').classList.toggle('is-rec', on);
+    $('miniRec').classList.toggle('is-rec', on);
+    RaimPrompter.setRecording(on);
   }
 
   function stopRec() {
     if (!rec) return;
     var r = rec;
     rec = null;
+    cancelCount();
     audio.pause();
+    RaimPrompter.stop();
     r.stream.getTracks().forEach(function (t) { t.stop(); });
     r.nodes.forEach(function (n) { try { n.disconnect(); } catch (e) { /* gone */ } });
     if (r.hasBeat) { try { mediaSrc.disconnect(r.nodes[0]); } catch (e) { /* gone */ } }
-    $('recBtn').classList.remove('is-rec');
-    $('miniRec').classList.remove('is-rec');
+    setRecUi(false);
+    draw();
     saveTake(r);
+  }
+
+  // ---------- BPM detection: autocorrelation of the onset envelope ----------
+  function detectBpm(buf) {
+    var sr = buf.sampleRate, hop = 512, data = buf.getChannelData(0);
+    var n = Math.min(data.length, sr * 60), frames = Math.floor(n / hop), env = new Float32Array(frames), prev = 0;
+    for (var f = 0; f < frames; f++) {
+      var e = 0;
+      for (var i = f * hop, end = i + hop; i < end; i++) e += data[i] * data[i];
+      e = Math.log(1e-9 + e);
+      env[f] = Math.max(0, e - prev);
+      prev = e;
+    }
+    var fps = sr / hop, best = 0, bestLag = 0;
+    for (var bpmTry = 60; bpmTry <= 180; bpmTry += 0.5) {
+      var lag = fps * 60 / bpmTry, l0 = Math.floor(lag), frac = lag - l0, sum = 0;
+      for (var k = 0; k + l0 + 1 < frames; k++) sum += env[k] * (env[k + l0] * (1 - frac) + env[k + l0 + 1] * frac);
+      // slight preference for the usual rap range
+      sum *= bpmTry >= 75 && bpmTry <= 160 ? 1.05 : 1;
+      if (sum > best) { best = sum; bestLag = bpmTry; }
+    }
+    return Math.round(bestLag);
   }
 
   function concat(chunks) {
@@ -312,7 +414,7 @@
       links.className = 'take-links';
       li.append(head, player, links);
       ul.append(li);
-      var base = (p.title || 'RAIM') + ' - ' + t.name.replace(/\.\w+$/, '');
+      var base = (p.title || 'RAIM').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name.replace(/\.\w+$/, '');
 
       function link(text, url, file) {
         var a = document.createElement('a');
@@ -326,7 +428,7 @@
           var url = URL.createObjectURL(f.blob);
           takeUrls.push(url);
           player.src = url;
-          links.append(link('Herunterladen', url, (p.title || 'RAIM') + ' - ' + t.name));
+          links.append(link('Herunterladen', url, (p.title || 'RAIM').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name));
         });
         return;
       }
@@ -490,7 +592,12 @@
         audio.play();
       } else audio.pause();
     });
-    function playing(on) { $('playBtn').classList.toggle('is-playing', on); $('miniPlay').classList.toggle('is-playing', on); }
+    function playing(on) {
+      $('playBtn').classList.toggle('is-playing', on);
+      $('miniPlay').classList.toggle('is-playing', on);
+      RaimPrompter.setPlaying(on);
+      if (!on) RaimPrompter.stop();
+    }
     audio.addEventListener('play', function () { playing(true); requestAnimationFrame(tick); });
     audio.addEventListener('pause', function () { playing(false); draw(); });
     audio.addEventListener('ended', function () { playing(false); if (rec) stopRec(); });
@@ -519,6 +626,48 @@
       if (rec) stopRec(); else startRec();
     });
 
+    // start point, BPM, count-in, teleprompter
+    $('bpmInput').addEventListener('change', function () {
+      var p = hooks.project();
+      p.bpm = $('bpmInput').value.trim();
+      hooks.save();
+    });
+    $('bpmDetect').addEventListener('click', function () {
+      if (!decoded) { toast('Lade zuerst einen Beat hoch.'); return; }
+      var b = detectBpm(decoded);
+      $('bpmInput').value = b;
+      $('bpmInput').dispatchEvent(new Event('change'));
+      toast('Erkannt: ' + b + ' BPM. Wenn es doppelt oder halb so schnell wirkt, korrigier die Zahl.');
+    });
+    try {
+      var savedCount = localStorage.getItem('raim.countIn');
+      if (savedCount !== null) $('countIn').value = savedCount;
+      $('prompterOn').checked = localStorage.getItem('raim.prompterOn') !== '0';
+    } catch (e) { /* private mode */ }
+    $('countIn').addEventListener('change', function (e) {
+      try { localStorage.setItem('raim.countIn', e.target.value); } catch (err) { /* private mode */ }
+    });
+    $('prompterOn').addEventListener('change', function (e) {
+      try { localStorage.setItem('raim.prompterOn', e.target.checked ? '1' : '0'); } catch (err) { /* private mode */ }
+    });
+    $('practiceBtn').addEventListener('click', practice);
+
+    RaimPrompter.init({
+      rec: function () { if (rec) stopRec(); else startRec(); },
+      play: function () {
+        if (rec) return;
+        if (!audio.paused) { audio.pause(); cancelCount(); return; }
+        if (audio.src) audio.play();
+        RaimPrompter.start(secPerLine());
+      },
+      close: function () {
+        if (rec) stopRec();
+        cancelCount();
+        audio.pause();
+        RaimPrompter.hide();
+      }
+    });
+
     var manual = savedLatency();
     showLatency(manual === null ? 0 : manual, manual === null);
     if (manual === null) $('latencyOut').textContent = 'auto';
@@ -539,6 +688,7 @@
       if (!showYt(url)) return;
       hooks.project().youtube = url;
       hooks.save();
+      if (hooks.changed) hooks.changed();
     });
     $('ytA').addEventListener('click', function () { if (yt) { ytA = yt.getCurrentTime(); if (ytB !== null && ytB <= ytA) ytB = null; ytInfo(); } });
     $('ytB').addEventListener('click', function () { if (yt) { ytB = yt.getCurrentTime(); if (ytA !== null && ytB <= ytA) ytA = null; ytInfo(); } });

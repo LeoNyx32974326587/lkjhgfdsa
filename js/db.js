@@ -44,12 +44,13 @@
       id: uid(),
       title: title || '',
       text: '',
+      lang: 'de',          // song language: 'de' or 'en'
       created: Date.now(),
       updated: Date.now(),
       beat: null,          // { fileId, name }
       youtube: '',
       license: { producer: '', type: '', bpm: '', key: '', date: '', notes: '', fileId: null, fileName: '' },
-      rhymes: { saved: [], history: [], blocked: [] },
+      rhymes: { saved: [], history: [], blocked: [], langs: [] },  // langs: rhyme languages, empty = all
       takes: []            // [{ fileId, name, created }]
     };
   }

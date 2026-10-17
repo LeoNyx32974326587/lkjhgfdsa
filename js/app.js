@@ -10,6 +10,9 @@
     return e;
   }
 
+  // file name without characters browsers or file systems reject
+  function fileName(t) { return t.replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').replace(/\s+/g, ' ').trim() || 'RAIM'; }
+
   var toastTimer = null;
   function toast(msg) {
     var t = $('toast');
@@ -19,17 +22,57 @@
     toastTimer = setTimeout(function () { t.hidden = true; }, 3200);
   }
 
-  // ---------- dictionary ----------
-  var index = new RaimRhyme.Index(window.RAIM_WORDS.split('\n'));
+  // ---------- dictionaries ----------
+  // German loads with the page; English (pronunciations) and the thesaurus load on demand.
+  var engine = new RaimRhyme.Engine();
+  var deData = window.RAIM_WORDS, deWords = deData.words.split('\n');
   window.RAIM_WORDS = null;
-  var readyCallbacks = [];
-  function whenReady(fn) { if (index.ready) fn(); else readyCallbacks.push(fn); }
-  setTimeout(function () {
-    index.build(function () {
-      $('dictStatus').textContent = index.words.length.toLocaleString('de-DE') + ' Wörter';
-      readyCallbacks.splice(0).forEach(function (fn) { fn(); });
+  engine.add(new RaimRhyme.Index('de', deWords, deData.ranked, function (i) { return RaimRhyme.transcribe(deWords[i]); }));
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function () { s.remove(); reject(new Error(src)); };
+      document.head.appendChild(s);
     });
-  }, 50);
+  }
+
+  var enPromise = null;
+  function loadEnglish() {
+    if (!enPromise) {
+      enPromise = loadScript('js/words-en.js').then(function () {
+        var rows = window.RAIM_WORDS_EN.split('\n');
+        window.RAIM_WORDS_EN = null;
+        var words = rows.map(function (r) { return r.slice(0, r.indexOf(' ')); });
+        var phones = rows.map(function (r) { return r.slice(r.indexOf(' ') + 1); });
+        var idx = new RaimRhyme.Index('en', words, words.length, function (i) { return RaimRhyme.fromArpa(phones[i]); });
+        return new Promise(function (resolve) { idx.build(function () { engine.add(idx); resolve(); }); });
+      });
+      enPromise.catch(function () { enPromise = null; });
+    }
+    return enPromise;
+  }
+
+  var dePromise = new Promise(function (resolve) {
+    setTimeout(function () { engine.indexes.de.build(resolve); }, 50);
+  });
+  var dictPromise = dePromise.then(loadEnglish).catch(function () {
+    toast('Englisches Wörterbuch konnte nicht geladen werden.');
+  }).then(function () {
+    var n = Object.keys(engine.indexes).map(function (l) {
+      return l.toUpperCase() + ' ' + engine.indexes[l].words.length.toLocaleString('de-DE');
+    });
+    $('dictStatus').textContent = n.join(' · ') + ' Wörter';
+  });
+  function whenReady(fn) { dictPromise.then(fn); }
+
+  // rhymes in the languages switched on for the current project
+  function rhymeLangs() { return current && current.rhymes.langs.length ? current.rhymes.langs : ['de', 'en']; }
+  function searchRhymes(q, limit) {
+    return engine.search(q, { langs: rhymeLangs(), primary: current.lang, limit: limit, exclude: blockedSet() });
+  }
 
   // ---------- projects ----------
   var projects = [];
@@ -70,14 +113,15 @@
       var top = el('div', 'project-top');
       top.append(el('strong', '', p.title || 'Ohne Titel'));
       if (p.license.type) top.append(el('span', 'badge', p.license.type));
+      if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
       b.append(top);
-      var first = (p.text || '').split('\n').find(function (l) { return l.trim(); });
+      var first = RaimSong.lines(p.text)[0];
       b.append(el('p', 'project-line', first || 'Noch kein Text'));
       var meta = [];
       if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
       else if (p.youtube) meta.push('♪ YouTube-Beat');
       if (p.license.producer) meta.push(p.license.producer);
-      var lines = (p.text || '').split('\n').filter(function (l) { return l.trim(); }).length;
+      var lines = RaimSong.lines(p.text).length;
       meta.push(lines + (lines === 1 ? ' Zeile' : ' Zeilen'));
       if (p.takes.length) meta.push(p.takes.length + (p.takes.length === 1 ? ' Aufnahme' : ' Aufnahmen'));
       meta.push(new Date(p.updated).toLocaleDateString('de-DE'));
@@ -108,7 +152,8 @@
     $('home').hidden = true;
     $('project').hidden = false;
     $('projectTitle').value = p.title;
-    $('songText').value = p.text;
+    loadSections();
+    renderLang();
     chipsFor = null;
     hideAi();
     updateChips();
@@ -118,6 +163,10 @@
     $('searchInput').value = '';
     lastResult = null;
     renderResults();
+    renderRhymeLangs();
+    setMode('rhymes');
+    $('synInput').value = $('synTarget').value = '';
+    $('synOut').textContent = $('synInfo').textContent = '';
     RaimBeats.open(p);
     showTab('text');
     window.scrollTo(0, 0);
@@ -250,49 +299,332 @@
     t.addEventListener('click', function () { showTab(t.dataset.tab); window.scrollTo(0, 0); });
   });
 
-  // ---------- text ----------
-  var WORD_RE = /[A-Za-zÄÖÜäöüß]+/g;
+  // ---------- text: sections editor ----------
+  // Each section ("[Hook]", "[Part 1]" …) is its own collapsible card; together they make up
+  // current.text. Text without headers is a single card, like a plain notepad.
+  var WORD_RE = /[A-Za-zÄÖÜäöüß']+/g;
+  var sections = [], collapsed = new Set(), activeTA = null, activeIdx = 0;
 
-  function updateStats() {
-    var t = current.text, lines = t.split('\n').filter(function (l) { return l.trim(); }).length;
-    var words = (t.match(WORD_RE) || []).length;
-    $('textStats').textContent = lines ? lines + ' Zeilen · ' + words + ' Wörter' : '';
+  function loadSections() {
+    sections = RaimSong.parse(current.text);
+    collapsed = new Set();
+    activeIdx = 0;
+    renderSections();
   }
 
-  $('songText').addEventListener('input', function (e) {
-    current.text = e.target.value;
+  function syncText() {
+    current.text = RaimSong.serialize(sections);
     scheduleSave();
-    updateChips();
     updateStats();
+  }
+
+  function autosize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(ta.scrollHeight, 56) + 'px';
+  }
+
+  function sectionMeta(i) {
+    var s = sections[i], src = RaimSong.repeatSource(sections, i);
+    if (src) return 'wiederholt ' + s.name;
+    var n = RaimSong.lines(s.body).length;
+    return n ? n + (n === 1 ? ' Zeile' : ' Zeilen') : '';
+  }
+
+  function renderSections(focusIndex) {
+    var box = $('sections');
+    box.textContent = '';
+    sections.forEach(function (s, i) {
+      var card = el('div', 'sec' + (s.name === null ? ' sec--plain' : '') + (sections.length === 1 ? ' sec--only' : '') + (collapsed.has(i) ? ' is-collapsed' : ''));
+      card.dataset.i = i;
+      if (s.name !== null) {
+        var head = el('div', 'sec-head');
+        var toggle = el('button', 'sec-toggle');
+        toggle.type = 'button';
+        toggle.setAttribute('aria-expanded', String(!collapsed.has(i)));
+        toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+        toggle.append(el('strong', '', s.name), el('span', 'sec-meta', sectionMeta(i)));
+        toggle.addEventListener('click', function () {
+          if (collapsed.has(i)) collapsed.delete(i); else collapsed.add(i);
+          renderSections();
+        });
+        var tools = el('span', 'sec-tools');
+        [['↑', 'Nach oben', -1], ['↓', 'Nach unten', 1]].forEach(function (m) {
+          var b = el('button', 'sec-tool', m[0]);
+          b.type = 'button';
+          b.title = m[1];
+          b.disabled = i + m[2] < 0 || i + m[2] >= sections.length;
+          b.addEventListener('click', function () { moveSection(i, m[2]); });
+          tools.append(b);
+        });
+        var ren = el('button', 'sec-tool', '✎');
+        ren.type = 'button';
+        ren.title = 'Umbenennen';
+        ren.addEventListener('click', function () {
+          var name = prompt('Name des Abschnitts', s.name);
+          if (name === null || !name.trim()) return;
+          s.name = name.trim().replace(/[\[\]]/g, '');
+          syncText();
+          renderSections();
+        });
+        var del = el('button', 'sec-tool', '✕');
+        del.type = 'button';
+        del.title = 'Abschnitt entfernen';
+        del.addEventListener('click', function () { removeSection(i); });
+        tools.append(ren, del);
+        head.append(toggle, tools);
+        card.append(head);
+      }
+      var src = RaimSong.repeatSource(sections, i);
+      if (src && !collapsed.has(i)) card.append(el('div', 'sec-repeat', src.body));
+      var ta = el('textarea', 'sec-text');
+      ta.value = s.body;
+      ta.spellcheck = false;
+      ta.placeholder = s.name === null ? 'Schreib deine erste Zeile …'
+        : src || (s.name.toLowerCase() === 'hook' && i > 0 && !s.body) ? 'Leer lassen, um den ' + s.name + ' von oben zu wiederholen'
+        : 'Text für ' + s.name + ' …';
+      ta.addEventListener('input', function () {
+        s.body = ta.value;
+        autosize(ta);
+        syncText();
+        updateChips();
+        var meta = card.querySelector('.sec-meta');
+        if (meta) meta.textContent = sectionMeta(i);
+      });
+      // typing a "[Name]" line splits the section into cards
+      ta.addEventListener('blur', function () {
+        if (ta.value.split('\n').some(RaimSong.isHeader)) { loadSectionsFromText(); }
+      });
+      ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; updateChips(); });
+      ['click', 'keyup'].forEach(function (ev) { ta.addEventListener(ev, updateChips); });
+      card.append(ta);
+      box.append(card);
+      if (!collapsed.has(i)) autosize(ta);
+    });
+    if (activeIdx >= sections.length) activeIdx = sections.length - 1;
+    activeTA = box.querySelectorAll('.sec-text')[activeIdx] || null;
+    if (focusIndex !== undefined && focusIndex >= 0) {
+      var f = box.querySelectorAll('.sec-text')[focusIndex];
+      if (f) f.focus();
+    }
+    var hasHook = sections.some(function (s) { return (s.name || '').toLowerCase() === 'hook' && s.body.trim(); });
+    $('addRepeat').hidden = !hasHook;
+    $('collapseAll').hidden = !sections.some(function (s) { return s.name !== null; });
+    $('collapseAll').textContent = collapsed.size ? 'Alle ausklappen' : 'Alle einklappen';
+  }
+
+  function loadSectionsFromText() {
+    current.text = RaimSong.serialize(sections);
+    sections = RaimSong.parse(current.text);
+    collapsed = new Set();
+    activeIdx = 0;
+    renderSections();
+    syncText();
+  }
+
+  function activeIndex() { return Math.min(activeIdx, sections.length - 1); }
+
+  function addSection(kind) {
+    var name = kind;
+    if (kind === 'repeat') name = 'Hook';
+    if (kind === 'Part') {
+      var parts = sections.filter(function (s) { return /^part\b/i.test(s.name || ''); }).length;
+      name = 'Part ' + (parts + 1);
+    }
+    // a plain first card that is still empty becomes the new section
+    var at;
+    if (sections.length === 1 && sections[0].name === null && !sections[0].body.trim()) {
+      sections[0] = { name: name, body: '' };
+      at = 0;
+    } else {
+      at = activeIndex() + 1;
+      sections.splice(at, 0, { name: name, body: '' });
+    }
+    activeIdx = at;
+    collapsed = new Set();
+    syncText();
+    renderSections(kind === 'repeat' ? -1 : at);
+  }
+  document.querySelectorAll('[data-add]').forEach(function (b) {
+    b.addEventListener('click', function () { addSection(b.dataset.add); });
   });
-  ['click', 'keyup'].forEach(function (ev) { $('songText').addEventListener(ev, updateChips); });
+
+  function moveSection(i, d) {
+    var s = sections.splice(i, 1)[0];
+    sections.splice(i + d, 0, s);
+    activeIdx = i + d;
+    collapsed = new Set();
+    syncText();
+    renderSections();
+  }
+
+  function removeSection(i) {
+    var s = sections[i];
+    var go = function () {
+      sections.splice(i, 1);
+      if (!sections.length) sections.push({ name: null, body: '' });
+      collapsed = new Set();
+      activeIdx = Math.max(0, i - 1);
+      syncText();
+      renderSections();
+    };
+    if (!s.body.trim()) return go();
+    confirmDialog('Abschnitt entfernen?', '„' + s.name + '“ mit ' + RaimSong.lines(s.body).length + ' Zeilen wird aus dem Song entfernt.', 'Entfernen')
+      .then(function (ok) { if (ok) go(); });
+  }
+
+  $('collapseAll').addEventListener('click', function () {
+    if (collapsed.size) collapsed = new Set();
+    else sections.forEach(function (s, i) { if (s.name !== null) collapsed.add(i); });
+    renderSections();
+  });
+
+  function updateStats() {
+    var lines = RaimSong.lines(current.text), words = (lines.join(' ').match(WORD_RE) || []).length;
+    $('textStats').textContent = lines.length ? lines.length + ' Zeilen · ' + words + ' Wörter' : '';
+  }
+
+  // ---------- PDF export ----------
+  var JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+  // the standard PDF fonts only know Latin-1 plus a few typographic signs
+  function pdfSafe(t) {
+    return t.replace(/[^\u0000-\u00ff„“”‘’‚–—…€]/g, '').replace(/\t/g, '    ');
+  }
+
+  function exportPdf() {
+    var p = current;
+    $('exportPdf').disabled = true;
+    loadScript(JSPDF_URL).then(function () {
+      var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+      var W = 210, M = 20, y = 0, maxW = W - 2 * M;
+      function page() { y = 22; }
+      function need(h) { if (y + h > 280) { doc.addPage(); page(); } }
+
+      // header band
+      doc.setFillColor(42, 21, 146);
+      doc.rect(0, 0, W, 34, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text(pdfSafe(p.title || 'Ohne Titel'), M, 17);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(pdfSafe('Songtext · ' + (p.lang === 'en' ? 'Englisch' : 'Deutsch') + ' · Stand ' + new Date().toLocaleDateString('de-DE')), M, 26);
+      y = 46;
+
+      // beat and license info
+      var l = p.license, info = [];
+      if (p.beat) info.push(['Beat', p.beat.name.replace(/\.\w+$/, '')]);
+      else if (p.youtube) info.push(['Beat', p.youtube]);
+      if (l.producer) info.push(['Produzent', l.producer]);
+      if (l.type) info.push(['Lizenz', l.type]);
+      if (p.bpm || l.bpm) info.push(['BPM', p.bpm || l.bpm]);
+      if (l.key) info.push(['Tonart', l.key]);
+      if (info.length) {
+        doc.setFontSize(10);
+        info.forEach(function (row) {
+          doc.setTextColor(120, 110, 160);
+          doc.text(row[0], M, y);
+          doc.setTextColor(30, 25, 60);
+          doc.text(doc.splitTextToSize(pdfSafe(String(row[1])), maxW - 30)[0], M + 30, y);
+          y += 6;
+        });
+        doc.setDrawColor(210, 205, 235);
+        doc.line(M, y, W - M, y);
+        y += 10;
+      }
+
+      // lyrics, repeats written out
+      RaimSong.expand(RaimSong.parse(p.text)).forEach(function (sec) {
+        if (sec.name !== null) {
+          need(16);
+          y += 3;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(90, 54, 232);
+          doc.text(pdfSafe(sec.name.toUpperCase() + (sec.repeated ? '  (WIEDERHOLUNG)' : '')), M, y);
+          y += 7;
+        }
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12.5);
+        doc.setTextColor(20, 16, 40);
+        sec.body.split('\n').forEach(function (line) {
+          if (!line.trim()) { y += 4; return; }
+          doc.splitTextToSize(pdfSafe(line), maxW).forEach(function (part) {
+            need(7);
+            doc.text(part, M, y);
+            y += 6.6;
+          });
+        });
+        y += 5;
+      });
+
+      var pages = doc.getNumberOfPages();
+      for (var i = 1; i <= pages; i++) {
+        doc.setPage(i);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(150, 145, 175);
+        doc.text('Erstellt mit RAIM', M, 290);
+        doc.text('Seite ' + i + ' von ' + pages, W - M, 290, { align: 'right' });
+      }
+      var a = el('a');
+      a.href = URL.createObjectURL(doc.output('blob'));
+      a.download = fileName(p.title || 'Songtext') + '.pdf';
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    }).catch(function () {
+      toast('PDF konnte nicht erstellt werden. Bist du online? (Der PDF-Baustein wird beim ersten Mal geladen.)');
+    }).then(function () { $('exportPdf').disabled = false; });
+  }
+  $('exportPdf').addEventListener('click', exportPdf);
+
+  // ---------- song language ----------
+  function renderLang() {
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.lang === current.lang); });
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      current.lang = b.dataset.lang;
+      scheduleSave();
+      renderLang();
+      chipsFor = null;
+      updateChips();
+    });
+  });
 
   // the last word before the caret; on an empty line, the last word of the line above
   function wordAtCaret() {
-    var ta = $('songText'), before = ta.value.slice(0, ta.selectionStart);
+    var ta = activeTA;
+    if (!ta) return '';
+    var before = ta.value.slice(0, ta.selectionStart);
     var line = before.split('\n').pop();
     var source = line.trim() ? line : before.replace(/\n[^\n]*$/, '');
     var words = source.match(WORD_RE);
     return words ? words[words.length - 1] : '';
   }
 
-  var chipsFor = null;
+  // rhymes for the word at the caret, searched once typing pauses
+  var chipsFor = null, chipsTimer = null;
   function updateChips() {
     if (!current) return;
     var word = wordAtCaret();
     if (word === chipsFor) return;
     chipsFor = word;
-    var box = $('rhymeChips');
-    box.textContent = '';
-    if (!word || word.length < 2) return;
-    whenReady(function () {
+    clearTimeout(chipsTimer);
+    if (!word || word.length < 2) { $('rhymeChips').textContent = ''; return; }
+    chipsTimer = setTimeout(function () { whenReady(showChips); }, 160);
+    function showChips() {
+      var box = $('rhymeChips');
       if (chipsFor !== word || !current) return;
-      var r = index.search(word, { limit: 24, exclude: blockedSet() });
+      var r = searchRhymes(word, 24);
       box.textContent = '';
       box.append(el('span', 'chip chip--muted', word));
-      r.results.forEach(function (h) { box.append(insertChip(h.word)); });
+      r.results.forEach(function (h) { box.append(insertChip(h.word, h.lang !== current.lang ? 'chip--foreign' : '')); });
       if (!r.results.length) box.append(el('span', 'chip chip--muted', 'keine Reime gefunden'));
-    });
+    }
   }
 
   function insertChip(word, cls) {
@@ -313,18 +645,21 @@
     saved.forEach(function (w) { box.append(insertChip(w, 'chip--saved')); });
   }
 
-  function insertAtCaret(text) {
-    var ta = $('songText'), s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
-    var pre = v.slice(0, s);
-    var needSpace = pre && !/[\s(„"]$/.test(pre);
-    var ins = (needSpace ? ' ' : '') + text;
-    ta.value = pre + ins + v.slice(e);
-    ta.selectionStart = ta.selectionEnd = s + ins.length;
+  // change the active card's text and keep everything in sync
+  function setActiveValue(value, caret) {
+    var ta = activeTA;
+    ta.value = value;
+    ta.selectionStart = ta.selectionEnd = caret;
     ta.focus();
-    current.text = ta.value;
-    scheduleSave();
-    updateChips();
-    updateStats();
+    ta.dispatchEvent(new Event('input'));
+  }
+
+  function insertAtCaret(text) {
+    if (!activeTA) return;
+    var ta = activeTA, s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    var pre = v.slice(0, s);
+    var ins = (pre && !/[\s(„"]$/.test(pre) ? ' ' : '') + text;
+    setActiveValue(pre + ins + v.slice(e), s + ins.length);
   }
 
   // ---------- KI-Ideen ----------
@@ -360,10 +695,12 @@
   }
   $('ageOk').addEventListener('change', function (e) { $('consentYes').disabled = !e.target.checked; });
 
-  // text up to the end of the caret's line: that is what the new lines continue
+  // whole song up to the end of the caret's line (repeats filled in): what the new lines continue
   function textBeforeInsertPoint() {
-    var ta = $('songText'), v = ta.value, nl = v.indexOf('\n', ta.selectionStart);
-    return nl < 0 ? v : v.slice(0, nl);
+    var ta = activeTA, i = activeIndex();
+    var v = ta ? ta.value : '', nl = ta ? v.indexOf('\n', ta.selectionStart) : -1;
+    var upTo = sections.slice(0, i).concat([{ name: sections[i].name, body: nl < 0 ? v : v.slice(0, nl) }]);
+    return RaimSong.serialize(RaimSong.expand(upTo));
   }
 
   function runAi() {
@@ -378,13 +715,13 @@
     ensureConsent().then(function (ok) {
       if (!ok) return;
       var p = current, text = textBeforeInsertPoint();
-      var lines = text.split('\n').filter(function (l) { return l.trim(); });
+      var lines = RaimSong.lines(text);
       var lastLineWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
       var rhymeWord = $('aiRhymeEnd').checked && lastLineWords ? lastLineWords[lastLineWords.length - 1] : '';
       var hints = [];
-      if (rhymeWord && index.ready) {
+      if (rhymeWord && engine.ready('de')) {
         // the project's saved words go first when they rhyme
-        var found = index.search(rhymeWord, { limit: 15, exclude: blockedSet() }).results.map(function (h) { return h.word; });
+        var found = searchRhymes(rhymeWord, 15).results.map(function (h) { return h.word; });
         hints = p.rhymes.saved.filter(function (w) { return found.indexOf(w) >= 0; }).concat(found);
         hints = hints.filter(function (w, i) { return hints.indexOf(w) === i; }).slice(0, 15);
       }
@@ -399,7 +736,7 @@
       box.append(el('p', '', 'Claude schreibt …'));
       setAiButtons(false);
 
-      RaimAI.suggest({ apiKey: key, text: text, lineCount: aiLineCount, rhymeWord: rhymeWord, rhymeHints: hints })
+      RaimAI.suggest({ apiKey: key, text: text, lineCount: aiLineCount, rhymeWord: rhymeWord, rhymeHints: hints, lang: p.lang })
         .then(function (out) {
           if (current !== p) return;
           aiProposal = out;
@@ -425,18 +762,12 @@
   $('aiRetry').addEventListener('click', runAi);
   $('aiDiscard').addEventListener('click', hideAi);
   $('aiAccept').addEventListener('click', function () {
-    if (!aiProposal) return;
-    var ta = $('songText'), v = ta.value, nl = v.indexOf('\n', ta.selectionStart);
+    if (!aiProposal || !activeTA) return;
+    var ta = activeTA, v = ta.value, nl = v.indexOf('\n', ta.selectionStart);
     var at = nl < 0 ? v.length : nl;
     var ins = (v.slice(0, at).trim() ? '\n' : '') + aiProposal.join('\n');
-    ta.value = v.slice(0, at) + ins + v.slice(at);
-    ta.selectionStart = ta.selectionEnd = at + ins.length;
-    ta.focus();
-    current.text = ta.value;
-    scheduleSave();
     hideAi();
-    updateChips();
-    updateStats();
+    setActiveValue(v.slice(0, at) + ins + v.slice(at), at + ins.length);
   });
 
   // ---------- license ----------
@@ -459,6 +790,7 @@
     $('licenseForm').hidden = !licenseEditing;
     $('licenseAdd').hidden = licenseEditing || has;
     $('licenseChip').hidden = licenseEditing || !has;
+    renderLicenseWarnings();
     if (licenseEditing || !has) return;
 
     $('licenseTitle').textContent = l.type || 'Lizenz';
@@ -490,6 +822,41 @@
         $('licenseOpen').hidden = false;
       });
     }
+  }
+
+  // what to watch out for with this project's beat license (no legal advice)
+  function licenseWarnings(p) {
+    var l = p.license, out = [], type = l.type, hasBeat = !!(p.beat || p.youtube);
+    if (!hasLicense(l)) {
+      if (hasBeat) out.push(['warn', 'Für diesen Beat ist keine Lizenz hinterlegt. Ohne Lizenz darfst du den Song nicht veröffentlichen – auch YouTube-Beats nur, wenn die Bedingungen es ausdrücklich erlauben.']);
+      return out;
+    }
+    if (/^Free/.test(type)) out.push(['warn', 'Free-Lizenz: nur nicht-kommerziell. Kein Release mit Einnahmen (Spotify, Apple Music, Verkäufe). Für ein Release brauchst du eine gekaufte Lizenz.']);
+    if (/^Lease|^Premium/.test(type)) {
+      out.push(['info', 'Lease ist nicht exklusiv: Der Produzent darf den Beat weiter verkaufen. Leases haben meist Grenzen (Streams, Verkäufe, Musikvideos, Laufzeit). Prüf sie vor dem Release.']);
+      if (!(l.notes || '').trim()) out.push(['warn', 'Trag die Grenzen deiner Lease in die Notizen ein, z. B. „bis 100.000 Streams, 1 Musikvideo“.']);
+    }
+    if (type === 'Unlimited') out.push(['info', 'Unlimited: unbegrenzt nutzbar, aber nicht exklusiv – andere Artists können denselben Beat nutzen.']);
+    if (type === 'Exklusiv') out.push(['info', 'Exklusiv: Nur du darfst den Beat nutzen. Bewahr den Vertrag gut auf.']);
+    if (type === 'Andere' || !type) out.push(['warn', 'Lizenzart nicht angegeben – prüf die Bedingungen genau.']);
+    if (type !== 'Eigener Beat') {
+      if (!l.fileId) out.push(['warn', 'Lizenzdatei fehlt. Lade Vertrag oder Kaufbeleg hoch – den brauchst du z. B. bei Content-ID-Einsprüchen.']);
+      if (!(l.producer || '').trim()) out.push(['info', 'Trag den Produzenten ein. Meist muss er im Songtitel genannt werden (prod. by …).']);
+    }
+    return out;
+  }
+
+  function renderLicenseWarnings() {
+    var box = $('licenseWarn'), list = licenseWarnings(current);
+    var warn = list.filter(function (w) { return w[0] === 'warn'; }).length;
+    $('licenseWarnDot').hidden = !warn;
+    box.textContent = '';
+    box.hidden = !list.length || licenseEditing;
+    box.classList.toggle('is-info', !warn);
+    if (!list.length) return;
+    var ul = el('ul');
+    list.forEach(function (w) { ul.append(el('li', w[0] === 'warn' ? 'is-warn' : '', w[1])); });
+    box.append(el('strong', '', warn ? 'Lizenz prüfen' : 'Gut zu wissen'), ul, el('small', '', 'Kein Rechtsrat – im Zweifel gilt dein Lizenzvertrag.'));
   }
 
   function setLicenseOpen(open) {
@@ -600,14 +967,14 @@
 
   // rhyme key of a word: its last stressed vowel and everything after it
   function rhymeKey(word) {
-    var v = RaimRhyme.transcribe(word).v, n = v.length;
+    var v = engine.wordT(word, current.lang).t.v, n = v.length;
     if (!n) return '';
     return 'aeiouöüAYW'.indexOf(v[n - 1]) < 0 && n > 1 ? v[n - 2] + v[n - 1] : v[n - 1];
   }
 
   function lineEndings() {
     var seen = {}, out = [];
-    current.text.split('\n').forEach(function (line) {
+    RaimSong.lines(current.text).forEach(function (line) {
       var w = line.match(WORD_RE);
       if (!w) return;
       var last = w[w.length - 1];
@@ -682,11 +1049,11 @@
     var q = $('searchInput').value.trim();
     if (q.length < 2) { lastResult = null; renderResults(); return; }
     var out = $('searchOut');
-    if (!index.ready) { out.textContent = ''; out.append(el('p', 'empty', 'Wörterbuch lädt noch …')); }
+    if (!engine.ready('de')) { out.textContent = ''; out.append(el('p', 'empty', 'Wörterbuch lädt noch …')); }
     var p = current;
     whenReady(function () {
       if ($('searchInput').value.trim() !== q || current !== p) return;
-      lastResult = index.search(q, { limit: 120, exclude: blockedSet() });
+      lastResult = searchRhymes(q, 120);
       shown = 30;
       if (record) { remember(q); renderRhymeBlocks(); }
       renderResults();
@@ -711,10 +1078,156 @@
     return i < 0;
   }
 
+  // which languages rhymes may come from, per project
+  function renderRhymeLangs() {
+    var on = rhymeLangs();
+    document.querySelectorAll('[data-rlang]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(on.indexOf(b.dataset.rlang) >= 0));
+      b.classList.toggle('is-on', on.indexOf(b.dataset.rlang) >= 0);
+    });
+  }
+  document.querySelectorAll('[data-rlang]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var on = rhymeLangs().slice(), l = b.dataset.rlang, i = on.indexOf(l);
+      if (i >= 0 && on.length === 1) { toast('Mindestens eine Sprache muss an sein.'); return; }
+      if (i >= 0) on.splice(i, 1); else on.push(l);
+      current.rhymes.langs = on;
+      scheduleSave();
+      renderRhymeLangs();
+      chipsFor = null;
+      if ($('searchInput').value.trim().length >= 2) runSearch(false);
+    });
+  });
+
+  // ---------- Reime / Synonyme switch ----------
+  function setMode(mode) {
+    document.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.mode === mode); });
+    $('rhymePanel').hidden = mode !== 'rhymes';
+    $('synPanel').hidden = mode !== 'syn';
+  }
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.dataset.mode); });
+  });
+
+  // ---------- Synonyme ----------
+  // German from OpenThesaurus (offline), English from Datamuse (online)
+  var thesPromise = null;
+  function loadThesaurus() {
+    if (!thesPromise) {
+      thesPromise = loadScript('js/thesaurus-de.js').then(function () {
+        var sets = window.RAIM_THES_DE.split('\n').map(function (l) { return l.split(';'); });
+        window.RAIM_THES_DE = null;
+        var byWord = new Map();
+        sets.forEach(function (set, i) {
+          set.forEach(function (t) {
+            var k = t.toLowerCase();
+            if (!byWord.has(k)) byWord.set(k, []);
+            byWord.get(k).push(i);
+          });
+        });
+        return { sets: sets, byWord: byWord };
+      });
+      thesPromise.catch(function () { thesPromise = null; });
+    }
+    return thesPromise;
+  }
+
+  function germanSynonyms(word) {
+    return loadThesaurus().then(function (th) {
+      var k = word.toLowerCase(), ids = th.byWord.get(k);
+      // "Geldes" -> "Geld": try a few inflection endings
+      if (!ids) {
+        var stem = ['en', 'es', 'er', 'e', 'n', 's'].map(function (e) { return k.endsWith(e) ? k.slice(0, -e.length) : null; })
+          .find(function (x) { return x && th.byWord.has(x); });
+        ids = stem ? th.byWord.get(stem) : [];
+      }
+      var out = [], seen = new Set([k]);
+      ids.forEach(function (i) {
+        th.sets[i].forEach(function (t) {
+          if (!seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
+        });
+      });
+      return out;
+    });
+  }
+
+  function englishSynonyms(word) {
+    return fetch('https://api.datamuse.com/words?ml=' + encodeURIComponent(word) + '&max=100')
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (list) { return list.map(function (x) { return x.word; }); });
+  }
+
+  var synSeq = 0;
+  function runSynonyms() {
+    var word = $('synInput').value.trim(), target = $('synTarget').value.trim(), out = $('synOut');
+    if (word.length < 2) return;
+    var seq = ++synSeq, p = current;
+    out.textContent = '';
+    out.append(el('p', 'empty', 'Suche Synonyme …'));
+    whenReady(function () {
+      var lang = engine.wordT(word, p.lang).lang;
+      $('synInfo').textContent = lang === 'en'
+        ? 'Englische Synonyme von Datamuse (braucht Internet).'
+        : 'Deutsche Synonyme aus OpenThesaurus.';
+      (lang === 'en' ? englishSynonyms(word) : germanSynonyms(word)).then(function (list) {
+        if (seq !== synSeq || current !== p) return;
+        var rows = list.map(function (w) {
+          return { word: w, score: target ? engine.rhymeScore(w, target, p.lang) : null };
+        });
+        if (target) rows.sort(function (a, b) { return b.score - a.score; });
+        renderSynonyms(rows, word, target);
+      }, function () {
+        if (seq !== synSeq) return;
+        out.textContent = '';
+        out.append(el('p', 'empty', lang === 'en' ? 'Keine Verbindung zu Datamuse. Bist du online?' : 'Synonyme konnten nicht geladen werden.'));
+      });
+    });
+  }
+  $('synForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    runSynonyms();
+    document.activeElement.blur();
+  });
+
+  function renderSynonyms(rows, word, target) {
+    var out = $('synOut');
+    out.textContent = '';
+    if (!rows.length) { out.append(el('p', 'empty', 'Keine Synonyme für „' + word + '“ gefunden.')); return; }
+    var card = el('div', 'result-card');
+    var head = el('p', 'syn-head', rows.length + ' Synonyme für „' + word + '“' + (target ? ', sortiert nach Reim auf „' + target + '“' : ''));
+    card.append(head);
+    var ul = el('ul', 'results');
+    rows.slice(0, 80).forEach(function (r) {
+      var li = el('li');
+      if (r.score !== null) {
+        var sc = el('span', 'score', r.score.toFixed(2).replace('.', ','));
+        sc.style.setProperty('--s', r.score.toFixed(2));
+        li.append(sc);
+      }
+      var w = el('span', 'word', r.word);
+      var star = el('button', 'star', '★');
+      star.type = 'button';
+      star.setAttribute('aria-label', 'Für dieses Projekt merken');
+      star.classList.toggle('is-on', current.rhymes.saved.indexOf(r.word) >= 0);
+      star.addEventListener('click', function () {
+        var on = toggleSaved(r.word);
+        star.classList.toggle('is-on', on);
+        toast(on ? '„' + r.word + '“ gemerkt' : '„' + r.word + '“ entfernt');
+      });
+      var rh = el('button', 'nope nope--text', 'Reime');
+      rh.type = 'button';
+      rh.title = 'Reime auf dieses Wort suchen';
+      rh.addEventListener('click', function () { setMode('rhymes'); search(r.word); });
+      li.append(w, star, rh);
+      ul.append(li);
+    });
+    card.append(ul);
+    out.append(card);
+  }
+
   function renderResults() {
     var out = $('searchOut');
     out.textContent = '';
-    $('filters').hidden = !lastResult;
     if (!lastResult) return;
     var r = lastResult;
     var card = el('div', 'result-card');
@@ -741,7 +1254,10 @@
       var sc = el('span', 'score', h.score.toFixed(2).replace('.', ','));
       sc.style.setProperty('--s', h.score.toFixed(2));
       var w = el('span', 'word', h.word);
-      if (h.kind === 'multi') w.append(el('span', 'tag', 'mehrsilbig'));
+      var tags = [];
+      if (h.kind === 'multi') tags.push('mehrsilbig');
+      if (h.lang !== current.lang) tags.push(h.lang === 'en' ? 'englisch' : 'deutsch');
+      if (tags.length) w.append(el('span', 'tag', tags.join(' · ')));
       var star = el('button', 'star', '★');
       star.type = 'button';
       star.setAttribute('aria-label', 'Für dieses Projekt merken');
@@ -913,7 +1429,17 @@
   // ---------- start ----------
   RaimBeats.init(toast, {
     project: function () { return current; },
-    save: function () { scheduleSave(); }
+    save: function () { scheduleSave(); },
+    changed: function () { if (current) renderLicenseWarnings(); },
+    // lyrics for the teleprompter: section names and lines, repeats filled in
+    lyrics: function () {
+      var out = [];
+      RaimSong.expand(RaimSong.parse(current.text)).forEach(function (s) {
+        if (s.name !== null) out.push({ head: s.name + (s.repeated ? ' (Wiederholung)' : '') });
+        s.body.split('\n').forEach(function (l) { if (l.trim()) out.push({ line: l.trim() }); });
+      });
+      return out;
+    }
   });
 
   // songs from the first version become projects

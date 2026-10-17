@@ -159,6 +159,7 @@
     if (!n) return '';
     var k = n - 1;
     if (FULL_VOWELS.indexOf(t.v[k]) < 0 && k > 0) k--;
+    if (!t.pos) return '';
     var s = word.toLowerCase(), p = t.pos[k], start = p;
     while (start > 0 && 'aeiouäöüy'.indexOf(s[start - 1]) < 0) start--;
     var cluster = s.slice(start, p), onset = cluster.slice(-1);
@@ -169,13 +170,61 @@
     return e.length >= 3 ? e : '';
   }
 
+  // ---------- English: CMU pronunciations (ARPAbet) mapped onto the same sound codes ----------
+  var ARPA_V = {
+    AA: ['a', 1], AE: ['e', 0], AH: ['a', 0], AO: ['o', 1], AW: ['W', 1], AY: ['A', 1],
+    EH: ['e', 0], ER: ['ö', 1], EY: ['e', 1], IH: ['i', 0], IY: ['i', 1], OW: ['o', 1],
+    OY: ['Y', 1], UH: ['u', 0], UW: ['u', 1]
+  };
+  var ARPA_C = {
+    B: 'b', CH: 'tS', D: 'd', DH: 'd', F: 'f', G: 'g', HH: 'h', JH: 'dS', K: 'k', L: 'l',
+    M: 'm', N: 'n', NG: 'N', P: 'p', R: 'r', S: 's', SH: 'S', T: 't', TH: 't', V: 'v',
+    W: 'v', Y: 'j', Z: 's', ZH: 'S'
+  };
+
+  // "M AH1 N IY0" -> transcription like transcribe() gives for German words
+  function fromArpa(phones) {
+    var v = [], long = [], cons = [''], ph = phones.split(' ');
+    for (var i = 0; i < ph.length; i++) {
+      var p = ph[i], base = p.replace(/\d$/, ''), stress = p.slice(-1);
+      if (ARPA_V[base]) {
+        var code = ARPA_V[base][0], ln = ARPA_V[base][1];
+        // unstressed: "ah" becomes a schwa, "er" the vocalic r (like German "-er")
+        if (stress === '0' && base === 'AH') { code = '@'; ln = 0; }
+        if (stress === '0' && base === 'ER') { code = '6'; ln = 0; }
+        v.push(code); long.push(ln); cons.push('');
+      } else if (ARPA_C[base]) {
+        cons[cons.length - 1] += ARPA_C[base];
+      }
+    }
+    return { v: v, long: long, cons: cons, pos: null };
+  }
+
+  // join word transcriptions of a phrase ("Rechnung bezahle")
+  function concatT(list) {
+    var out = { v: [], long: [], cons: [''], pos: null };
+    list.forEach(function (t) {
+      out.cons[out.cons.length - 1] += t.cons[0];
+      for (var i = 0; i < t.v.length; i++) {
+        out.v.push(t.v[i]); out.long.push(t.long[i]); out.cons.push(t.cons[i + 1]);
+      }
+    });
+    return out;
+  }
+
   // crude inflection stem so "Anlage" and "Anlagen" count as the same word
   function stemOf(lower) { return lower.replace(/(e|en|er|es|em|n|s)$/, '').replace(/ß/g, 'ss'); }
 
-  function Index(words) {
+  // One language's word list. The first `ranked` words are ordered by frequency.
+  // toT(i) returns the transcription of word i.
+  function Index(lang, words, ranked, toT) {
+    this.lang = lang;
     this.words = words;
+    this.ranked = ranked;
+    this.toT = toT;
     this.lower = new Array(words.length);
     this.t = new Array(words.length);
+    this.byLower = new Map();
     this.ready = false;
   }
   // build in slices so the UI stays responsive
@@ -185,8 +234,10 @@
     function step() {
       var end = Math.min(N, i + slice);
       for (; i < end; i++) {
-        self.lower[i] = self.words[i].toLowerCase();
-        self.t[i] = transcribe(self.words[i]);
+        var l = self.words[i].toLowerCase();
+        self.lower[i] = l;
+        self.t[i] = self.toT(i);
+        if (!self.byLower.has(l)) self.byLower.set(l, i);
       }
       if (i < N) setTimeout(step, 0);
       else { self.ready = true; if (onDone) onDone(); }
@@ -194,52 +245,102 @@
     step();
   };
 
-  // opts: { limit, exclude: Set of lower-case words to hide }
-  Index.prototype.search = function (query, opts) {
-    opts = opts || {};
-    var limit = opts.limit || 80;
-    var q = query.trim().replace(/\s+/g, ' ');
-    var lastWord = q.split(' ').pop();
-    var qt = transcribe(q.replace(/ /g, ''));
-    var qLower = q.toLowerCase().replace(/ /g, '');
-    var qStem = stemOf(qLower);
-    var end = ending(lastWord);
-    var hits = [], group = [];
+  // q: { t, lower, stem, ending } ; opts: { limit, exclude, penalty }
+  Index.prototype.scan = function (q, opts) {
+    var hits = [], group = [], end = this.lang === 'de' ? q.ending : '';
     for (var i = 0; i < this.words.length; i++) {
       var w = this.lower[i];
-      if (w === qLower || stemOf(w) === qStem) continue;
+      if (w === q.lower || stemOf(w) === q.stem) continue;
       if (end && w.length > end.length && w.slice(-end.length) === end) {
         if (group.length < 400) group.push(this.words[i]);
         continue;
       }
-      if (opts.exclude && opts.exclude.has(qLower + '|' + w)) continue;
+      if (opts.exclude && opts.exclude.has(q.lower + '|' + w)) continue;
       // skip words that only repeat the query's own tail ("dienst" for "Nachrichtendienst")
-      if (qLower.length > 4 && w.length >= 3 && qLower.slice(-w.length) === w) continue;
-      var s = score(qt, this.t[i]);
-      if (s >= 0.45) hits.push([s, i]);
+      if (q.lower.length > 4 && w.length >= 3 && q.lower.slice(-w.length) === w) continue;
+      var s = score(q.t, this.t[i]);
+      if (s < 0.45) continue;
+      // common words first among equally good rhymes
+      if (i < this.ranked) s += 0.03 * (1 - i / this.ranked);
+      hits.push([s - (opts.penalty || 0), i]);
     }
+    return { hits: hits, group: group };
+  };
+
+  // Rhyme search over one or more languages.
+  function Engine() { this.indexes = {}; }
+  Engine.prototype.add = function (index) { this.indexes[index.lang] = index; };
+  Engine.prototype.ready = function (lang) { var x = this.indexes[lang]; return !!(x && x.ready); };
+
+  // pronunciation of one word: from the dictionary of the language that knows it
+  Engine.prototype.wordT = function (word, primary) {
+    var l = word.toLowerCase(), de = this.indexes.de, en = this.indexes.en;
+    var inDe = de && de.ready && de.byLower.has(l), inEn = en && en.ready && en.byLower.has(l);
+    // words in both lists ("Money", "Hand"): English if it is far more common there
+    var deRank = inDe ? de.byLower.get(l) : Infinity, enRank = inEn ? en.byLower.get(l) : Infinity;
+    if (deRank >= de.ranked) deRank = Infinity;
+    if (inEn && (primary === 'en' || !inDe || enRank * 3 < deRank)) return { lang: 'en', t: en.t[enRank] };
+    return { lang: inDe || primary !== 'en' ? 'de' : 'en', t: transcribe(word), guessed: !inDe };
+  };
+
+  Engine.prototype.queryOf = function (query, primary) {
+    var q = query.trim().replace(/\s+/g, ' ');
+    var parts = q.split(' ').filter(Boolean), self = this;
+    var infos = parts.map(function (w) { return self.wordT(w.replace(/[^A-Za-zÄÖÜäöüß']/g, '') || w, primary); });
+    var last = infos[infos.length - 1];
+    var lower = q.toLowerCase().replace(/ /g, '');
+    return {
+      text: q,
+      t: concatT(infos.map(function (x) { return x.t; })),
+      lower: lower,
+      stem: stemOf(lower),
+      lang: last ? last.lang : primary,
+      ending: last && last.lang === 'de' ? ending(parts[parts.length - 1]) : ''
+    };
+  };
+
+  // opts: { langs: ['de', 'en'], primary, limit, exclude: Set }
+  Engine.prototype.search = function (query, opts) {
+    opts = opts || {};
+    var primary = opts.primary || 'de', limit = opts.limit || 80, self = this;
+    var q = this.queryOf(query, primary);
+    var hits = [], group = [];
+    (opts.langs || [primary]).forEach(function (lang) {
+      var idx = self.indexes[lang];
+      if (!idx || !idx.ready) return;
+      var r = idx.scan(q, { exclude: opts.exclude, penalty: lang === primary ? 0 : 0.03 });
+      r.hits.forEach(function (h) { hits.push([h[0], h[1], idx]); });
+      group = group.concat(r.group);
+    });
     hits.sort(function (a, b) { return b[0] - a[0] || a[1] - b[1]; });
     var out = [], seen = {}, perEnd = {};
     for (var h = 0; h < hits.length && out.length < limit; h++) {
-      var word = this.words[hits[h][1]];
-      var stem = stemOf(word.toLowerCase());
+      var idx = hits[h][2], i = hits[h][1], word = idx.words[i];
+      var stem = idx.lang + stemOf(word.toLowerCase());
       if (seen[stem]) continue;
       seen[stem] = 1;
       // keep the list varied: at most two compounds on the same final word
-      var e2 = ending(word, this.t[hits[h][1]]) || stem;
+      var e2 = (idx.lang === 'de' && ending(word, idx.t[i])) || stem;
       perEnd[e2] = (perEnd[e2] || 0) + 1;
       if (perEnd[e2] > 2) continue;
+      var sc = Math.min(1, hits[h][0]);
       out.push({
         word: word,
-        score: hits[h][0],
-        kind: Math.min(qt.v.length, this.t[hits[h][1]].v.length) >= 2 && hits[h][0] >= 0.7 ? 'multi' : 'end'
+        lang: idx.lang,
+        score: sc,
+        kind: Math.min(q.t.v.length, idx.t[i].v.length) >= 2 && sc >= 0.7 ? 'multi' : 'end'
       });
     }
     group.sort(function (a, b) { return a.length - b.length; });
-    return { query: q, ending: end, endings: group, results: out };
+    return { query: q.text, lang: q.lang, ending: q.ending, endings: group, results: out };
   };
 
-  var api = { transcribe: transcribe, score: score, ending: ending, Index: Index };
+  // how well `word` rhymes on `target` (both may be phrases), 0..1
+  Engine.prototype.rhymeScore = function (word, target, primary) {
+    return score(this.queryOf(target, primary).t, this.queryOf(word, primary).t);
+  };
+
+  var api = { transcribe: transcribe, fromArpa: fromArpa, score: score, ending: ending, Index: Index, Engine: Engine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RaimRhyme = api;
 })(this);
