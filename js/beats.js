@@ -70,6 +70,8 @@
     openId = null;
   }
 
+  function played() { if (hooks.played) hooks.played(); }
+
   function pause() {
     audio.pause();
     if (yt && yt.pauseVideo) yt.pauseVideo();
@@ -518,7 +520,10 @@
       yt = new YT.Player('ytPlayer', {
         videoId: id,
         playerVars: { playsinline: 1, rel: 0 },
-        events: { onReady: function () { yt.setPlaybackRate(parseFloat($('ytRate').value)); } }
+        events: {
+          onReady: function () { yt.setPlaybackRate(parseFloat($('ytRate').value)); },
+          onStateChange: function (e) { if (e.data === 1) played(); }
+        }
       });
     }, function () { toast('YouTube konnte nicht geladen werden.'); });
     return true;
@@ -545,6 +550,8 @@
     hooks = projectHooks;
     canvas = $('waveCanvas');
     g = canvas.getContext('2d');
+    // only one thing plays at a time: the beat stops the finished song and the other way round
+    audio.addEventListener('play', played);
 
     document.querySelectorAll('[data-source]').forEach(function (b) {
       b.addEventListener('click', function () { setSource(b.dataset.source); });

@@ -260,6 +260,14 @@
     }).catch(function () { toast('Song konnte nicht gespeichert werden – Speicher voll?'); })
       .then(function () { $('masterAdd').disabled = false; });
   }
+  // only one thing plays at a time: the finished song, the beat or a recorded take
+  function pauseOthers(except) {
+    document.querySelectorAll('audio, video').forEach(function (a) { if (a !== except) a.pause(); });
+  }
+  document.addEventListener('play', function (e) {
+    pauseOthers(e.target);
+    RaimBeats.pause();
+  }, true);
   $('masterAdd').addEventListener('click', function () { $('masterInput').click(); });
   $('masterReplace').addEventListener('click', function () { $('masterInput').click(); });
   $('masterInput').addEventListener('change', function (e) { uploadMaster(e.target.files[0]); e.target.value = ''; });
@@ -2448,6 +2456,7 @@
     save: function () { scheduleSave(); },
     changed: function () { if (current) renderLicenseWarnings(); },
     may: function (what) { return may(what); },
+    played: function () { pauseOthers(null); },
     // section names for beat markers, and the first one the teleprompter shows
     sections: function () {
       var secs = RaimSong.expand(RaimSong.parse(current.text));
