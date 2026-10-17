@@ -709,6 +709,7 @@ body.prompter-open { overflow: hidden; }
 .lock-text #addSection, .lock-text .sec-tools, .lock-text .ai-bar, .lock-text #aiSetup { display: none !important; }
 .lock-beat #drop { pointer-events: none; }
 .lock-beat #drop input, .lock-beat #ytForm { display: none !important; }
+.lock-beat .marker-row, .lock-beat .markers > .hint { display: none !important; }
 .lock-license #licenseAdd, .lock-license #licenseEdit, .lock-license #licenseForm { display: none !important; }
 .rights-checks .check { white-space: nowrap; flex: none; font-size: 14px; color: var(--text); gap: 6px; }
 .rights-checks .check input { width: 18px; height: 18px; flex: none; margin: 0; }
@@ -892,3 +893,17 @@ body.prompter-open { overflow: hidden; }
 .bar-actions .link-btn--danger { margin-left: auto; }
 .bar-quick { display: flex; gap: 8px; }
 .bar-list--pick { max-height: 50vh; overflow: auto; }
+
+/* ---------- beat markers ---------- */
+.markers { margin-top: 18px; }
+.markers .sub { margin-top: 0; }
+.marker-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 10px 0; }
+.marker-row select { min-width: 140px; }
+.marker-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.marker-chip { display: inline-flex; align-items: center; border-radius: 999px; background: rgba(255, 210, 63, .12); border: 1px solid rgba(255, 210, 63, .45); overflow: hidden; }
+.marker-chip.is-orphan { opacity: .55; }
+.marker-go, .marker-del { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.marker-go { padding: 6px 4px 6px 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.marker-go:last-child { padding-right: 12px; }
+.marker-del { padding: 6px 10px 6px 6px; font-size: 16px; line-height: 1; opacity: .7; }
+.marker-del:hover, .marker-del:focus-visible { opacity: 1; }

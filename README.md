@@ -64,6 +64,8 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 **Beats & Lizenzen:** Über den Knopf unter „Projekte“ siehst du alle Beats und Lizenzen aus allen Projekten auf einer Seite – Lizenzart, Produzent, Kaufdatum, ob die Lizenzdatei da ist, und alle Warnungen. Filter: „Lizenz prüfen“, „Ohne Lizenz“, „Lease / Free“.
 
+**Beat-Marker:** Im Bereich Beat merkst du dir, wo Intro, Hook, Part oder Bridge im Beat anfangen – Abschnitt wählen, an die Stelle tippen, „Marker hier setzen“. Die Marker stehen auf der Wellenform. Wählst du im Teleprompter einen Abschnitt, startet der Beat an seinem Marker.
+
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
 Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.

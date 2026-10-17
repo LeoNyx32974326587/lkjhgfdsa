@@ -315,6 +315,15 @@
               <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
             </div>
             <p class="hint">Tipp auf die Wellenform, um die Startstelle zu setzen. Ziehen markiert einen Loop-Bereich.</p>
+            <div class="markers" id="markers" hidden>
+              <h2 class="sub">Marker</h2>
+              <p class="hint">Merk dir, wo Hook, Part und Bridge im Beat anfangen. Der Teleprompter startet den Beat dann am Marker des gewählten Abschnitts.</p>
+              <div class="marker-row">
+                <label class="mini-field">Abschnitt <select id="markerSec"></select></label>
+                <button type="button" class="pill-btn" id="markerSet">Marker hier setzen</button>
+              </div>
+              <div class="marker-list" id="markerList"></div>
+            </div>
           </div>
         </div>
 
@@ -435,7 +444,7 @@
               <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
             </label>
             <label class="check" id="withBeatLabel"><input type="checkbox" id="withBeat" checked> Beat mitspielen</label>
-            <span class="rec-start" id="recStart" hidden title="Startstelle: im Bereich Beat auf die Wellenform tippen">Beat ab 0:00</span>
+            <span class="rec-start" id="recStart" hidden title="Startstelle: im Bereich Beat auf die Wellenform tippen oder einen Marker setzen">Beat ab 0:00</span>
           </div>
           <p class="bpm-hint" id="bpmHint"></p>
           <button type="button" class="btn btn--primary practice" id="practiceBtn">

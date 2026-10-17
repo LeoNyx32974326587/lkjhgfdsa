@@ -148,7 +148,7 @@ begin
   select rights into r from project_members where owner = old.user_id and project_id = old.id and member = auth.uid();
   r := coalesce(r, '{}'::jsonb);
   if not coalesce((r ->> 'text')::boolean, false) then locked := locked || array['text']; end if;
-  if not coalesce((r ->> 'beat')::boolean, false) then locked := locked || array['beat', 'youtube']; end if;
+  if not coalesce((r ->> 'beat')::boolean, false) then locked := locked || array['beat', 'youtube', 'markers']; end if;
   if not coalesce((r ->> 'license')::boolean, false) then locked := locked || array['license']; end if;
   if not coalesce((r ->> 'info')::boolean, false) then locked := locked || array['title', 'bpm', 'key', 'genres', 'langs', 'lang', 'topic']; end if;
   if not coalesce((r ->> 'status')::boolean, false) then locked := locked || array['status', 'release']; end if;

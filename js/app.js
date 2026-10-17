@@ -970,6 +970,17 @@
   // null = whole song, otherwise a Set of section positions
   var promptPick = null;
 
+  // number sections that appear more than once: "Hook 1", "Hook 2"
+  function sectionLabels(secs) {
+    var total = {}, seen = {};
+    secs.forEach(function (s) { var k = (s.name || '').toLowerCase(); total[k] = (total[k] || 0) + 1; });
+    return secs.map(function (s) {
+      var k = (s.name || '').toLowerCase();
+      seen[k] = (seen[k] || 0) + 1;
+      return s.name === null ? 'Anfang' : s.name + (total[k] > 1 && !/\d$/.test(s.name) ? ' ' + seen[k] : '');
+    });
+  }
+
   function renderPromptPick() {
     var secs = RaimSong.expand(RaimSong.parse(current.text)), box = $('secPick');
     var named = secs.some(function (s) { return s.name !== null; });
@@ -987,20 +998,17 @@
       c.addEventListener('click', onClick);
       box.append(c);
     }
-    chip('Ganzer Song', !promptPick, function () { promptPick = null; renderPromptPick(); });
-    // number sections that appear more than once: "Hook 1", "Hook 2"
-    var total = {}, seen = {};
-    secs.forEach(function (s) { var k = (s.name || '').toLowerCase(); total[k] = (total[k] || 0) + 1; });
+    chip('Ganzer Song', !promptPick, function () { promptPick = null; renderPromptPick(); RaimBeats.refreshPrompter(); });
+    var labels = sectionLabels(secs);
     secs.forEach(function (s, i) {
-      var k = (s.name || '').toLowerCase();
-      seen[k] = (seen[k] || 0) + 1;
-      var label = s.name === null ? 'Anfang' : s.name + (total[k] > 1 && !/\d$/.test(s.name) ? ' ' + seen[k] : '');
+      var label = labels[i];
       if (!RaimSong.lines(s.body).length) label += ' (leer)';
       chip(label, !!promptPick && promptPick.has(i), function () {
         if (!promptPick) promptPick = new Set();
         if (promptPick.has(i)) promptPick.delete(i); else promptPick.add(i);
         if (!promptPick.size) promptPick = null;
         renderPromptPick();
+        RaimBeats.refreshPrompter();
       });
     });
   }
@@ -2327,6 +2335,16 @@
     save: function () { scheduleSave(); },
     changed: function () { if (current) renderLicenseWarnings(); },
     may: function (what) { return may(what); },
+    // section names for beat markers, and the first one the teleprompter shows
+    sections: function () {
+      var secs = RaimSong.expand(RaimSong.parse(current.text));
+      return secs.some(function (s) { return s.name !== null; }) ? sectionLabels(secs) : [];
+    },
+    startSection: function () {
+      var labels = sectionLabels(RaimSong.expand(RaimSong.parse(current.text)));
+      if (!promptPick) return labels[0] || null;
+      return labels[Math.min.apply(null, Array.from(promptPick))] || null;
+    },
     // lyrics for the teleprompter: section names and lines, repeats filled in
     lyrics: function () {
       var out = [];

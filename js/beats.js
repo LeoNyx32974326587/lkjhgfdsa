@@ -54,6 +54,7 @@
       });
     }
     renderTakes(project);
+    renderMarkers();
     updatePrompterCard();
   }
 
@@ -129,8 +130,79 @@
     return out.map(function (v) { return max ? v / max : 0; });
   }
 
+  // ---------- markers: where each section starts in the beat ----------
+  function markers() { var p = hooks.project(); return (p && p.markers) || []; }
+  function markerFor(label) {
+    var key = String(label || '').toLowerCase();
+    return markers().filter(function (m) { return m.s.toLowerCase() === key; })[0] || null;
+  }
+  // the marker of the first section the teleprompter shows
+  function startMarker() {
+    if (!audio.src || !hooks.startSection) return null;
+    return markerFor(hooks.startSection());
+  }
+
+  function renderMarkers() {
+    var labels = hooks.sections ? hooks.sections() : [];
+    $('markers').hidden = !labels.length;
+    var sel = $('markerSec'), keep = sel.value;
+    sel.textContent = '';
+    labels.forEach(function (l) {
+      var o = document.createElement('option');
+      o.value = o.textContent = l;
+      sel.append(o);
+    });
+    if (labels.indexOf(keep) >= 0) sel.value = keep;
+    else {
+      // suggest the first section without a marker
+      var free = labels.filter(function (l) { return !markerFor(l); })[0];
+      if (free) sel.value = free;
+    }
+    var list = $('markerList');
+    list.textContent = '';
+    markers().slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (m) {
+      var chip = document.createElement('span');
+      chip.className = 'marker-chip' + (labels.some(function (l) { return l.toLowerCase() === m.s.toLowerCase(); }) ? '' : ' is-orphan');
+      var go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'marker-go';
+      go.textContent = m.s + ' · ' + fmt(m.t);
+      go.title = 'Zur Stelle springen';
+      go.addEventListener('click', function () { audio.currentTime = m.t; draw(); });
+      chip.append(go);
+      if (canChange()) {
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'marker-del';
+        del.setAttribute('aria-label', 'Marker ' + m.s + ' löschen');
+        del.textContent = '×';
+        del.addEventListener('click', function () {
+          var p = hooks.project();
+          p.markers = markers().filter(function (x) { return x !== m; });
+          hooks.save();
+          renderMarkers();
+          draw();
+        });
+        chip.append(del);
+      }
+      list.append(chip);
+    });
+  }
+
+  function setMarker() {
+    var label = $('markerSec').value;
+    if (!label || !audio.src) return;
+    var p = hooks.project(), t = Math.round(audio.currentTime * 100) / 100;
+    p.markers = markers().filter(function (m) { return m.s.toLowerCase() !== label.toLowerCase(); }).concat([{ s: label, t: t }]);
+    hooks.save();
+    toast('Marker „' + label + '“ bei ' + fmt(t) + ' gesetzt.');
+    renderMarkers();
+    draw();
+  }
+
   function draw() {
     if ($('deck').hidden) return;
+    showTimes();
     var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w) return;
     if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
@@ -154,13 +226,28 @@
       g.fillRect(x + bw * 0.2, (h - bh) / 2, Math.max(1, bw * 0.6), bh);
     }
     if (dur) {
+      g.font = '600 11px Roboto, sans-serif';
+      g.textBaseline = 'top';
+      markers().forEach(function (m) {
+        var x = Math.min(m.t / dur * w, w - 1);
+        g.fillStyle = '#ffd23f';
+        g.fillRect(x - 1, 0, 2, h);
+        var tw = g.measureText(m.s).width;
+        g.fillRect(Math.min(x, w - tw - 8), 0, tw + 8, 16);
+        g.fillStyle = '#07060f';
+        g.fillText(m.s, Math.min(x, w - tw - 8) + 4, 2);
+      });
       g.fillStyle = '#5ee7ff';
       g.fillRect(played - 1, 0, 2, h);
     }
+  }
+
+  // the clocks also run while the waveform is out of sight (teleprompter tab)
+  function showTimes() {
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
     RaimPrompter.setTime(fmt(audio.currentTime));
-    $('recStart').textContent = 'Beat ab ' + fmt(startPos());
-    $('tDur').textContent = fmt(dur);
+    $('recStart').textContent = startLabel();
+    $('tDur').textContent = fmt(audio.duration || 0);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
 
@@ -180,6 +267,8 @@
   // the beat starts where the playhead is (or at the loop start)
   function startPos() {
     if (looping && loop) return loop[0];
+    var m = startMarker();
+    if (m) return m.t;
     var d = audio.duration || 0;
     return d && audio.currentTime < d - 0.5 ? audio.currentTime : 0;
   }
@@ -566,6 +655,7 @@
       updatePrompterCard();
     });
     $('practiceBtn').addEventListener('click', practice);
+    $('markerSet').addEventListener('click', setMarker);
 
     RaimPrompter.init({
       play: promptPlay,
@@ -601,11 +691,21 @@
     $('ytRate').addEventListener('change', function (e) { if (yt) yt.setPlaybackRate(parseFloat(e.target.value)); });
   }
 
+  function startLabel() {
+    var m = !(looping && loop) && startMarker();
+    return 'Beat ab ' + fmt(startPos()) + (m ? ' (Marker ' + m.s + ')' : '');
+  }
+
   // the teleprompter tab shows the current start point and beat options
   function refreshPrompter() {
     updatePrompterCard();
-    $('recStart').textContent = 'Beat ab ' + fmt(startPos());
+    $('recStart').textContent = startLabel();
   }
 
-  root.RaimBeats = { init: init, open: open, close: close, pause: pause, redraw: draw, refreshPrompter: refreshPrompter };
+  function redraw() {
+    renderMarkers();
+    draw();
+  }
+
+  root.RaimBeats = { init: init, open: open, close: close, pause: pause, redraw: redraw, refreshPrompter: refreshPrompter };
 })(this);
