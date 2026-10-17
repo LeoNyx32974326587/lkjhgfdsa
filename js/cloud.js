@@ -78,47 +78,108 @@
     },
     onAuth: function (fn) { if (sb) sb.auth.onAuthStateChange(fn); },
 
-    // ---------- profile: name and artist name in the account, picture in the bucket ----------
-    // -> { name, artist, avatar: version or 0 }, fresh from the server
+    // ---------- profile: ID, name, artist name (table profiles), picture in the bucket ----------
+    // -> { code, name, artist, avatar: version or 0 }; creates the profile with a new ID the first time
     getProfile: function () {
-      return sb.auth.getUser().then(ok).then(function (data) {
-        var m = (data.user && data.user.user_metadata) || {};
-        return { name: m.name || '', artist: m.artist || '', avatar: m.avatar || 0 };
+      return sb.from('profiles').select('code,name,artist,avatar').eq('id', uid).then(ok).then(function (rows) {
+        if (rows[0]) return rows[0];
+        // names from before profiles existed were kept in the account itself
+        return sb.auth.getUser().then(ok).then(function (data) {
+          var m = (data.user && data.user.user_metadata) || {};
+          return createProfile({ name: m.name || '', artist: m.artist || '', avatar: m.avatar || 0 }, 0);
+        });
       });
     },
     saveProfile: function (fields) {
-      return sb.auth.updateUser({ data: fields }).then(ok);
+      return sb.from('profiles').update(fields).eq('id', uid).then(ok);
     },
     uploadAvatar: function (blob) {
       return sb.storage.from('files').upload(uid + '/avatar.jpg', blob, { upsert: true, contentType: 'image/jpeg' }).then(ok);
     },
-    downloadAvatar: function () {
-      return sb.storage.from('files').download(uid + '/avatar.jpg').then(ok);
+    // own picture, or a friend's (userId)
+    downloadAvatar: function (userId) {
+      return sb.storage.from('files').download((userId || uid) + '/avatar.jpg').then(ok);
     },
     removeAvatar: function () {
       return sb.storage.from('files').remove([uid + '/avatar.jpg']).then(ok);
     },
 
-    // ---------- data ----------
-    listProjects: function () {
-      return sb.from('projects').select('id,data,updated').then(ok);
+    // ---------- friends ----------
+    // -> { code, name, artist, avatar, id } or null
+    findByCode: function (code) {
+      return sb.rpc('find_profile', { c: code }).then(ok).then(function (rows) { return rows[0] || null; });
     },
-    saveProject: function (p) {
-      return sb.from('projects').upsert({ user_id: uid, id: p.id, data: p, updated: p.updated }, { onConflict: 'user_id,id' }).then(ok);
-    },
-    deleteProject: function (id) {
-      return sb.from('files').select('id').eq('project', id).then(ok).then(function (rows) {
-        return Promise.all(rows.map(function (r) { return api.deleteFile(r.id); }));
-      }).then(function () {
-        return sb.from('projects').delete().eq('id', id).then(ok);
+    // -> [{ id, code, name, artist, avatar, status: 'friend' | 'incoming' | 'outgoing' }]
+    relations: function () {
+      return sb.from('friendships').select('requester,addressee,status').then(ok).then(function (rows) {
+        var state = {};
+        rows.forEach(function (r) {
+          var other = r.requester === uid ? r.addressee : r.requester;
+          state[other] = r.status === 'accepted' ? 'friend' : r.requester === uid ? 'outgoing' : 'incoming';
+        });
+        var ids = Object.keys(state);
+        if (!ids.length) return [];
+        return sb.from('profiles').select('id,code,name,artist,avatar').in('id', ids).then(ok).then(function (people) {
+          return people.map(function (x) { x.status = state[x.id]; return x; });
+        });
       });
     },
-    putFile: function (rec) {
+    askFriend: function (otherId) {
+      return sb.from('friendships').insert({ requester: uid, addressee: otherId }).then(ok);
+    },
+    acceptFriend: function (otherId) {
+      return sb.from('friendships').update({ status: 'accepted' }).eq('requester', otherId).eq('addressee', uid).then(ok);
+    },
+    // decline, withdraw or unfriend
+    endFriendship: function (otherId) {
+      return Promise.all([
+        sb.from('friendships').delete().eq('requester', uid).eq('addressee', otherId).then(ok),
+        sb.from('friendships').delete().eq('requester', otherId).eq('addressee', uid).then(ok)
+      ]);
+    },
+
+    // ---------- features: friends on a project ----------
+    members: function (projectId) {
+      return sb.from('project_members').select('member').eq('owner', uid).eq('project_id', projectId).then(ok)
+        .then(function (rows) { return rows.map(function (r) { return r.member; }); });
+    },
+    addMember: function (projectId, member) {
+      return sb.from('project_members').insert({ owner: uid, project_id: projectId, member: member }).then(ok);
+    },
+    removeMember: function (projectId, member) {
+      return sb.from('project_members').delete().eq('owner', uid).eq('project_id', projectId).eq('member', member).then(ok);
+    },
+    leaveProject: function (owner, projectId) {
+      return sb.from('project_members').delete().eq('owner', owner).eq('project_id', projectId).eq('member', uid).then(ok);
+    },
+
+    // ---------- data ----------
+    // own projects and the ones friends featured you on; -> [{ id, user_id, data, updated }]
+    listProjects: function () {
+      return sb.from('projects').select('id,user_id,data,updated').then(ok);
+    },
+    getProject: function (owner, id) {
+      return sb.from('projects').select('id,user_id,data,updated').eq('user_id', owner || uid).eq('id', id).then(ok)
+        .then(function (rows) { return rows[0] || null; });
+    },
+    // a featured friend saves into the owner's row
+    saveProject: function (p) {
+      return sb.from('projects').upsert({ user_id: p._owner || uid, id: p.id, data: p, updated: p.updated }, { onConflict: 'user_id,id' }).then(ok);
+    },
+    deleteProject: function (id) {
+      return sb.from('files').select('id').eq('project', id).eq('project_owner', uid).then(ok).then(function (rows) {
+        return Promise.all(rows.map(function (r) { return api.deleteFile(r.id); }));
+      }).then(function () {
+        return sb.from('projects').delete().eq('user_id', uid).eq('id', id).then(ok);
+      });
+    },
+    // owner: whose project the file belongs to (a featured friend uploads into their own folder)
+    putFile: function (rec, owner) {
       var path = uid + '/' + rec.id;
       return sb.storage.from('files').upload(path, rec.blob, { upsert: true, contentType: rec.type || 'application/octet-stream' }).then(ok)
         .then(function () {
-          return sb.from('files').upsert({ user_id: uid, id: rec.id, project: rec.project, name: rec.name, type: rec.type || '', path: path },
-            { onConflict: 'user_id,id' }).then(ok);
+          return sb.from('files').upsert({ user_id: uid, id: rec.id, project: rec.project, name: rec.name, type: rec.type || '', path: path,
+            project_owner: owner || uid }, { onConflict: 'user_id,id' }).then(ok);
         });
     },
     // -> { id, project, name, type, blob } or null
@@ -131,12 +192,33 @@
         });
       });
     },
+    // only the uploader or the project owner may delete; for anyone else there is nothing to do
     deleteFile: function (id) {
-      return sb.storage.from('files').remove([uid + '/' + id]).then(ok).then(function () {
-        return sb.from('files').delete().eq('id', id).then(ok);
+      return sb.from('files').select('user_id,project_owner,path').eq('id', id).then(ok).then(function (rows) {
+        var row = rows[0];
+        if (!row || (row.user_id !== uid && row.project_owner !== uid)) return;
+        return sb.storage.from('files').remove([row.path]).then(ok).then(function () {
+          return sb.from('files').delete().eq('user_id', row.user_id).eq('id', id).then(ok);
+        });
       });
     }
   };
+
+  // a new profile with a fresh ID like "K7M2QX" (no 0/O, 1/I mix-ups); retry if the ID is taken
+  var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function newCode() {
+    var out = '', bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    for (var i = 0; i < 6; i++) out += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+    return out;
+  }
+  function createProfile(fields, tries) {
+    var row = { id: uid, code: newCode(), name: fields.name, artist: fields.artist, avatar: fields.avatar };
+    return sb.from('profiles').insert(row).then(ok).then(function () { return row; }, function (err) {
+      if (tries < 5 && /duplicate|unique|23505/i.test((err && (err.code + ' ' + err.message)) || '')) return createProfile(fields, tries + 1);
+      throw err;
+    });
+  }
 
   root.RaimCloud = api;
 })(this);

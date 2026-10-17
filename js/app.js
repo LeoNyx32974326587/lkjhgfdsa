@@ -185,12 +185,14 @@
     var top = el('div', 'project-top');
     top.append(el('strong', '', p.title || 'Ohne Titel'));
     if (statusOf(p) === 'done') top.append(el('span', 'badge badge--done', 'Fertig'));
+    if (p._owner) top.append(el('span', 'badge badge--feat', 'von ' + ownerName(p)));
     if (p.license.type) top.append(el('span', 'badge', p.license.type));
     if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
     b.append(top);
     var first = RaimSong.lines(p.text)[0];
     b.append(el('p', 'project-line', first || 'Noch kein Text'));
     var meta = songFacts(p);
+    if (p.features.length) meta.unshift('feat. ' + featureNames(p));
     if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
     else if (p.youtube) meta.push('♪ YouTube-Beat');
     if (p.license.producer) meta.push(p.license.producer);
@@ -199,7 +201,7 @@
     if (p.takes.length) meta.push(p.takes.length + (p.takes.length === 1 ? ' Aufnahme' : ' Aufnahmen'));
     meta.push(new Date(p.updated).toLocaleDateString('de-DE'));
     b.append(el('span', 'project-meta', meta.join(' · ')));
-    b.addEventListener('click', function () { openProject(p); });
+    b.addEventListener('click', function () { openFresh(p); });
     li.append(b);
     return li;
   }
@@ -271,6 +273,7 @@
   $('deleteProject').addEventListener('click', function () {
     var p = current;
     if (!p) return;
+    if (p._owner) { leaveProject(p); return; }
     confirmDialog(
       'Projekt löschen?',
       'Bist du sicher, dass du „' + (p.title || 'Ohne Titel') + '“ löschen möchtest? Es wird mit Text, Beat, Lizenz und Aufnahmen in den Papierkorb verschoben und nach ' + TRASH_DAYS + ' Tagen endgültig gelöscht.',
@@ -816,6 +819,7 @@
     }
     renderPicks('infoGenres', GENRES, infoGenres);
     renderPicks('infoLangs', LANGS, infoLangs);
+    renderInfoFeatures(p);
     $('infoDlg').showModal();
     if (!p) f.elements.title.focus();
   }
@@ -910,12 +914,14 @@
     p.lang = rhymeLang(p.langs);
     p.topic = v.topic;
     p.updated = Date.now();
+    var featureChange = applyFeatures(p);
     var beat = infoBeat;
     $('infoSubmit').disabled = true;
     (beat ? RaimDB.putFile(p.id, beat) : Promise.resolve(null)).then(function (fileId) {
       if (fileId) p.beat = { fileId: fileId, name: beat.name };
       return saveNow(p);
     }).then(function () {
+      if (featureChange) syncFeatures(p, featureChange);
       $('infoDlg').close();
       if (infoProject) {
         if (current === p) {
@@ -1961,27 +1967,28 @@
     if (!account || !RaimCloud.online()) return;
     RaimCloud.getProfile().then(function (r) {
       var changed = r.avatar !== profile.avatar;
+      profile.code = r.code;
       profile.name = r.name;
       profile.artist = r.artist;
       profile.avatar = r.avatar;
       if (!changed) return;
       if (!r.avatar) { profile.pic = ''; return; }
       return RaimCloud.downloadAvatar().then(blobToDataUrl).then(function (url) { profile.pic = url; });
-    }).then(function () { storeProfile(); renderProfile(); }, function () { /* keep the copy */ });
+    }).then(function () { storeProfile(); renderProfile(); renderFriends(); }, function () { /* keep the copy */ });
   }
   function storeProfile() {
     try { localStorage.setItem(profileKey(), JSON.stringify(profile)); } catch (e) { /* private mode */ }
   }
   // "Leon Lauterbach" -> "LL"
-  function initials() {
-    var words = (profile.artist || profile.name || '').trim().split(/\s+/).filter(Boolean);
-    if (!words.length && account) words = [account.email];
+  function initials(person) {
+    var words = (person.artist || person.name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length && person.email) words = [person.email];
     return words.slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
   }
-  function paintAvatar(node, pic) {
+  function paintAvatar(node, pic, person) {
     node.classList.toggle('has-pic', !!pic);
     node.style.backgroundImage = pic ? 'url("' + pic + '")' : '';
-    node.textContent = pic ? '' : initials();
+    node.textContent = pic ? '' : initials(person || { artist: profile.artist, name: profile.name, email: account && account.email });
     if (!pic && !node.textContent) {
       node.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>';
     }
@@ -2003,6 +2010,8 @@
     f.elements.artist.value = profile.artist;
     draftPic = undefined;
     renderDraftPic();
+    $('profileIdRow').hidden = !profile.code;
+    $('profileCode').textContent = '#' + (profile.code || '');
     $('profileEmail').textContent = account ? 'Angemeldet als ' + account.email
       : 'Ohne Account – dein Profil bleibt in diesem Browser.';
     $('logout').hidden = !account;
@@ -2054,7 +2063,7 @@
     $('profileSave').disabled = true;
     profileMsg('Speichere …');
     job.then(function () {
-      profile = { name: name, artist: artist, avatar: version, pic: pic };
+      profile = { code: profile.code, name: name, artist: artist, avatar: version, pic: pic };
       storeProfile();
       renderProfile();
       $('profileDlg').close();
@@ -2070,9 +2079,240 @@
     RaimCloud.signOut().catch(function () {}).then(function () { location.replace('login.html'); });
   });
 
+
+  // ---------- friends ----------
+  // Everyone with an account has an ID (profile.code). Friends are found by it; accepted friends
+  // can be featured on a project (song infos) and then open and edit it too.
+  var people = [];        // [{ id, code, name, artist, avatar, status: 'friend' | 'incoming' | 'outgoing' }]
+  var friendPics = {};    // id -> picture as data URL ('' while loading)
+  function personName(x) { return x ? x.artist || x.name || '#' + x.code : ''; }
+  function personById(id) { return people.find(function (x) { return x.id === id; }); }
+  function friends() { return people.filter(function (x) { return x.status === 'friend'; }); }
+  function ownerName(p) { return personName(personById(p._owner)) || p.ownerName || 'einem Freund'; }
+  function featureNames(p) {
+    return p.features.map(function (f) {
+      if (account && f.id === account.id) return (profile.artist || profile.name || f.name) + ' (du)';
+      return personName(personById(f.id)) || f.name;
+    }).join(', ');
+  }
+
+  function loadFriends() {
+    if (!account || !RaimCloud.online()) return Promise.resolve();
+    return RaimCloud.relations().then(function (list) {
+      people = list;
+      renderFriends();
+      if (!current) renderProjects();
+    }, function () { /* keep the last list */ });
+  }
+
+  // a friend's circle: initials first, the picture once it is loaded
+  function paintPerson(node, x) {
+    paintAvatar(node, friendPics[x.id], x);
+    if (!x.avatar || friendPics[x.id] !== undefined) return;
+    friendPics[x.id] = '';
+    RaimCloud.downloadAvatar(x.id).then(blobToDataUrl).then(function (url) {
+      friendPics[x.id] = url;
+      document.querySelectorAll('[data-person="' + x.id + '"]').forEach(function (n) { paintAvatar(n, url, x); });
+    }, function () { /* initials stay */ });
+  }
+
+  function personRow(x, actions) {
+    var li = el('li', 'person');
+    var pic = el('span', 'avatar');
+    pic.dataset.person = x.id;
+    paintPerson(pic, x);
+    var info = el('div', 'person-info');
+    info.append(el('strong', '', personName(x)));
+    info.append(el('span', '', (x.artist && x.name ? x.name + ' · ' : '') + '#' + x.code));
+    var box = el('div', 'person-actions');
+    actions.forEach(function (a) {
+      if (typeof a === 'string') { box.append(el('span', 'person-state', a)); return; }
+      var b = el('button', 'btn' + (a.primary ? ' btn--primary' : ''), a.label);
+      b.type = 'button';
+      b.addEventListener('click', function () { b.disabled = true; a.run(); });
+      box.append(b);
+    });
+    li.append(pic, info, box);
+    return li;
+  }
+
+  function friendAction(job, done) {
+    job.then(function () {
+      if (done) toast(done);
+      return loadFriends();
+    }, function (err) { toast(RaimCloud.message(err)); renderFriends(); });
+  }
+  function ask(x) { friendAction(RaimCloud.askFriend(x.id), 'Anfrage an ' + personName(x) + ' gesendet.'); $('friendResult').textContent = ''; }
+  function accept(x) { friendAction(RaimCloud.acceptFriend(x.id), 'Du bist jetzt mit ' + personName(x) + ' befreundet.'); }
+  function unfriend(x, text) { friendAction(RaimCloud.endFriendship(x.id), text); }
+
+  function renderFriends() {
+    var badge = $('friendsBadge'), incoming = people.filter(function (x) { return x.status === 'incoming'; });
+    badge.textContent = String(incoming.length);
+    badge.hidden = !incoming.length;
+    if ($('friends').hidden) return;
+    $('myCode').textContent = profile.code ? '#' + profile.code : '…';
+    var inList = $('incomingList'), outList = $('outgoingList'), list = $('friendsList');
+    inList.textContent = outList.textContent = list.textContent = '';
+    incoming.forEach(function (x) {
+      inList.append(personRow(x, [
+        { label: 'Annehmen', primary: true, run: function () { accept(x); } },
+        { label: 'Ablehnen', run: function () { unfriend(x, 'Anfrage abgelehnt.'); } }
+      ]));
+    });
+    $('incomingBlock').hidden = !incoming.length;
+    var mine = friends();
+    mine.sort(function (a, b) { return personName(a).localeCompare(personName(b), 'de'); }).forEach(function (x) {
+      list.append(personRow(x, [{ label: 'Entfernen', run: function () {
+        confirmDialog('Freund entfernen?', personName(x) + ' ist dann nicht mehr in deiner Freundesliste. Gemeinsame Songs bleiben, bis jemand das Feature entfernt.', 'Entfernen')
+          .then(function (yes) { if (yes) unfriend(x, personName(x) + ' entfernt.'); else renderFriends(); });
+      } }]));
+    });
+    $('friendsCount').textContent = mine.length ? '(' + mine.length + ')' : '';
+    $('friendsEmpty').hidden = mine.length > 0;
+    var outgoing = people.filter(function (x) { return x.status === 'outgoing'; });
+    outgoing.forEach(function (x) {
+      outList.append(personRow(x, [{ label: 'Zurückziehen', run: function () { unfriend(x, 'Anfrage zurückgezogen.'); } }]));
+    });
+    $('outgoingBlock').hidden = !outgoing.length;
+  }
+
+  $('openFriends').addEventListener('click', function () {
+    $('home').hidden = true;
+    $('friends').hidden = false;
+    $('friendResult').textContent = '';
+    renderFriends();
+    loadFriends();
+    window.scrollTo(0, 0);
+  });
+  $('closeFriends').addEventListener('click', function () {
+    $('friends').hidden = true;
+    $('home').hidden = false;
+    renderProjects();
+  });
+
+  function copyCode() {
+    var text = '#' + profile.code;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+      toast('ID ' + text + ' kopiert.');
+    }, function () { toast('Deine ID: ' + text); });
+  }
+  $('copyCode').addEventListener('click', copyCode);
+  $('profileCopy').addEventListener('click', copyCode);
+
+  $('friendSearch').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = $('friendCode').value.toUpperCase().replace(/[^A-Z0-9]/g, ''), out = $('friendResult');
+    out.textContent = '';
+    if (code.length < 4) { out.append(el('p', 'empty', 'Gib die ID deines Freundes ein, z. B. K7M2QX.')); return; }
+    if (code === profile.code) { out.append(el('p', 'empty', 'Das ist deine eigene ID.')); return; }
+    if (!RaimCloud.online()) { out.append(el('p', 'empty', 'Offline – suchen geht nur mit Internet.')); return; }
+    out.append(el('p', 'empty', 'Suche …'));
+    RaimCloud.findByCode(code).then(function (x) {
+      out.textContent = '';
+      if (!x) { out.append(el('p', 'empty', 'Niemand mit der ID #' + code + ' gefunden.')); return; }
+      var known = personById(x.id), state = known && known.status, ul = el('ul', 'people');
+      ul.append(personRow(x, state === 'friend' ? ['Schon befreundet']
+        : state === 'outgoing' ? ['Anfrage gesendet']
+        : state === 'incoming' ? [{ label: 'Annehmen', primary: true, run: function () { accept(x); out.textContent = ''; } }]
+        : [{ label: 'Anfrage senden', primary: true, run: function () { ask(x); } }]));
+      out.append(ul);
+    }, function (err) { out.textContent = ''; out.append(el('p', 'empty', RaimCloud.message(err))); });
+  });
+
+  // ---------- features in the song infos ----------
+  var infoFeatures = [];
+  function renderInfoFeatures(p) {
+    var field = $('infoFeatureField'), note = $('infoFeatureNote'), box = $('infoFeatures');
+    field.hidden = !account;
+    if (!account) return;
+    if (p && p._owner) {
+      box.hidden = true;
+      note.textContent = 'Projekt von ' + ownerName(p) + (p.features.length ? ' · feat. ' + featureNames(p) : '') +
+        '. Features kann nur ' + ownerName(p) + ' ändern.';
+      return;
+    }
+    box.hidden = false;
+    infoFeatures = p ? p.features.map(function (f) { return f.id; }) : [];
+    // friends, plus anyone already featured who is no longer a friend (so they can be removed)
+    var options = friends().map(function (x) { return [x.id, personName(x)]; });
+    (p ? p.features : []).forEach(function (f) {
+      if (!options.some(function (o) { return o[0] === f.id; })) options.push([f.id, f.name]);
+    });
+    renderPicks('infoFeatures', options, infoFeatures);
+    note.textContent = options.length ? 'Ausgewählte Freunde haben den Song in ihrer Projektliste und können Text, Beat und Lizenz bearbeiten.'
+      : 'Noch keine Freunde – über den Freunde-Knopf oben rechts kannst du welche hinzufügen.';
+  }
+  // -> { add: [ids], remove: [ids] } or null when nothing changed
+  function applyFeatures(p) {
+    if (!account || p._owner) return null;
+    var before = p.features.map(function (f) { return f.id; });
+    var add = infoFeatures.filter(function (id) { return before.indexOf(id) < 0; });
+    var remove = before.filter(function (id) { return infoFeatures.indexOf(id) < 0; });
+    if (!add.length && !remove.length) return null;
+    p.features = infoFeatures.map(function (id) {
+      var x = personById(id), old = p.features.find(function (f) { return f.id === id; });
+      return { id: id, name: personName(x) || (old && old.name) || '' };
+    });
+    p.ownerName = profile.artist || profile.name || account.email;
+    return { add: add, remove: remove };
+  }
+  // the project row has to exist in the cloud before friends can be added to it
+  function syncFeatures(p, change) {
+    if (!RaimCloud.online()) { toast('Offline – Features werden erst mit Internet übernommen.'); return; }
+    RaimCloud.saveProject(p).then(function () {
+      return Promise.all(change.add.map(function (id) { return RaimCloud.addMember(p.id, id); })
+        .concat(change.remove.map(function (id) { return RaimCloud.removeMember(p.id, id); })));
+    }).then(function () {
+      if (change.add.length) toast('feat. ' + featureNames(p) + ' – der Song ist jetzt auch bei ' + (change.add.length > 1 ? 'deinen Freunden' : 'deinem Freund') + '.');
+    }, function (err) { toast('Features konnten nicht gespeichert werden: ' + RaimCloud.message(err)); });
+  }
+
+  // a featured friend leaves a project instead of deleting it
+  function leaveProject(p) {
+    confirmDialog('Projekt verlassen?', '„' + (p.title || 'Ohne Titel') + '“ gehört ' + ownerName(p) +
+      '. Wenn du gehst, verschwindet es aus deiner Liste – für ' + ownerName(p) + ' bleibt es erhalten.', 'Verlassen')
+      .then(function (yes) {
+        if (!yes || current !== p) return;
+        if (!RaimCloud.online()) { toast('Offline – verlassen geht nur mit Internet.'); return; }
+        RaimCloud.leaveProject(p._owner, p.id).then(function () {
+          closeProject();
+          projects = projects.filter(function (x) { return x !== p; });
+          return RaimDB.forgetProject(p.id);
+        }).then(function () { renderProjects(); toast('Projekt verlassen.'); },
+          function (err) { toast(RaimCloud.message(err)); });
+      });
+  }
+
+  // open with the newest version: a friend may have changed the song in the meantime
+  function openFresh(p) {
+    RaimDB.refreshProject(p).then(function (fresh) {
+      if (fresh !== p) {
+        normalize(fresh);
+        projects = projects.map(function (x) { return x === p ? fresh : x; });
+      }
+      openProject(fresh);
+    });
+  }
+
+  // back in the app (other tab, phone unlocked): pick up what friends changed
+  var lastSync = Date.now();
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden || !account || current || Date.now() - lastSync < 15000) return;
+    lastSync = Date.now();
+    RaimDB.sync().then(function () { return RaimDB.projects(); }).then(function (list) {
+      if (current) return;
+      projects = list.map(normalize);
+      renderProjects();
+    }, function () {});
+    loadFriends();
+  });
+
   startAccount().then(takeOverLegacy).then(function () {
     renderAccount();
     loadProfile();
+    $('openFriends').hidden = !account;
+    loadFriends();
     return RaimDB.projects();
   }).then(function (list) {
     projects = list.map(normalize);

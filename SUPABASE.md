@@ -14,7 +14,9 @@ Solange `js/config.js` leer ist, läuft Barbook ohne Account, nur im Browser.
 1. Links **SQL Editor** → **New query**.
 2. Den kompletten Inhalt von `supabase/setup.sql` hineinkopieren → **Run**. Es sollte „Success“ erscheinen.
 
-Damit gibt es die Tabellen `projects` und `files` und einen privaten Speicher-Bereich „files“. Jede Person sieht nur ihre eigenen Daten.
+Damit gibt es die Tabellen für Projekte, Dateien, Profile (mit der ID jedes Accounts), Freundschaften und Features sowie einen privaten Speicher-Bereich „files“. Jede Person sieht nur ihre eigenen Daten – und die Songs, auf denen ein Freund sie als Feature eingetragen hat.
+
+**Nach einem Barbook-Update** (z. B. als Freunde und Features dazukamen): `supabase/setup.sql` einfach noch einmal komplett ausführen. Das Skript ergänzt nur, was fehlt, und erneuert die Regeln – vorhandene Projekte und Accounts bleiben erhalten.
 
 ## 3. Schlüssel in Barbook eintragen
 

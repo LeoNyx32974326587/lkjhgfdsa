@@ -82,7 +82,19 @@
     });
   }
   function pushFile(rec) {
-    push('files', rec.id, function () { return cloud.putFile(rec); });
+    push('files', rec.id, function () { return uploadFile(rec); });
+  }
+  // files of a friend's project are filed under that friend as project owner
+  function uploadFile(rec) {
+    return localProject(rec.project).then(function (p) { return cloud.putFile(rec, p && p._owner); });
+  }
+  // a project from the cloud: remember whose it is when it is a friend's (they featured us)
+  function fromRemote(r) {
+    var p = r.data;
+    if (r.user_id && r.user_id !== user) p._owner = r.user_id;
+    else delete p._owner;
+    p._cloud = true;
+    return p;
   }
 
   // Bring local copy and cloud together: the newer version of each project wins.
@@ -97,7 +109,7 @@
     })).concat(x.files.map(function (id) {
       return localFile(id).then(function (rec) {
         if (!rec) { setPending(function (y) { drop(y.files, id); }); return; }
-        return cloud.putFile(rec).then(function () { setPending(function (y) { drop(y.files, id); }); }, function () {});
+        return uploadFile(rec).then(function () { setPending(function (y) { drop(y.files, id); }); }, function () {});
       });
     }))).then(function () {
       return Promise.all([cloud.listProjects(), run('projects', 'readonly', function (s) { return s.getAll(); })]);
@@ -108,8 +120,7 @@
       Object.keys(remote).forEach(function (id) {
         var r = remote[id], l = local[id];
         if (!l || r.updated > (l.updated || 0)) {
-          r.data._cloud = true;
-          jobs.push(putLocal('projects', r.data));
+          jobs.push(putLocal('projects', fromRemote(r)));
           stats.down++;
         }
       });
@@ -169,7 +180,8 @@
       youtube: '',
       license: { producer: '', type: '', bpm: '', key: '', date: '', notes: '', fileId: null, fileName: '' },
       rhymes: { saved: [], history: [], blocked: [], langs: [] },  // langs: rhyme languages, empty = all
-      takes: []            // [{ fileId, name, created }]
+      takes: [],           // [{ fileId, name, created }]
+      features: []         // friends featured on the song: [{ id, name }] (the owner's list)
     };
   }
 
@@ -185,6 +197,20 @@
     },
     sync: sync,
     legacy: legacy,
+    // fetch one project fresh before opening it (a featured friend may have changed it); -> newest version
+    refreshProject: function (p) {
+      if (!cloud || !cloud.online() || !p._cloud) return Promise.resolve(p);
+      return cloud.getProject(p._owner, p.id).then(function (r) {
+        if (!r || r.updated <= (p.updated || 0)) return p;
+        var fresh = fromRemote(r);
+        return putLocal('projects', fresh).then(function () { return fresh; });
+      }, function () { return p; });
+    },
+    // leaving a friend's project: only the copy on this device goes
+    forgetProject: function (id) {
+      setPending(function (x) { drop(x.projects, id); });
+      return deleteLocal(id);
+    },
     projects: function () { return run('projects', 'readonly', function (s) { return s.getAll(); }); },
     saveProject: function (p) {
       return putLocal('projects', p).then(function () { pushProject(p); });

@@ -31,6 +31,10 @@
         <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
         </button>
+        <button class="icon-btn friends-btn" id="openFriends" type="button" aria-label="Freunde" hidden>
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.6c2.9.2 5 1.9 5 5.4"/></svg>
+          <span class="badge-count" id="friendsBadge" hidden></span>
+        </button>
         <button class="avatar avatar--small" id="openProfile" type="button" aria-label="Profil"></button>
       </span>
     </header>
@@ -65,6 +69,43 @@
       <ul class="trash-list" id="trashList"></ul>
       <p class="empty" id="trashEmpty" hidden>Der Papierkorb ist leer.</p>
       <button type="button" class="btn btn--danger" id="emptyTrash" hidden>Papierkorb leeren</button>
+    </main>
+  </div>
+
+  <!-- ================= Freunde ================= -->
+  <div id="friends" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="closeFriends" type="button" aria-label="Zurück zu den Projekten">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="topbar-title">Freunde</span>
+    </header>
+    <main>
+      <div class="card my-id">
+        <span class="chip-label">Deine ID</span>
+        <strong class="my-id-code" id="myCode">…</strong>
+        <button class="btn btn--small" id="copyCode" type="button">Kopieren</button>
+        <p class="hint">Gib sie Freunden – mit ihr finden sie dich und schicken dir eine Anfrage.</p>
+      </div>
+      <form class="friend-search" id="friendSearch" autocomplete="off">
+        <input id="friendCode" placeholder="ID eines Freundes, z. B. K7M2QX" maxlength="12" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn--primary" type="submit">Suchen</button>
+      </form>
+      <div id="friendResult"></div>
+      <section id="incomingBlock" hidden>
+        <h3 class="list-title">Anfragen</h3>
+        <ul class="people" id="incomingList"></ul>
+      </section>
+      <section>
+        <h3 class="list-title">Deine Freunde <span id="friendsCount"></span></h3>
+        <ul class="people" id="friendsList"></ul>
+        <p class="empty" id="friendsEmpty">Noch keine Freunde. Such jemanden über die ID oder schick deine ID weiter.</p>
+      </section>
+      <section id="outgoingBlock" hidden>
+        <h3 class="list-title">Gesendete Anfragen</h3>
+        <ul class="people" id="outgoingList"></ul>
+      </section>
+      <p class="hint">Freunde fügst du in den Song-Infos eines Projekts als <strong>Feature</strong> hinzu. Dann haben sie den Song in ihrer Projektliste und können mitschreiben.</p>
     </main>
   </div>
 
@@ -452,6 +493,11 @@
       <label class="field">Künstlername
         <input name="artist" maxlength="80" placeholder="Dein Name als Artist">
       </label>
+      <div class="profile-id" id="profileIdRow" hidden>
+        <span class="chip-label">Deine ID</span>
+        <strong id="profileCode"></strong>
+        <button class="link-btn" type="button" id="profileCopy">Kopieren</button>
+      </div>
       <p class="hint" id="profileEmail"></p>
       <p class="hint" id="profileMsg" role="status" hidden></p>
       <div class="row">
@@ -506,6 +552,10 @@
       <label class="field">Worum geht's? (optional, hilft der KI)
         <input name="topic" placeholder="z. B. Aufstieg aus dem Nichts, Herzschmerz, Party">
       </label>
+      <div class="field" id="infoFeatureField" hidden>Feature <span class="field-note">Freunde, die mitschreiben</span>
+        <div class="chips chips--wrap" id="infoFeatures"></div>
+        <p class="hint" id="infoFeatureNote"></p>
+      </div>
       <p class="form-error" id="infoError" role="alert" hidden></p>
       <div class="row">
         <button class="btn btn--primary" type="submit" id="infoSubmit">Projekt anlegen</button>
