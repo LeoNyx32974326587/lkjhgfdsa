@@ -43,6 +43,7 @@
         <h1>Projekte</h1>
         <button class="btn btn--primary" id="newProject" type="button">+ Neues Projekt</button>
       </div>
+      <button type="button" class="invite-banner" id="inviteBanner" hidden></button>
       <div id="projects"></div>
       <div class="empty-state" id="projectsEmpty" hidden>
         <img src="assets/icon.svg" alt="" width="96" height="96">
@@ -92,6 +93,10 @@
         <button class="btn btn--primary" type="submit">Suchen</button>
       </form>
       <div id="friendResult"></div>
+      <section id="invitesBlock" hidden>
+        <h3 class="list-title">Einladungen zu Songs</h3>
+        <ul class="people" id="invitesList"></ul>
+      </section>
       <section id="incomingBlock" hidden>
         <h3 class="list-title">Anfragen</h3>
         <ul class="people" id="incomingList"></ul>
@@ -105,7 +110,7 @@
         <h3 class="list-title">Gesendete Anfragen</h3>
         <ul class="people" id="outgoingList"></ul>
       </section>
-      <p class="hint">Freunde fügst du in den Song-Infos eines Projekts als <strong>Feature</strong> hinzu. Dann haben sie den Song in ihrer Projektliste und können mitschreiben.</p>
+      <p class="hint">Freunde lädst du in den Projekteinstellungen (Zahnrad) als <strong>Feature</strong> zu einem Song ein. Nehmen sie an, haben sie den Song in ihrer Projektliste und können mitschreiben.</p>
     </main>
   </div>
 
@@ -116,6 +121,10 @@
         <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
       </button>
       <input class="title-input" id="projectTitle" placeholder="Projektname" autocomplete="off">
+      <button class="status-pill" id="statusToggle" type="button" title="Status – antippen zum Umschalten"></button>
+      <button class="icon-btn" id="projectSettings" type="button" aria-label="Projekteinstellungen" title="Projekteinstellungen">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
+      </button>
       <button class="icon-btn" id="deleteProject" type="button" aria-label="Projekt löschen">
         <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
       </button>
@@ -123,11 +132,6 @@
 
     <main>
       <div class="status-row">
-        <span class="chip-label">Status</span>
-        <div class="seg" id="projectStatus" role="group" aria-label="Status des Songs">
-          <button type="button" class="seg-btn" data-status="edit">In Bearbeitung</button>
-          <button type="button" class="seg-btn" data-status="done">Fertig</button>
-        </div>
         <button type="button" class="song-info" id="songInfo" aria-label="Song-Infos bearbeiten">
           <span id="songInfoText"></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
@@ -553,9 +557,17 @@
       <label class="field">Worum geht's? (optional, hilft der KI)
         <input name="topic" placeholder="z. B. Aufstieg aus dem Nichts, Herzschmerz, Party">
       </label>
-      <div class="field" id="infoFeatureField" hidden>Feature <span class="field-note">Freunde, die mitschreiben</span>
-        <div class="chips chips--wrap" id="infoFeatures"></div>
-        <div class="rights" id="infoRights"></div>
+      <div class="field" id="infoFeatureField" hidden>
+        <label class="switch">
+          <input type="checkbox" id="featureToggle">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Feature <span class="field-note">Freunde schreiben mit</span></span>
+        </label>
+        <div class="feature-box" id="featureBox" hidden>
+          <div class="rights" id="infoRights"></div>
+          <button class="btn btn--small" type="button" id="inviteBtn">+ Freund einladen</button>
+          <ul class="people invite-picker" id="invitePicker" hidden></ul>
+        </div>
         <p class="hint" id="infoFeatureNote"></p>
       </div>
       <p class="form-error" id="infoError" role="alert" hidden></p>

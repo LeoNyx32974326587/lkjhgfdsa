@@ -58,6 +58,15 @@ create table if not exists public.project_members (
 );
 -- what the friend may change: {"text": true, "beat": false, "license": false, "info": false, "status": false}
 alter table public.project_members add column if not exists rights jsonb not null default '{}'::jsonb;
+-- an invitation counts once the friend accepts it; the song title is shown in the invitation
+alter table public.project_members add column if not exists title text not null default '';
+do $$ begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'project_members' and column_name = 'accepted') then
+    alter table public.project_members add column accepted boolean not null default true;   -- features from before: already in
+    alter table public.project_members alter column accepted set default false;
+  end if;
+end $$;
 
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
@@ -77,14 +86,14 @@ $$;
 -- is the signed-in user featured on this project?
 create or replace function public.is_member(o uuid, pid text) returns boolean
 language sql security definer stable set search_path = public as $$
-  select exists (select 1 from project_members where owner = o and project_id = pid and member = auth.uid());
+  select exists (select 1 from project_members where owner = o and project_id = pid and member = auth.uid() and accepted);
 $$;
 
 -- may the signed-in user change this part ('text', 'beat', 'license', 'info', 'status') of the project?
 create or replace function public.member_can(o uuid, pid text, what text) returns boolean
 language sql security definer stable set search_path = public as $$
   select coalesce((select (rights ->> what)::boolean from project_members
-    where owner = o and project_id = pid and member = auth.uid()), false);
+    where owner = o and project_id = pid and member = auth.uid() and accepted), false);
 $$;
 
 -- A featured friend's save keeps everything they may not change as it was.
@@ -93,7 +102,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   r jsonb;
   k text;
-  locked text[] := array['features', 'ownerName', 'deletedAt'];   -- only the owner
+  locked text[] := array['features', 'featureOn', 'ownerName', 'deletedAt'];   -- only the owner
 begin
   if auth.uid() is null or auth.uid() = old.user_id then return new; end if;
   select rights into r from project_members where owner = old.user_id and project_id = old.id and member = auth.uid();
@@ -115,6 +124,26 @@ $$;
 drop trigger if exists guard_member_edit on public.projects;
 create trigger guard_member_edit before update on public.projects
   for each row execute function public.guard_member_edit();
+
+-- Invitations: the owner sets title and rights, only the friend can accept
+create or replace function public.guard_member_row() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.owner := old.owner;
+  new.project_id := old.project_id;
+  new.member := old.member;
+  if auth.uid() = old.member then
+    new.rights := old.rights;
+    new.title := old.title;
+  else
+    new.accepted := old.accepted;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists guard_member_row on public.project_members;
+create trigger guard_member_row before update on public.project_members
+  for each row execute function public.guard_member_row();
 
 -- a deleted project takes its features along
 create or replace function public.drop_project_members() returns trigger
@@ -206,12 +235,12 @@ drop policy if exists "members rights" on public.project_members;
 create policy "members read" on public.project_members for select to authenticated
   using (auth.uid() in (owner, member));
 create policy "members add" on public.project_members for insert to authenticated
-  with check (auth.uid() = owner and public.are_friends(owner, member)
+  with check (auth.uid() = owner and not accepted and public.are_friends(owner, member)
     and exists (select 1 from public.projects p where p.user_id = owner and p.id = project_id));
 create policy "members remove" on public.project_members for delete to authenticated
   using (auth.uid() in (owner, member));
 create policy "members rights" on public.project_members for update to authenticated
-  using (auth.uid() = owner) with check (auth.uid() = owner and public.are_friends(owner, member));
+  using (auth.uid() in (owner, member)) with check (auth.uid() in (owner, member) and public.are_friends(owner, member));
 
 -- ---------- file storage: private bucket, a folder per user ----------
 

@@ -145,21 +145,22 @@
   // ---------- status: in Bearbeitung / fertig ----------
   var STATUS = { edit: 'In Bearbeitung', done: 'Fertig' };
   function statusOf(p) { return p.status === 'done' ? 'done' : 'edit'; }
+  // one button in the top bar: shows the status, a tap switches it
   function renderStatus() {
-    document.querySelectorAll('[data-status]').forEach(function (b) {
-      var on = b.dataset.status === statusOf(current);
-      b.classList.toggle('is-on', on);
-      b.setAttribute('aria-pressed', on);
-    });
+    var b = $('statusToggle'), st = statusOf(current);
+    b.textContent = STATUS[st];
+    b.className = 'status-pill status-pill--' + st;
+    b.disabled = !may('status');
+    b.setAttribute('aria-label', 'Status: ' + STATUS[st] + (may('status') ? ' – antippen zum Umschalten' : ''));
   }
-  document.querySelectorAll('[data-status]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (!may('status')) return;
-      current.status = b.dataset.status;
-      renderStatus();
-      scheduleSave();
-    });
+  $('statusToggle').addEventListener('click', function () {
+    if (!current || !may('status')) return;
+    current.status = statusOf(current) === 'done' ? 'edit' : 'done';
+    renderStatus();
+    scheduleSave();
+    toast(current.status === 'done' ? 'Als fertig markiert.' : 'Wieder in Bearbeitung.');
   });
+  $('projectSettings').addEventListener('click', function () { if (current) openInfo(current); });
 
   // projects in progress on top, finished ones below
   function renderProjects() {
@@ -219,7 +220,7 @@
     ['text', 'beat', 'license', 'info', 'status'].forEach(function (k) { root.classList.toggle('lock-' + k, !may(k)); });
     $('projectTitle').readOnly = !may('info');
     $('bpmInput').readOnly = !may('info');
-    document.querySelectorAll('#projectStatus .seg-btn').forEach(function (b) { b.disabled = !may('status'); });
+    $('deleteProject').setAttribute('aria-label', current._owner ? 'Projekt verlassen' : 'Projekt löschen');
     var note = $('rightsNote');
     note.hidden = !current._owner;
     if (current._owner) {
@@ -824,7 +825,7 @@
     infoAuto = {};
     var f = $('infoForm');
     f.reset();
-    $('infoTitle').textContent = p ? 'Song-Infos' : 'Neues Projekt';
+    $('infoTitle').textContent = p ? 'Projekteinstellungen' : 'Neues Projekt';
     $('infoIntro').hidden = !!p;
     $('infoBeatField').hidden = !!p;
     $('infoSubmit').textContent = p ? 'Speichern' : 'Projekt anlegen';
@@ -846,7 +847,7 @@
     [].forEach.call(f.elements, function (x) { if (x.id !== 'infoCancel' && x.id !== 'infoClose') x.disabled = locked; });
     $('infoSubmit').hidden = locked;
     $('infoCancel').textContent = locked ? 'Schließen' : 'Abbrechen';
-    $('infoTitle').textContent = locked ? 'Song-Infos (nur ansehen)' : $('infoTitle').textContent;
+    $('infoTitle').textContent = locked ? 'Projekteinstellungen (nur ansehen)' : $('infoTitle').textContent;
     $('infoDlg').showModal();
     if (!p) f.elements.title.focus();
   }
@@ -2113,6 +2114,8 @@
   // Everyone with an account has an ID (profile.code). Friends are found by it; accepted friends
   // can be featured on a project (song infos) and then open and edit it too.
   var people = [];        // [{ id, code, name, artist, avatar, status: 'friend' | 'incoming' | 'outgoing' }]
+  var invites = [];       // songs friends invited me to: [{ owner, project_id, title }]
+  var ownFeatures = {};   // my songs -> [{ member, accepted, rights }]
   var friendPics = {};    // id -> picture as data URL ('' while loading)
   function personName(x) { return x ? x.artist || x.name || '#' + x.code : ''; }
   function personById(id) { return people.find(function (x) { return x.id === id; }); }
@@ -2121,17 +2124,37 @@
   function featureNames(p) {
     return p.features.map(function (f) {
       if (account && f.id === account.id) return (profile.artist || profile.name || f.name) + ' (du)';
-      return personName(personById(f.id)) || f.name;
+      var name = personName(personById(f.id)) || f.name;
+      return !p._owner && memberState(p, f.id) === 'invited' ? name + ' (eingeladen)' : name;
     }).join(', ');
   }
 
   function loadFriends() {
     if (!account || !RaimCloud.online()) return Promise.resolve();
-    return RaimCloud.relations().then(function (list) {
-      people = list;
+    return Promise.all([RaimCloud.relations(), RaimCloud.invitations(), RaimCloud.myFeatures()]).then(function (r) {
+      people = r[0];
+      invites = r[1];
+      ownFeatures = r[2];
+      pruneFeatures();
       renderFriends();
       if (!current) renderProjects();
-    }, function () { /* keep the last list */ });
+    }, function () { /* keep the last lists */ });
+  }
+  var featuresLoaded = false;
+  // friends who declined an invitation or left a song drop out of its feature list
+  function pruneFeatures() {
+    featuresLoaded = true;
+    projects.forEach(function (p) {
+      if (p._owner || !p.features.length) return;
+      var rows = ownFeatures[p.id] || [];
+      var gone = p.features.filter(function (f) { return !rows.some(function (r) { return r.member === f.id; }); });
+      if (!gone.length) return;
+      p.features = p.features.filter(function (f) { return gone.indexOf(f) < 0; });
+      p.updated = Date.now();
+      saveNow(p);
+      toast(gone.map(function (f) { return personName(personById(f.id)) || f.name; }).join(', ') +
+        ' ist bei „' + (p.title || 'Ohne Titel') + '“ nicht mehr dabei.');
+    });
   }
 
   // a friend's circle: initials first, the picture once it is loaded
@@ -2177,9 +2200,26 @@
 
   function renderFriends() {
     var badge = $('friendsBadge'), incoming = people.filter(function (x) { return x.status === 'incoming'; });
-    badge.textContent = String(incoming.length);
-    badge.hidden = !incoming.length;
+    badge.textContent = String(incoming.length + invites.length);
+    badge.hidden = !incoming.length && !invites.length;
+    var banner = $('inviteBanner');
+    banner.hidden = !invites.length;
+    banner.textContent = invites.length === 1 ? 'Du hast eine Einladung zu einem Song – ansehen'
+      : 'Du hast ' + invites.length + ' Einladungen zu Songs – ansehen';
     if ($('friends').hidden) return;
+    var invList = $('invitesList');
+    invList.textContent = '';
+    invites.forEach(function (inv) {
+      var x = personById(inv.owner) || { id: inv.owner, code: '', name: '', artist: 'Ein Freund' };
+      var li = personRow(x, [
+        { label: 'Annehmen', primary: true, run: function () { answerInvite(inv, true); } },
+        { label: 'Ablehnen', run: function () { answerInvite(inv, false); } }
+      ]);
+      li.querySelector('.person-info span').textContent = 'lädt dich zu „' + (inv.title || 'Ohne Titel') + '“ ein';
+      li.classList.add('person--invite');
+      invList.append(li);
+    });
+    $('invitesBlock').hidden = !invites.length;
     $('myCode').textContent = profile.code ? '#' + profile.code : '…';
     var inList = $('incomingList'), outList = $('outgoingList'), list = $('friendsList');
     inList.textContent = outList.textContent = list.textContent = '';
@@ -2205,6 +2245,22 @@
     });
     $('outgoingBlock').hidden = !outgoing.length;
   }
+
+  // accept: the song lands in my projects; decline: the invitation is gone
+  function answerInvite(inv, yes) {
+    if (!yes) {
+      friendAction(RaimCloud.leaveProject(inv.owner, inv.project_id), 'Einladung abgelehnt.');
+      return;
+    }
+    RaimCloud.acceptInvitation(inv.owner, inv.project_id).then(function () {
+      return RaimDB.sync();
+    }).then(function () { return RaimDB.projects(); }).then(function (list) {
+      projects = list.map(normalize);
+      toast('„' + (inv.title || 'Ohne Titel') + '“ ist jetzt in deinen Projekten.');
+      return loadFriends();
+    }, function (err) { toast(RaimCloud.message(err)); renderFriends(); });
+  }
+  $('inviteBanner').addEventListener('click', function () { $('openFriends').click(); });
 
   $('openFriends').addEventListener('click', function () {
     $('home').hidden = true;
@@ -2251,31 +2307,69 @@
 
   // ---------- features in the song infos ----------
   var infoFeatures = [];
+  // Feature switch, "+ Freund einladen" and the invited friends with their rights
+  var infoFeatureOn = false;
   function renderInfoFeatures(p) {
-    var field = $('infoFeatureField'), note = $('infoFeatureNote'), box = $('infoFeatures');
+    var field = $('infoFeatureField'), note = $('infoFeatureNote'), sw = $('featureToggle').closest('.switch');
     field.hidden = !account;
     if (!account) return;
     if (p && p._owner) {
-      box.hidden = true;
+      sw.hidden = true;
+      $('featureBox').hidden = true;
       note.textContent = 'Projekt von ' + ownerName(p) + (p.features.length ? ' · feat. ' + featureNames(p) : '') +
         '. Features kann nur ' + ownerName(p) + ' ändern.';
       return;
     }
-    box.hidden = false;
+    sw.hidden = false;
     infoFeatures = p ? p.features.map(function (f) { return f.id; }) : [];
-    // friends, plus anyone already featured who is no longer a friend (so they can be removed)
-    var options = friends().map(function (x) { return [x.id, personName(x)]; });
-    (p ? p.features : []).forEach(function (f) {
-      if (!options.some(function (o) { return o[0] === f.id; })) options.push([f.id, f.name]);
-    });
     infoRights = {};
     (p ? p.features : []).forEach(function (f) { infoRights[f.id] = Object.assign({}, f.rights || {}); });
-    renderPicks('infoFeatures', options, infoFeatures, renderInfoRights);
-    renderInfoRights();
-    note.textContent = options.length ? 'Ausgewählte Freunde haben den Song in ihrer Projektliste. Ansehen dürfen sie alles – ändern nur, wo du einen Haken setzt.'
-      : 'Noch keine Freunde – über den Freunde-Knopf oben rechts kannst du welche hinzufügen.';
+    infoFeatureOn = !!(p && (p.featureOn || p.features.length));
+    $('featureToggle').checked = infoFeatureOn;
+    $('invitePicker').hidden = true;
+    renderFeatureBox();
   }
-  // one row of checkboxes per featured friend: what they may change
+  function renderFeatureBox() {
+    var on = $('featureToggle').checked, note = $('infoFeatureNote');
+    $('featureBox').hidden = !on;
+    if (!on) {
+      note.textContent = infoFeatures.length ? 'Beim Speichern werden alle Features dieses Songs entfernt.'
+        : 'Schalte Feature an, um Freunde zu diesem Song einzuladen.';
+      return;
+    }
+    note.textContent = 'Eingeladene Freunde bekommen eine Einladung. Erst wenn sie annehmen, ist der Song in ihren Projekten. ' +
+      'Ansehen dürfen sie dann alles – ändern nur, wo du einen Haken setzt.';
+    renderInfoRights();
+    if (!$('invitePicker').hidden) renderInvitePicker();
+  }
+  $('featureToggle').addEventListener('change', renderFeatureBox);
+  $('inviteBtn').addEventListener('click', function () {
+    var picker = $('invitePicker');
+    picker.hidden = !picker.hidden;
+    if (!picker.hidden) renderInvitePicker();
+  });
+  function renderInvitePicker() {
+    var picker = $('invitePicker'), open = friends().filter(function (x) { return infoFeatures.indexOf(x.id) < 0; });
+    picker.textContent = '';
+    open.sort(function (a, b) { return personName(a).localeCompare(personName(b), 'de'); }).forEach(function (x) {
+      picker.append(personRow(x, [{ label: 'Einladen', primary: true, run: function () {
+        infoFeatures.push(x.id);
+        rightsOf(x.id);
+        picker.hidden = true;
+        renderFeatureBox();
+      } }]));
+    });
+    if (!open.length) {
+      picker.append(el('li', 'empty', friends().length ? 'Alle deine Freunde sind schon eingeladen.'
+        : 'Noch keine Freunde – über den Freunde-Knopf oben rechts kannst du welche hinzufügen.'));
+    }
+  }
+  // what happened to an invitation: 'accepted', 'invited' or '' (not sent yet)
+  function memberState(p, id) {
+    var r = p && (ownFeatures[p.id] || []).find(function (x) { return x.member === id; });
+    return r ? (r.accepted ? 'accepted' : 'invited') : '';
+  }
+  // one row per invited friend: status, what they may change, remove
   var RIGHTS = [['text', 'Text'], ['beat', 'Beat'], ['license', 'Lizenz'], ['info', 'Song-Infos'], ['status', 'Status']];
   var infoRights = {};
   function rightsOf(id) { return infoRights[id] || (infoRights[id] = {}); }
@@ -2284,8 +2378,19 @@
     box.textContent = '';
     infoFeatures.forEach(function (id) {
       var x = personById(id), old = infoProject && infoProject.features.find(function (f) { return f.id === id; });
-      var row = el('div', 'rights-row'), r = rightsOf(id);
-      row.append(el('strong', '', (personName(x) || (old && old.name) || 'Freund') + ' darf ändern:'));
+      var row = el('div', 'rights-row'), r = rightsOf(id), state = memberState(infoProject, id);
+      var head = el('div', 'rights-head');
+      head.append(el('strong', '', personName(x) || (old && old.name) || 'Freund'));
+      head.append(el('span', 'badge ' + (state === 'accepted' ? 'badge--done' : 'badge--feat'),
+        state === 'accepted' ? 'Dabei' : state === 'invited' ? 'Eingeladen' : 'Wird beim Speichern eingeladen'));
+      var remove = el('button', 'link-btn link-btn--danger', 'Entfernen');
+      remove.type = 'button';
+      remove.addEventListener('click', function () {
+        infoFeatures = infoFeatures.filter(function (y) { return y !== id; });
+        renderFeatureBox();
+      });
+      head.append(remove);
+      row.append(head, el('span', 'rights-label', 'Darf ändern:'));
       var checks = el('div', 'rights-checks');
       RIGHTS.forEach(function (k) {
         var label = el('label', 'check'), cb = el('input');
@@ -2312,6 +2417,8 @@
   // -> { add: [ids], remove: [ids], update: [ids] } or null when nothing changed
   function applyFeatures(p) {
     if (!account || p._owner) return null;
+    p.featureOn = $('featureToggle').checked;
+    if (!p.featureOn) infoFeatures = [];
     var before = p.features.map(function (f) { return f.id; });
     var add = infoFeatures.filter(function (id) { return before.indexOf(id) < 0; });
     var remove = before.filter(function (id) { return infoFeatures.indexOf(id) < 0; });
@@ -2333,11 +2440,14 @@
     RaimCloud.saveProject(p).then(function () {
       var rights = {};
       p.features.forEach(function (f) { rights[f.id] = f.rights; });
-      return Promise.all(change.add.map(function (id) { return RaimCloud.addMember(p.id, id, rights[id]); })
+      return Promise.all(change.add.map(function (id) { return RaimCloud.addMember(p.id, id, rights[id], p.title); })
         .concat(change.update.map(function (id) { return RaimCloud.setRights(p.id, id, rights[id]); }))
         .concat(change.remove.map(function (id) { return RaimCloud.removeMember(p.id, id); })));
     }).then(function () {
-      if (change.add.length) toast('feat. ' + featureNames(p) + ' – der Song ist jetzt auch bei ' + (change.add.length > 1 ? 'deinen Freunden' : 'deinem Freund') + '.');
+      if (change.add.length) {
+        toast('Einladung an ' + change.add.map(function (id) { return personName(personById(id)); }).join(', ') + ' gesendet.');
+      }
+      return loadFriends();
     }, function (err) { toast('Features konnten nicht gespeichert werden: ' + RaimCloud.message(err)); });
   }
 
@@ -2389,6 +2499,7 @@
     return RaimDB.projects();
   }).then(function (list) {
     projects = list.map(normalize);
+    if (featuresLoaded) pruneFeatures();
     var expired = projects.filter(function (p) { return p.deletedAt && Date.now() - p.deletedAt > TRASH_DAYS * DAY; });
     return Promise.all([migrate(), expired.length ? purgeProjects(expired) : null]);
   }).then(function () {

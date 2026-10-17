@@ -144,15 +144,31 @@
 
     // ---------- features: friends on a project ----------
     // rights: what the friend may change, e.g. { text: true, beat: false, license: false, info: false, status: false }
-    addMember: function (projectId, member, rights) {
-      return sb.from('project_members').insert({ owner: uid, project_id: projectId, member: member, rights: rights || {} }).then(ok);
+    // an invitation: the friend sees the song only after accepting it
+    addMember: function (projectId, member, rights, title) {
+      return sb.from('project_members').insert({ owner: uid, project_id: projectId, member: member, rights: rights || {}, title: title || '' }).then(ok);
+    },
+    // everyone I featured -> { projectId: [{ member, accepted, rights }] }
+    myFeatures: function () {
+      return sb.from('project_members').select('project_id,member,accepted,rights').eq('owner', uid).then(ok).then(function (rows) {
+        var out = {};
+        rows.forEach(function (r) { (out[r.project_id] = out[r.project_id] || []).push(r); });
+        return out;
+      });
+    },
+    // invitations to friends' songs I have not answered yet -> [{ owner, project_id, title }]
+    invitations: function () {
+      return sb.from('project_members').select('owner,project_id,title').eq('member', uid).eq('accepted', false).then(ok);
+    },
+    acceptInvitation: function (owner, projectId) {
+      return sb.from('project_members').update({ accepted: true }).eq('owner', owner).eq('project_id', projectId).eq('member', uid).then(ok);
     },
     setRights: function (projectId, member, rights) {
       return sb.from('project_members').update({ rights: rights }).eq('owner', uid).eq('project_id', projectId).eq('member', member).then(ok);
     },
     // projects friends featured me on -> { 'owner/projectId': rights }
     myRights: function () {
-      return sb.from('project_members').select('owner,project_id,rights').eq('member', uid).then(ok).then(function (rows) {
+      return sb.from('project_members').select('owner,project_id,rights').eq('member', uid).eq('accepted', true).then(ok).then(function (rows) {
         var out = {};
         rows.forEach(function (r) { out[r.owner + '/' + r.project_id] = r.rights || {}; });
         return out;
