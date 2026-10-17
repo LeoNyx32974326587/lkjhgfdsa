@@ -175,6 +175,7 @@
   }
   function renderRelease() {
     var box = $('releaseBox'), p = current;
+    $('ideaBox').hidden = !isIdea(p) || !may('status') || !!p._owner;
     box.hidden = !p || isIdea(p) || statusOf(p) !== 'done';
     if (box.hidden) { $('masterAudio').pause(); return; }
     if (!p.release) p.release = {};
@@ -1460,6 +1461,14 @@
     sel.value = k;
   }
 
+  // from the idea bar in the project: the settings dialog, straight in "make it a project" mode
+  $('ideaPromote').addEventListener('click', function () {
+    if (!isIdea(current)) return;
+    openInfo(current);
+    $('infoTitle').textContent = 'Zum Projekt machen';
+    $('infoIntro').textContent = 'Trag BPM, Tonart, Genre und Sprache ein – dann wird aus der Idee ein Projekt.';
+    $('infoSubmit').hidden = true;
+  });
   $('infoPromote').addEventListener('click', function () {
     infoPromote = true;
     $('infoForm').requestSubmit();
