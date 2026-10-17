@@ -29,6 +29,8 @@
     f: 'F', v: 'F', s: 'F', S: 'F', X: 'F', h: 'F', j: 'F',
     l: 'L', r: 'L'
   };
+  // clusters from the other languages' data can hold any of these letters
+  function cls(c) { return CLASS[c] || 'F'; }
   var FULL_VOWELS = 'aeiouöüAYW';
 
   function startsAt(s, i, pat) { return s.substr(i, pat.length) === pat; }
@@ -95,6 +97,7 @@
     switch (p) {
       case '6a': return 0.75;
       case '6@': return 0.55;
+      case '@e': return 0.65;  // unstressed e in Spanish, Italian … on the German schwa
       case 'iü': return 0.6;
       case 'eö': return 0.6;
       case 'ou': return 0.35;
@@ -110,7 +113,7 @@
     if (a === b) return 1;
     if (!a || !b) return a.length + b.length <= 1 ? 0.5 : 0.2;
     var la = a[a.length - 1], lb = b[b.length - 1];
-    var s = la === lb ? 0.7 : CLASS[la] === CLASS[lb] ? 0.5 : 0.15;
+    var s = la === lb ? 0.7 : cls(la) === cls(lb) ? 0.5 : 0.15;
     if (a.length !== b.length) s -= 0.1;
     return Math.max(0, s);
   }
@@ -200,6 +203,15 @@
     return { v: v, long: long, cons: cons, pos: null };
   }
 
+  // Other languages (tools/build_langs.py): "cons|vowel|cons|vowel:|cons", ":" marks a long vowel
+  function fromCode(code) {
+    var p = code.split('|'), v = [], long = [], cons = [p[0]];
+    for (var i = 1; i < p.length; i += 2) {
+      v.push(p[i][0]); long.push(p[i].length > 1 ? 1 : 0); cons.push(p[i + 1] || '');
+    }
+    return { v: v, long: long, cons: cons, pos: null };
+  }
+
   // join word transcriptions of a phrase ("Rechnung bezahle")
   function concatT(list) {
     var out = { v: [], long: [], cons: [''], pos: null };
@@ -272,21 +284,26 @@
   Engine.prototype.add = function (index) { this.indexes[index.lang] = index; };
   Engine.prototype.ready = function (lang) { var x = this.indexes[lang]; return !!(x && x.ready); };
 
-  // pronunciation of one word: from the dictionary of the language that knows it
-  Engine.prototype.wordT = function (word, primary) {
-    var l = word.toLowerCase(), de = this.indexes.de, en = this.indexes.en;
-    var inDe = de && de.ready && de.byLower.has(l), inEn = en && en.ready && en.byLower.has(l);
-    // words in both lists ("Money", "Hand"): English if it is far more common there
-    var deRank = inDe ? de.byLower.get(l) : Infinity, enRank = inEn ? en.byLower.get(l) : Infinity;
-    if (deRank >= de.ranked) deRank = Infinity;
-    if (inEn && (primary === 'en' || !inDe || enRank * 3 < deRank)) return { lang: 'en', t: en.t[enRank] };
-    return { lang: inDe || primary !== 'en' ? 'de' : 'en', t: transcribe(word), guessed: !inDe };
+  // pronunciation of one word: from the dictionary of the language that knows it.
+  // A word in several lists ("Money", "amore"): the song's main language, unless the word is
+  // far more common in another one. Unknown words are read like German.
+  Engine.prototype.wordT = function (word, primary, langs) {
+    var l = word.toLowerCase(), self = this, best = null;
+    (langs || Object.keys(this.indexes)).forEach(function (lang) {
+      var idx = self.indexes[lang];
+      if (!idx || !idx.ready || !idx.byLower.has(l)) return;
+      var i = idx.byLower.get(l), rank = i < idx.ranked ? i : 1e9;
+      if (lang === primary) rank = rank / 3;
+      if (!best || rank < best.rank) best = { lang: lang, t: idx.t[i], rank: rank };
+    });
+    if (best) return { lang: best.lang, t: best.t };
+    return { lang: primary || 'de', t: transcribe(word), guessed: true };
   };
 
-  Engine.prototype.queryOf = function (query, primary) {
+  Engine.prototype.queryOf = function (query, primary, langs) {
     var q = query.trim().replace(/\s+/g, ' ');
     var parts = q.split(' ').filter(Boolean), self = this;
-    var infos = parts.map(function (w) { return self.wordT(w.replace(/[^A-Za-zÄÖÜäöüß']/g, '') || w, primary); });
+    var infos = parts.map(function (w) { return self.wordT(w.replace(/[^\p{L}'’]/gu, '') || w, primary, langs); });
     var last = infos[infos.length - 1];
     var lower = q.toLowerCase().replace(/ /g, '');
     return {
@@ -299,11 +316,35 @@
     };
   };
 
+  // Best first, but a big word list (German) must not bury the other languages: after three
+  // hits in a row from one language comes a good one from the language shown least so far.
+  function mix(list, limit) {
+    var out = [], used = new Array(list.length), run = 0, last = null, count = {};
+    while (out.length < limit) {
+      var pick = -1, other = -1;
+      for (var i = 0; i < list.length; i++) {
+        if (used[i]) continue;
+        if (pick < 0) pick = i;
+        var l = list[i].lang;
+        if (run >= 3 && l !== last && list[i].score >= 0.6 &&
+            (other < 0 || (count[l] || 0) < (count[list[other].lang] || 0))) other = i;
+      }
+      if (pick < 0) break;
+      if (run >= 3 && other >= 0) pick = other;
+      used[pick] = 1;
+      run = list[pick].lang === last ? run + 1 : 1;
+      last = list[pick].lang;
+      count[last] = (count[last] || 0) + 1;
+      out.push(list[pick]);
+    }
+    return out;
+  }
+
   // opts: { langs: ['de', 'en'], primary, limit, exclude: Set }
   Engine.prototype.search = function (query, opts) {
     opts = opts || {};
     var primary = opts.primary || 'de', limit = opts.limit || 80, self = this;
-    var q = this.queryOf(query, primary);
+    var q = this.queryOf(query, primary, opts.langs);
     var hits = [], group = [];
     (opts.langs || [primary]).forEach(function (lang) {
       var idx = self.indexes[lang];
@@ -313,9 +354,10 @@
       group = group.concat(r.group);
     });
     hits.sort(function (a, b) { return b[0] - a[0] || a[1] - b[1]; });
-    var out = [], seen = {}, perEnd = {};
-    for (var h = 0; h < hits.length && out.length < limit; h++) {
+    var all = [], seen = {}, perEnd = {}, perLang = {};
+    for (var h = 0; h < hits.length; h++) {
       var idx = hits[h][2], i = hits[h][1], word = idx.words[i];
+      if (perLang[idx.lang] >= limit) continue;
       var stem = idx.lang + stemOf(word.toLowerCase());
       if (seen[stem]) continue;
       seen[stem] = 1;
@@ -324,23 +366,25 @@
       perEnd[e2] = (perEnd[e2] || 0) + 1;
       if (perEnd[e2] > 2) continue;
       var sc = Math.min(1, hits[h][0]);
-      out.push({
+      perLang[idx.lang] = (perLang[idx.lang] || 0) + 1;
+      all.push({
         word: word,
         lang: idx.lang,
         score: sc,
         kind: Math.min(q.t.v.length, idx.t[i].v.length) >= 2 && sc >= 0.7 ? 'multi' : 'end'
       });
     }
+    var out = mix(all, limit);
     group.sort(function (a, b) { return a.length - b.length; });
     return { query: q.text, lang: q.lang, ending: q.ending, endings: group, results: out };
   };
 
   // how well `word` rhymes on `target` (both may be phrases), 0..1
-  Engine.prototype.rhymeScore = function (word, target, primary) {
-    return score(this.queryOf(target, primary).t, this.queryOf(word, primary).t);
+  Engine.prototype.rhymeScore = function (word, target, primary, langs) {
+    return score(this.queryOf(target, primary, langs).t, this.queryOf(word, primary, langs).t);
   };
 
-  var api = { transcribe: transcribe, fromArpa: fromArpa, score: score, ending: ending, Index: Index, Engine: Engine };
+  var api = { transcribe: transcribe, fromArpa: fromArpa, fromCode: fromCode, score: score, ending: ending, Index: Index, Engine: Engine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RaimRhyme = api;
 })(this);

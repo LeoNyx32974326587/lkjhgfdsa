@@ -58,19 +58,50 @@
   var dePromise = new Promise(function (resolve) {
     setTimeout(function () { engine.indexes.de.build(resolve); }, 50);
   });
-  var dictPromise = dePromise.then(loadEnglish).catch(function () {
-    toast('Englisches Wörterbuch konnte nicht geladen werden.');
-  }).then(function () {
-    var n = Object.keys(engine.indexes).map(function (l) {
+
+  // every other language: js/words-<code>.js from tools/build_langs.py, loaded when a song needs it
+  var langPromises = { de: dePromise };
+  function loadLang(code) {
+    if (code === 'en') return loadEnglish();
+    if (!langPromises[code]) {
+      langPromises[code] = loadScript('js/words-' + code + '.js').then(function () {
+        var name = 'RAIM_LANG_' + code.toUpperCase(), data = window[name];
+        window[name] = null;
+        var rows = data.words.split('\n');
+        var words = rows.map(function (r) { return r.slice(0, r.indexOf('\t')); });
+        var codes = rows.map(function (r) { return r.slice(r.indexOf('\t') + 1); });
+        var idx = new RaimRhyme.Index(code, words, data.ranked, function (i) { return RaimRhyme.fromCode(codes[i]); });
+        return new Promise(function (resolve) { idx.build(function () { engine.add(idx); resolve(); }); });
+      });
+      langPromises[code].catch(function () { langPromises[code] = null; });
+    }
+    return langPromises[code];
+  }
+  function showDictStatus() {
+    var n = Object.keys(engine.indexes).filter(function (l) { return engine.ready(l); }).map(function (l) {
       return l.toUpperCase() + ' ' + engine.indexes[l].words.length.toLocaleString('de-DE');
     });
     $('dictStatus').textContent = n.join(' · ') + ' Wörter';
-  });
-  function whenReady(fn) { dictPromise.then(fn); }
+  }
+  // load the dictionaries of these languages (German always), then run fn
+  function withLangs(langs, fn) {
+    var failed = [];
+    var all = ['de'].concat(langs).map(function (l) {
+      return loadLang(l).catch(function () { failed.push(langName(l)); });
+    });
+    Promise.all(all).then(function () {
+      showDictStatus();
+      if (failed.length) toast('Wörterbuch für ' + failed.join(', ') + ' konnte nicht geladen werden.');
+      fn();
+    });
+  }
+  function whenReady(fn) { withLangs(current ? rhymeLangs() : [], fn); }
+  dePromise.then(showDictStatus);
 
-  // rhymes come from the song's languages (song infos): German, English or both, also across them
+  // rhymes come from all the song's languages (song infos), also across them:
+  // a Spanish word on a German one works like German on English
   function rhymeLangs() {
-    var l = current ? current.langs.filter(function (x) { return x === 'de' || x === 'en'; }) : [];
+    var l = current ? current.langs.filter(function (x) { return x !== 'other'; }) : [];
     return l.length ? l : ['de'];
   }
   function searchRhymes(q, limit) {
@@ -642,8 +673,8 @@
   function langName(code) { var x = LANGS.filter(function (l) { return l[0] === code; })[0]; return x ? x[1] : code; }
   // "Deutsch + Englisch"
   function langsText(p) { return p.langs.map(langName).join(' + '); }
-  // the rhyme engine knows German and English: use the first of those the song is in
-  function rhymeLang(langs) { return langs.filter(function (l) { return l === 'de' || l === 'en'; })[0] || 'de'; }
+  // the song's main language for rhymes: the first one it is in
+  function rhymeLang(langs) { return langs.filter(function (l) { return l !== 'other'; })[0] || 'de'; }
 
   function songBpm(p) { return p.bpm || p.license.bpm || ''; }
   function songKey(p) { return p.key && p.key !== 'unbekannt' ? p.key : p.license.key || ''; }
@@ -954,7 +985,7 @@
           req.after = around.after;
           req.rhymeWord = $('aiRhymeEnd').checked && lastWords ? lastWords[lastWords.length - 1] : '';
           req.rhymeHints = [];
-          if (req.rhymeWord && engine.ready('de')) {
+          if (req.rhymeWord && rhymeLangs().every(function (l) { return engine.ready(l); })) {
             // the project's saved words go first when they rhyme
             var found = searchRhymes(req.rhymeWord, 15).results.map(function (h) { return h.word; });
             var hints = p.rhymes.saved.filter(function (w) { return found.indexOf(w) >= 0; }).concat(found);
@@ -1296,7 +1327,7 @@
 
   // rhyme key of a word: its last stressed vowel and everything after it
   function rhymeKey(word) {
-    var v = engine.wordT(word, current.lang).t.v, n = v.length;
+    var v = engine.wordT(word, current.lang, rhymeLangs()).t.v, n = v.length;
     if (!n) return '';
     return 'aeiouöüAYW'.indexOf(v[n - 1]) < 0 && n > 1 ? v[n - 2] + v[n - 1] : v[n - 1];
   }
@@ -1378,7 +1409,7 @@
     var q = $('searchInput').value.trim();
     if (q.length < 2) { lastResult = null; renderResults(); return; }
     var out = $('searchOut');
-    if (!engine.ready('de')) { out.textContent = ''; out.append(el('p', 'empty', 'Wörterbuch lädt noch …')); }
+    if (!rhymeLangs().every(function (l) { return engine.ready(l); })) { out.textContent = ''; out.append(el('p', 'empty', 'Wörterbuch lädt noch …')); }
     var p = current;
     whenReady(function () {
       if ($('searchInput').value.trim() !== q || current !== p) return;
@@ -1409,13 +1440,11 @@
 
   // which languages rhymes come from: shown in the rhymes tab, changed in the song infos
   function renderRhymeLangs() {
-    var on = rhymeLangs(), note = $('rhymeLangNote');
-    var others = current.langs.filter(function (l) { return l !== 'de' && l !== 'en'; }).map(langName);
-    var known = current.langs.some(function (l) { return l === 'de' || l === 'en'; });
-    var text = !known ? 'Die Reimsuche kennt nur Deutsch und Englisch und sucht darum deutsche Reime.'
-      : on.length > 1 ? 'Reime auf Deutsch und Englisch – auch deutsche Wörter auf englische und umgekehrt.'
-      : on[0] === 'en' ? 'Reime auf Englisch.' : 'Reime auf Deutsch.';
-    if (others.length) text += ' Für ' + others.join(' und ') + ' helfen dir die KI-Ideen.';
+    var on = rhymeLangs(), names = on.map(langName);
+    var note = $('rhymeLangNote'), list = names.length > 1 ? names.slice(0, -1).join(', ') + ' und ' + names[names.length - 1] : names[0];
+    var text = on.length > 1 ? 'Reime auf ' + list + ' – auch über die Sprachen hinweg, z. B. ' +
+      langName(on[1]) + ' auf ' + langName(on[0]) + '.' : 'Reime auf ' + list + '.';
+    if (current.langs.indexOf('other') >= 0) text += ' Für andere Sprachen helfen dir die KI-Ideen.';
     note.textContent = text + ' ';
     var edit = el('button', 'link-btn', 'Sprachen ändern');
     edit.type = 'button';
@@ -1488,15 +1517,17 @@
     var seq = ++synSeq, p = current;
     out.textContent = '';
     out.append(el('p', 'empty', 'Suche Synonyme …'));
-    whenReady(function () {
-      var lang = engine.wordT(word, p.lang).lang;
-      $('synInfo').textContent = lang === 'en'
+    // synonyms exist for German and English
+    withLangs(['en'].concat(rhymeLangs()), function () {
+      var lang = engine.wordT(word, p.lang === 'en' ? 'en' : 'de', ['de', 'en']).lang;
+      $('synInfo').textContent = (lang === 'en'
         ? 'Englische Synonyme von Datamuse (braucht Internet).'
-        : 'Deutsche Synonyme aus OpenThesaurus.';
+        : 'Deutsche Synonyme aus OpenThesaurus.') + (rhymeLangs().some(function (l) { return l !== 'de' && l !== 'en'; })
+        ? ' Synonyme gibt es nur auf Deutsch und Englisch.' : '');
       (lang === 'en' ? englishSynonyms(word) : germanSynonyms(word)).then(function (list) {
         if (seq !== synSeq || current !== p) return;
         var rows = list.map(function (w) {
-          return { word: w, score: target ? engine.rhymeScore(w, target, p.lang) : null };
+          return { word: w, score: target ? engine.rhymeScore(w, target, p.lang, rhymeLangs()) : null };
         });
         if (target) rows.sort(function (a, b) { return b.score - a.score; });
         renderSynonyms(rows, word, target);
@@ -1580,7 +1611,7 @@
       var w = el('span', 'word', h.word);
       var tags = [];
       if (h.kind === 'multi') tags.push('mehrsilbig');
-      if (h.lang !== current.lang) tags.push(h.lang === 'en' ? 'englisch' : 'deutsch');
+      if (h.lang !== current.lang) tags.push(langName(h.lang).toLowerCase());
       if (tags.length) w.append(el('span', 'tag', tags.join(' · ')));
       var star = el('button', 'star', '★');
       star.type = 'button';

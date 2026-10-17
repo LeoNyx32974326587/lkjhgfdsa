@@ -30,9 +30,10 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat v
 - **Prompter**
   - Eigener Bereich für den **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
 - **Reime**
-  - Reimsuche nach Klang in den Sprachen aus den Song-Infos: nur Deutsch, nur Englisch oder beides – dann auch deutsche Wörter auf englische und umgekehrt, z. B. „Money“ → honey, funny, Manie (für andere Sprachen helfen die KI-Ideen).
+  - Reimsuche nach Klang in allen Sprachen aus den Song-Infos (Deutsch, Englisch, Türkisch, Arabisch, Französisch, Spanisch, Italienisch, Portugiesisch, Polnisch, Russisch, Ukrainisch, Albanisch, Kurdisch, Bosnisch/Kroatisch/Serbisch, Griechisch, Rumänisch, Niederländisch, Persisch) – auch über die Sprachen hinweg: jedes Wort reimt auf jede gewählte Sprache, z. B. „Money“ → honey, funny, Manie oder „Leben“ → deben (spanisch). Damit die große deutsche Liste die anderen nicht verdrängt, werden die Sprachen in der Trefferliste gemischt. Die Wörterbücher der weiteren Sprachen laden erst, wenn ein Song sie braucht.
+  - Abdeckung: Deutsch und Englisch sind am größten; Kurdisch hat nur gut 2.000 Wörter, Arabisch, Persisch und Griechisch je etwa 5.000–6.500. Für Arabisch und Persisch muss das Wort ohne Vokalzeichen eingegeben werden.
   - Häufige Wörter stehen bei gleich guten Reimen weiter oben.
-  - **Synonyme**: Bedeutung eingeben, optional „reimt auf“ – dann nach Reim sortiert. Deutsch offline (OpenThesaurus), Englisch online (Datamuse).
+  - **Synonyme**: Bedeutung eingeben, optional „reimt auf“ – dann nach Reim sortiert. Deutsch offline (OpenThesaurus), Englisch online (Datamuse). Synonyme gibt es nur für Deutsch und Englisch.
   - Reimenden aus deinem Text (farbig gruppiert), Gemerkt-Liste, Verlauf, „Passt nicht“.
 
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
@@ -45,8 +46,8 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kanns
 
 - `index.html`, `styles.css`, `script.js`: Startseite
 - `app.html`, `app.css`: App
-- `js/rhyme.js`: Reim-Engine (deutsche Aussprache-Näherung und Bewertung)
-- `js/words.js`, `js/words-en.js`: Wortlisten Deutsch/Englisch
+- `js/rhyme.js`: Reim-Engine (deutsche Aussprache-Näherung, Klang-Codes aller Sprachen und Bewertung)
+- `js/words.js`, `js/words-en.js`: Wortlisten Deutsch/Englisch; `js/words-<sprache>.js`: alle weiteren Sprachen (Aussprache als Klang-Code)
 - `js/thesaurus-de.js`: deutsche Synonyme
 - `js/song.js`: Song-Abschnitte
 - `js/prompter.js`: Teleprompter
@@ -70,5 +71,10 @@ Die Dateien in `js/words.js`, `js/words-en.js` und `js/thesaurus-de.js` erzeugt 
 - Englische Synonyme: [Datamuse API](https://www.datamuse.com/api/) (online)
 - PDF: [jsPDF](https://github.com/parallax/jsPDF) (MIT, per CDN)
 - Lizenz-PDFs lesen: [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0, per CDN)
+
+Die Wortlisten der weiteren Sprachen (`js/words-<sprache>.js`) erzeugt `tools/build_langs.py` aus:
+
+- Aussprache: [WikiPron](https://github.com/CUNY-CL/wikipron) (aus Wiktionary, CC BY-SA); für Türkisch, Albanisch und Rumänisch ergänzt durch Ausspracheregeln aus der Schreibung
+- Worthäufigkeiten: [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0), für Bosnisch/Kroatisch/Serbisch aus allen drei Listen
 
 Wegen DeReWo (nicht-kommerziell) sollte die deutsche Wortliste für eine kommerzielle Nutzung ersetzt oder die Lizenz geklärt werden.
