@@ -177,6 +177,10 @@
         <h2 class="sub">Teleprompter</h2>
         <div class="card prompter-card">
           <p>Zeigt deinen Songtext groß und lässt ihn im Takt mitlaufen – zum Beispiel zum Einsingen in FL Studio. Damit das Tempo stimmt, braucht er die BPM des Beats.</p>
+          <div class="sec-pick" id="secPickBlock" hidden>
+            <span class="sec-pick-label">Was soll laufen?</span>
+            <div class="chips chips--wrap" id="secPick"></div>
+          </div>
           <div class="rec-row">
             <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
             <button type="button" class="link-btn" id="bpmDetect">aus Beat erkennen</button>

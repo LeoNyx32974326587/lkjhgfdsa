@@ -565,3 +565,9 @@ body.prompter-open { overflow: hidden; }
 .badge--warn { background: rgba(255, 196, 87, .15); color: #ffd27a; border-color: rgba(255, 196, 87, .4); }
 .bpm-hint { margin: 10px 0 0 !important; font-size: 13px; color: var(--muted) !important; }
 .bpm-hint.is-missing { color: #ffd27a !important; }
+
+/* teleprompter: section choice */
+.sec-pick { margin: 4px 0 12px; }
+.sec-pick-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.chip--pick { background: rgba(40, 30, 90, .6); border-color: var(--border); color: #d8d0ff; cursor: pointer; }
+.chip--pick.is-on { background: var(--violet-2); border-color: rgba(120, 210, 255, .6); color: #fff; box-shadow: 0 0 12px rgba(110, 80, 255, .45); }

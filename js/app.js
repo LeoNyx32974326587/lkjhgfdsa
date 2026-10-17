@@ -153,6 +153,7 @@
     $('project').hidden = false;
     $('projectTitle').value = p.title;
     loadSections();
+    promptPick = null;
     renderLang();
     chipsFor = null;
     hideAi();
@@ -291,7 +292,7 @@
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
-    if (name === 'beat') RaimBeats.redraw();
+    if (name === 'beat') { RaimBeats.redraw(); renderPromptPick(); }
     if (name === 'rhymes') renderRhymeBlocks();
     if (name === 'text') { renderSavedChips(); chipsFor = null; updateChips(); }
   }
@@ -495,6 +496,45 @@
   function updateStats() {
     var lines = RaimSong.lines(current.text), words = (lines.join(' ').match(WORD_RE) || []).length;
     $('textStats').textContent = lines.length ? lines.length + ' Zeilen · ' + words + ' Wörter' : '';
+  }
+
+  // ---------- teleprompter: which sections to show ----------
+  // null = whole song, otherwise a Set of section positions
+  var promptPick = null;
+
+  function renderPromptPick() {
+    var secs = RaimSong.expand(RaimSong.parse(current.text)), box = $('secPick');
+    var named = secs.some(function (s) { return s.name !== null; });
+    $('secPickBlock').hidden = !named;
+    box.textContent = '';
+    if (!named) { promptPick = null; return; }
+    if (promptPick) {
+      promptPick.forEach(function (i) { if (i >= secs.length) promptPick.delete(i); });
+      if (!promptPick.size) promptPick = null;
+    }
+    function chip(label, on, onClick) {
+      var c = el('button', 'chip chip--pick' + (on ? ' is-on' : ''), label);
+      c.type = 'button';
+      c.setAttribute('aria-pressed', String(on));
+      c.addEventListener('click', onClick);
+      box.append(c);
+    }
+    chip('Ganzer Song', !promptPick, function () { promptPick = null; renderPromptPick(); });
+    // number sections that appear more than once: "Hook 1", "Hook 2"
+    var total = {}, seen = {};
+    secs.forEach(function (s) { var k = (s.name || '').toLowerCase(); total[k] = (total[k] || 0) + 1; });
+    secs.forEach(function (s, i) {
+      var k = (s.name || '').toLowerCase();
+      seen[k] = (seen[k] || 0) + 1;
+      var label = s.name === null ? 'Anfang' : s.name + (total[k] > 1 && !/\d$/.test(s.name) ? ' ' + seen[k] : '');
+      if (!RaimSong.lines(s.body).length) label += ' (leer)';
+      chip(label, !!promptPick && promptPick.has(i), function () {
+        if (!promptPick) promptPick = new Set();
+        if (promptPick.has(i)) promptPick.delete(i); else promptPick.add(i);
+        if (!promptPick.size) promptPick = null;
+        renderPromptPick();
+      });
+    });
   }
 
   // ---------- PDF export ----------
@@ -1452,7 +1492,8 @@
     // lyrics for the teleprompter: section names and lines, repeats filled in
     lyrics: function () {
       var out = [];
-      RaimSong.expand(RaimSong.parse(current.text)).forEach(function (s) {
+      RaimSong.expand(RaimSong.parse(current.text)).forEach(function (s, i) {
+        if (promptPick && !promptPick.has(i)) return;
         if (s.name !== null) out.push({ head: s.name + (s.repeated ? ' (Wiederholung)' : '') });
         s.body.split('\n').forEach(function (l) { if (l.trim()) out.push({ line: l.trim() }); });
       });
