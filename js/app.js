@@ -780,12 +780,12 @@
     return parts.join(', ');
   }
 
+  // the song facts show as the gear's tooltip ("Projekteinstellungen – Pop · 86 BPM · F-Dur · Deutsch")
   function renderSongInfo() {
     var facts = songFacts(current);
     facts.push(langsText(current));
-    $('songInfoText').textContent = facts.join(' · ');
+    $('projectSettings').title = 'Projekteinstellungen – ' + facts.join(' · ');
   }
-  $('songInfo').addEventListener('click', function () { openInfo(current); });
 
   // key options: all 24 keys plus "unknown"
   (function () {
