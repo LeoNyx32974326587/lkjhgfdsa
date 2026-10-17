@@ -14,18 +14,22 @@
     $('prompterPlay').addEventListener('click', function () { cb.play(); });
     $('prompterSlower').addEventListener('click', function () { setFactor(factor * 1.15); });
     $('prompterFaster').addEventListener('click', function () { setFactor(factor / 1.15); });
-    try { factor = parseFloat(localStorage.getItem('raim.prompterFactor')) || 1; } catch (e) { factor = 1; }
   }
 
   function setFactor(f) {
     var now = elapsedLines();
     factor = Math.max(0.3, Math.min(4, f));
-    try { localStorage.setItem('raim.prompterFactor', String(factor)); } catch (e) { /* private mode */ }
     // keep the current position when the speed changes
     if (running) { startLine = now; origin = performance.now(); }
     showSpeed();
   }
-  function showSpeed() { $('prompterSpeed').textContent = (secPerLine * factor).toFixed(1).replace('.', ',') + ' s/Zeile'; }
+  // e.g. "92 BPM" (or "92 BPM · 115 %" after − / +), seconds per line without a BPM
+  var label = '';
+  function showSpeed() {
+    var pct = Math.round(100 / factor);
+    $('prompterSpeed').textContent = (label || (secPerLine * factor).toFixed(1).replace('.', ',') + ' s/Zeile') +
+      (label && pct !== 100 ? ' · ' + pct + ' %' : '');
+  }
 
   // list: [{ head: 'Hook' } | { line: '…' }]
   function show(list) {
@@ -67,8 +71,11 @@
     return startLine + (performance.now() - origin) / 1000 / (secPerLine * factor);
   }
 
-  function start(seconds) {
+  // seconds per line from the BPM; fresh: back to exactly that tempo (drops − / + changes)
+  function start(seconds, speedLabel, fresh) {
     secPerLine = seconds;
+    if (speedLabel !== undefined) label = speedLabel;
+    if (fresh) factor = 1;
     showSpeed();
     origin = performance.now();
     running = true;

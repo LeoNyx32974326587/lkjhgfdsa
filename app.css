@@ -565,3 +565,5 @@ body.prompter-open { overflow: hidden; }
 .license-warn small { display: block; margin-top: 8px; color: var(--dim); font-size: 12px; }
 .warn-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #1b1050; background: #ffc457; }
 .badge--warn { background: rgba(255, 196, 87, .15); color: #ffd27a; border-color: rgba(255, 196, 87, .4); }
+.bpm-hint { margin: 10px 0 0 !important; font-size: 13px; color: var(--muted) !important; }
+.bpm-hint.is-missing { color: #ffd27a !important; }

@@ -25,7 +25,7 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat d
   - **PDF**: Songtext mit Beat- und Lizenzinfos als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
-  - **Teleprompter**: zeigt den Text groß und lässt ihn im Takt mitlaufen (eine Zeile pro Takt), z. B. zum Einsingen in FL Studio. Mit BPM (eintragen oder aus dem Beat erkennen), Einzähler (1 oder 2 Takte), optional mit dem Beat ab der Startstelle; Tempo mit − / +, Zeile antippen zum Springen.
+  - **Teleprompter**: zeigt den Text groß und lässt ihn im Takt mitlaufen (eine Zeile pro Takt), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
   - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann RAIM nicht mehr.
   - **Lizenz** als schmale Leiste mit allen Angaben und Datei, dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Reime**

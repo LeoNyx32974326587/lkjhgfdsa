@@ -36,6 +36,8 @@
     openId = project.id;
     loop = null; looping = false; peaks = []; decoded = null;
     $('bpmInput').value = project.bpm || project.license.bpm || '';
+    $('barsPerLine').value = project.barsPerLine || '1';
+    showBpmHint();
     $('loopBtn').setAttribute('aria-pressed', 'false');
     $('tempo').value = 1; audio.playbackRate = 1; $('tempoOut').textContent = '100 %';
     $('deck').hidden = true;
@@ -86,6 +88,8 @@
     }).then(function (buf) {
       if (openId !== id) return;
       decoded = buf;
+      // no BPM yet: take it from the beat right away
+      if (!bpm()) setBpm(detectBpm(buf), 'auto');
       peaks = computePeaks(buf, 160);
       draw();
     }).catch(function () {
@@ -184,7 +188,28 @@
     return b >= 40 && b <= 250 ? b * (withBeat() ? audio.playbackRate : 1) : 0;
   }
   // one lyric line per bar of four beats
-  function secPerLine() { var b = bpm(); return b ? 4 * 60 / b : 2.6; }
+  function barsPerLine() { return parseFloat($('barsPerLine').value) || 1; }
+  function secPerLine() { var b = bpm(); return b ? barsPerLine() * 4 * 60 / b : 2.6; }
+  function speedLabel() {
+    var b = parseFloat(String($('bpmInput').value).replace(',', '.'));
+    return bpm() ? Math.round(b) + ' BPM' + (barsPerLine() !== 1 ? ' · ' + $('barsPerLine').selectedOptions[0].textContent + ' Takt/Zeile' : '') : '';
+  }
+
+  function setBpm(value, how) {
+    $('bpmInput').value = value;
+    var p = hooks.project();
+    p.bpm = String(value);
+    hooks.save();
+    showBpmHint(how);
+  }
+
+  function showBpmHint(how) {
+    var h = $('bpmHint'), b = bpm();
+    h.classList.toggle('is-missing', !b);
+    if (!b) h.textContent = audio.src || decoded ? 'Trag die BPM ein oder lass sie aus dem Beat erkennen.' : 'Trag die BPM deines Beats ein (steht meist im Beat-Namen oder in FL Studio oben).';
+    else h.textContent = (how === 'auto' ? 'BPM aus dem Beat erkannt. ' : '') + 'Eine Zeile = ' + secPerLine().toFixed(1).replace('.', ',') + ' s' +
+      (how === 'auto' ? '. Wirkt es doppelt oder halb so schnell, korrigier die Zahl.' : '.');
+  }
 
   function cancelCount() {
     countTimers.forEach(clearTimeout);
@@ -221,12 +246,18 @@
     if (withBeat()) audio.currentTime = startPos();
     countIn(function () {
       if (withBeat()) audio.play();
-      RaimPrompter.start(secPerLine());
+      RaimPrompter.start(secPerLine(), speedLabel(), true);
       RaimPrompter.setPlaying(true);
     });
   }
 
   function practice() {
+    if (!bpm()) {
+      toast('Ohne BPM stimmt das Tempo nicht. Trag sie zuerst ein.');
+      $('bpmInput').focus();
+      showBpmHint();
+      return;
+    }
     audio.pause();
     RaimPrompter.show(lyrics());
     roll();
@@ -241,7 +272,7 @@
       return;
     }
     if (withBeat()) audio.play();
-    RaimPrompter.start(secPerLine());
+    RaimPrompter.start(secPerLine(), speedLabel());
     RaimPrompter.setPlaying(true);
   }
 
@@ -262,15 +293,31 @@
       env[f] = Math.max(0, e - prev);
       prev = e;
     }
-    var fps = sr / hop, best = 0, bestLag = 0;
-    for (var bpmTry = 60; bpmTry <= 180; bpmTry += 0.5) {
-      var lag = fps * 60 / bpmTry, l0 = Math.floor(lag), frac = lag - l0, sum = 0;
-      for (var k = 0; k + l0 + 1 < frames; k++) sum += env[k] * (env[k + l0] * (1 - frac) + env[k + l0 + 1] * frac);
-      // slight preference for the usual rap range
-      sum *= bpmTry >= 75 && bpmTry <= 160 ? 1.05 : 1;
-      if (sum > best) { best = sum; bestLag = bpmTry; }
+    var fps = sr / hop;
+    function strength(b) {
+      var lag = fps * 60 / b, l0 = Math.floor(lag), frac = lag - l0, sum = 0;
+      // compare with one, two and four beats later so small tempo errors add up and show
+      [1, 2, 4].forEach(function (m) {
+        var L = lag * m, i0 = Math.floor(L), fr = L - i0;
+        for (var k = 0; k + i0 + 1 < frames; k++) sum += env[k] * (env[k + i0] * (1 - fr) + env[k + i0 + 1] * fr);
+      });
+      return sum;
     }
-    return Math.round(bestLag);
+    var best = 0, bestBpm = 0, b;
+    for (b = 60; b <= 180; b += 0.5) {
+      // slight preference for the usual rap range
+      var v = strength(b) * (b >= 75 && b <= 160 ? 1.05 : 1);
+      if (v > best) { best = v; bestBpm = b; }
+    }
+    var fine = bestBpm;
+    best = 0;
+    for (b = bestBpm - 1; b <= bestBpm + 1; b += 0.05) {
+      var w = strength(b);
+      if (w > best) { best = w; fine = b; }
+    }
+    // very slow results are almost always the half-time reading of a faster beat
+    if (fine < 70) fine *= 2;
+    return Math.round(fine);
   }
 
   // voice shifted earlier by offsetMs, laid over the beat recorded in the same pass
@@ -527,13 +574,17 @@
       var p = hooks.project();
       p.bpm = $('bpmInput').value.trim();
       hooks.save();
+      showBpmHint();
+    });
+    $('bpmInput').addEventListener('input', function () { showBpmHint(); });
+    $('barsPerLine').addEventListener('change', function () {
+      hooks.project().barsPerLine = $('barsPerLine').value;
+      hooks.save();
+      showBpmHint();
     });
     $('bpmDetect').addEventListener('click', function () {
       if (!decoded) { toast('Lade zuerst einen Beat hoch.'); return; }
-      var b = detectBpm(decoded);
-      $('bpmInput').value = b;
-      $('bpmInput').dispatchEvent(new Event('change'));
-      toast('Erkannt: ' + b + ' BPM. Wenn es doppelt oder halb so schnell wirkt, korrigier die Zahl.');
+      setBpm(detectBpm(decoded), 'auto');
     });
     try {
       var savedCount = localStorage.getItem('raim.countIn');

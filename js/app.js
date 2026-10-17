@@ -936,6 +936,10 @@
     }
     step.then(function (file) {
       LICENSE_FIELDS.forEach(function (k) { l[k] = values[k]; });
+      if (values.bpm && !p.bpm) {
+        p.bpm = values.bpm;
+        if (current === p) { $('bpmInput').value = values.bpm; $('bpmInput').dispatchEvent(new Event('input')); }
+      }
       if (file) {
         l.fileId = file.fileId;
         l.fileName = file.fileName;
