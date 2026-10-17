@@ -754,3 +754,28 @@ body.prompter-open { overflow: hidden; }
 .person--invite .person-info { flex-basis: calc(100% - 56px); }
 .person--invite .person-info span { white-space: normal; }
 .person--invite .person-actions { width: 100%; justify-content: flex-end; }
+
+/* ---------- beats & licenses ---------- */
+.home-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.home-link {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: rgba(40, 30, 90, .5); color: var(--text); font-weight: 500; font-size: 14px;
+}
+.home-link:hover { background: rgba(70, 50, 160, .6); }
+.home-link svg { width: 18px; height: 18px; color: var(--cyan); }
+.home-link .warn-dot { width: 18px; height: 18px; font-size: 12px; }
+.lib-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+.lib-stat { display: grid; padding: 14px; border-radius: 18px; border: 1px solid var(--border); background: rgba(28, 20, 70, .6); }
+.lib-stat strong { font-size: 26px; line-height: 1.1; }
+.lib-stat span { font-size: 13px; color: var(--dim); }
+.lib-stat.is-warn { border-color: rgba(255, 196, 87, .5); }
+.lib-stat.is-warn strong { color: #ffd27a; }
+.lib-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 12px; }
+.lib-item { display: grid; gap: 6px; justify-items: start; padding: 16px; border-radius: 20px; border: 1px solid var(--border); background: rgba(28, 20, 70, .6); }
+.lib-item.is-warn { border-color: rgba(255, 196, 87, .45); }
+.lib-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lib-head strong { font-size: 17px; margin-right: 4px; }
+.lib-facts, .lib-notes { margin: 0; font-size: 14px; color: var(--muted); }
+.lib-notes { color: var(--dim); font-style: italic; }
+.lib-warn { margin: 2px 0 4px; padding-left: 18px; font-size: 13px; color: #ffd27a; }
+.lib-warn li + li { margin-top: 3px; }

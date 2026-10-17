@@ -177,6 +177,8 @@
     });
     $('projectsEmpty').hidden = active.length > 0;
     $('newProject').hidden = active.length === 0;
+    $('homeLinks').hidden = active.length === 0;
+    $('libraryWarn').hidden = !libEntries().some(function (e) { return e.warn; });
     $('openTrash').hidden = !trashed;
     $('trashCount').textContent = '(' + trashed + ')';
   }
@@ -2504,15 +2506,91 @@
   }
 
   // open with the newest version: a friend may have changed the song in the meantime
-  function openFresh(p) {
+  function openFresh(p, tab) {
     RaimDB.refreshProject(p).then(function (fresh) {
       if (fresh !== p) {
         normalize(fresh);
         projects = projects.map(function (x) { return x === p ? fresh : x; });
       }
+      $('library').hidden = true;
       openProject(fresh);
+      if (tab) showTab(tab);
     });
   }
+
+  // ---------- beats & licenses of all projects ----------
+  var libFilter = 'all';
+  function libEntries() {
+    return activeProjects().filter(function (p) { return p.beat || p.youtube || hasLicense(p.license); }).map(function (p) {
+      var w = licenseWarnings(p);
+      return { p: p, warnings: w, warn: w.some(function (x) { return x[0] === 'warn'; }) };
+    });
+  }
+  function renderLibrary() {
+    var all = libEntries(), list = $('libList');
+    var beats = all.filter(function (e) { return e.p.beat || e.p.youtube; }).length;
+    var lic = all.filter(function (e) { return hasLicense(e.p.license); }).length;
+    var warn = all.filter(function (e) { return e.warn; }).length;
+    var stats = $('libStats');
+    stats.textContent = '';
+    [[beats, beats === 1 ? 'Beat' : 'Beats'], [lic, lic === 1 ? 'Lizenz' : 'Lizenzen'], [warn, 'zu prüfen']].forEach(function (x, i) {
+      var c = el('div', 'lib-stat' + (i === 2 && x[0] ? ' is-warn' : ''));
+      c.append(el('strong', '', String(x[0])), el('span', '', x[1]));
+      stats.append(c);
+    });
+    var shown = all.filter(function (e) {
+      var t = e.p.license.type || '';
+      return libFilter === 'warn' ? e.warn : libFilter === 'nolicense' ? !hasLicense(e.p.license)
+        : libFilter === 'lease' ? /^(Lease|Premium|Free)/.test(t) : true;
+    }).sort(function (a, b) { return (b.warn - a.warn) || b.p.updated - a.p.updated; });
+    list.textContent = '';
+    shown.forEach(function (e) {
+      var p = e.p, l = p.license, li = el('li', 'lib-item' + (e.warn ? ' is-warn' : ''));
+      var head = el('div', 'lib-head');
+      head.append(el('strong', '', p.title || 'Ohne Titel'));
+      if (p._owner) head.append(el('span', 'badge badge--feat', 'von ' + ownerName(p)));
+      head.append(el('span', 'badge' + (hasLicense(l) ? '' : ' badge--warn'), hasLicense(l) ? (l.type || 'Lizenz') : 'Keine Lizenz'));
+      li.append(head);
+      var beat = p.beat ? '♪ ' + p.beat.name.replace(/\.\w+$/, '') : p.youtube ? '♪ YouTube-Beat' : 'Kein Beat';
+      var facts = [beat];
+      if (l.producer) facts.push('Prod. ' + l.producer);
+      if (l.date) facts.push('gekauft ' + new Date(l.date).toLocaleDateString('de-DE'));
+      facts.push(l.fileId ? 'Lizenzdatei ✓' : 'keine Lizenzdatei');
+      li.append(el('p', 'lib-facts', facts.join(' · ')));
+      if (l.notes) li.append(el('p', 'lib-notes', l.notes));
+      var warns = e.warnings.filter(function (x) { return x[0] === 'warn'; });
+      if (warns.length) {
+        var ul = el('ul', 'lib-warn');
+        warns.forEach(function (x) { ul.append(el('li', '', x[1])); });
+        li.append(ul);
+      }
+      var open = el('button', 'btn btn--small', p._owner && !(p._rights && (p._rights.license || p._rights.beat)) ? 'Ansehen' : 'Öffnen');
+      open.type = 'button';
+      open.addEventListener('click', function () { openFresh(p, 'beat'); });
+      li.append(open);
+      list.append(li);
+    });
+    $('libEmpty').hidden = shown.length > 0;
+    $('libEmpty').textContent = all.length ? 'Nichts in dieser Auswahl.' : 'Noch keine Beats oder Lizenzen. Lade in einem Projekt unter „Beat“ einen Beat und die Lizenz hoch.';
+  }
+  document.querySelectorAll('[data-lib]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      libFilter = b.dataset.lib;
+      document.querySelectorAll('[data-lib]').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+      renderLibrary();
+    });
+  });
+  $('openLibrary').addEventListener('click', function () {
+    $('home').hidden = true;
+    $('library').hidden = false;
+    renderLibrary();
+    window.scrollTo(0, 0);
+  });
+  $('closeLibrary').addEventListener('click', function () {
+    $('library').hidden = true;
+    $('home').hidden = false;
+    renderProjects();
+  });
 
   // back in the app (other tab, phone unlocked): pick up what friends changed
   var lastSync = Date.now();

@@ -49,6 +49,12 @@
         <h1>Projekte</h1>
         <button class="btn btn--primary" id="newProject" type="button">+ Neues Projekt</button>
       </div>
+      <div class="home-links" id="homeLinks" hidden>
+        <button type="button" class="home-link" id="openLibrary">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          Beats &amp; Lizenzen <span id="libraryWarn" class="warn-dot" hidden>!</span>
+        </button>
+      </div>
       <button type="button" class="invite-banner" id="inviteBanner" hidden></button>
       <div id="projects"></div>
       <div class="empty-state" id="projectsEmpty" hidden>
@@ -118,6 +124,28 @@
         <ul class="people" id="outgoingList"></ul>
       </section>
       <p class="hint">Freunde lädst du in den Projekteinstellungen (Zahnrad) als <strong>Feature</strong> zu einem Song ein. Nehmen sie an, haben sie den Song in ihrer Projektliste und können mitschreiben.</p>
+    </main>
+  </div>
+
+  <!-- ================= Beats & Lizenzen ================= -->
+  <div id="library" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="closeLibrary" type="button" aria-label="Zurück zu den Projekten">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="topbar-title">Beats &amp; Lizenzen</span>
+    </header>
+    <main>
+      <div class="lib-stats" id="libStats"></div>
+      <div class="filters" id="libFilters">
+        <button type="button" class="seg-btn is-on" data-lib="all">Alle</button>
+        <button type="button" class="seg-btn" data-lib="warn">Lizenz prüfen</button>
+        <button type="button" class="seg-btn" data-lib="nolicense">Ohne Lizenz</button>
+        <button type="button" class="seg-btn" data-lib="lease">Lease / Free</button>
+      </div>
+      <ul class="lib-list" id="libList"></ul>
+      <p class="empty" id="libEmpty" hidden></p>
+      <p class="hint">Kein Rechtsrat – im Zweifel gilt dein Lizenzvertrag.</p>
     </main>
   </div>
 
