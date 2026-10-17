@@ -66,6 +66,8 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 **Beat-Marker:** Im Bereich Beat merkst du dir, wo Intro, Hook, Part oder Bridge im Beat anfangen – Abschnitt wählen, an die Stelle tippen, „Marker hier setzen“. Die Marker stehen auf der Wellenform. Wählst du im Teleprompter einen Abschnitt, startet der Beat an seinem Marker.
 
+**Leselink:** In den Projekteinstellungen schaltest du den **Leselink** an – Barbook kopiert dann einen Link, den du z. B. deinem Producer oder Engineer schickst. Wer ihn öffnet, sieht den aktuellen Songtext mit Abschnitten, Titel, Künstlername, BPM, Tonart und Genre – ohne Account und ohne Beat, Lizenz, Kommentare oder Features. Ausschalten macht den Link sofort ungültig. Nur mit Account und nur für eigene Songs.
+
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
 Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.

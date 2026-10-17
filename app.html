@@ -724,6 +724,18 @@
         </div>
         <p class="hint" id="infoFeatureNote"></p>
       </div>
+      <div class="field" id="infoShareField" hidden>
+        <label class="switch">
+          <input type="checkbox" id="shareToggle">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Leselink <span class="field-note">Text lesen ohne Account</span></span>
+        </label>
+        <div class="share-box" id="shareBox" hidden>
+          <input id="shareUrl" readonly aria-label="Leselink">
+          <button class="btn btn--small" type="button" id="shareCopy">Kopieren</button>
+        </div>
+        <p class="hint" id="shareNote"></p>
+      </div>
       <p class="form-error" id="infoError" role="alert" hidden></p>
       <div class="row">
         <button class="btn btn--primary" type="submit" id="infoSubmit">Projekt anlegen</button>

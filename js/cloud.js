@@ -192,6 +192,26 @@
       return sb.from('bars').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // ---------- read links (anyone with the link reads the text, no account needed) ----------
+    shareLink: function (projectId) {
+      return sb.from('share_links').select('token').eq('owner', uid).eq('project_id', projectId).then(ok)
+        .then(function (rows) { return rows[0] ? rows[0].token : null; });
+    },
+    createShareLink: function (projectId) {
+      var a = new Uint8Array(24), chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', token = '';
+      crypto.getRandomValues(a);
+      for (var i = 0; i < a.length; i++) token += chars[a[i] % chars.length];
+      return sb.from('share_links').insert({ token: token, owner: uid, project_id: projectId }).then(ok)
+        .then(function () { return token; });
+    },
+    deleteShareLink: function (projectId) {
+      return sb.from('share_links').delete().eq('owner', uid).eq('project_id', projectId).then(ok);
+    },
+    // works signed out too
+    sharedProject: function (token) {
+      return sb.rpc('shared_project', { t: token }).then(ok);
+    },
+
     // ---------- saved states of the song text ----------
     versions: function (owner, projectId) {
       return sb.from('project_versions').select('id,author_name,title,text,created').eq('owner', owner).eq('project_id', projectId).then(ok)

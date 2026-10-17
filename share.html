@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Barbook – Songtext</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#07060f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="share-page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
+  </header>
+
+  <main class="share">
+    <p class="share-msg" id="shareMsg">Lade Songtext …</p>
+    <article id="song" hidden>
+      <h1 id="songTitle"></h1>
+      <p class="share-artist" id="songArtist"></p>
+      <p class="share-meta" id="songMeta"></p>
+      <div class="share-text" id="songText"></div>
+      <p class="share-updated" id="songUpdated"></p>
+    </article>
+    <p class="share-foot">Geschrieben mit <a href="index.html">Barbook</a> – dem Notizbuch für Rap-Texte.</p>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/song.js"></script>
+  <script src="js/share.js"></script>
+</body>
+</html>

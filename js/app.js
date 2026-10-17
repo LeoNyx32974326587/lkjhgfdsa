@@ -1271,6 +1271,7 @@
     renderPicks('infoGenres', GENRES, infoGenres);
     renderPicks('infoLangs', LANGS, infoLangs);
     renderInfoFeatures(p);
+    renderInfoShare(p);
     var locked = !!(p && p._owner && !(p._rights && p._rights.info));
     [].forEach.call(f.elements, function (x) { if (x.id !== 'infoCancel' && x.id !== 'infoClose') x.disabled = locked; });
     $('infoSubmit').hidden = locked;
@@ -2773,6 +2774,60 @@
   var infoFeatures = [];
   // Feature switch, "+ Freund einladen" and the invited friends with their rights
   var infoFeatureOn = false;
+  // ---------- read link: the song text for anyone with the link, no account needed ----------
+  var shareSeq = 0;
+  function shareUrl(token) { return new URL('share.html?t=' + token, location.href).href; }
+  function showShare(token, note) {
+    $('shareToggle').checked = !!token;
+    $('shareBox').hidden = !token;
+    $('shareUrl').value = token ? shareUrl(token) : '';
+    $('shareNote').textContent = note || (token
+      ? 'Wer den Link hat, sieht immer den aktuellen Text – ohne Beat, Lizenz und Kommentare. Ausschalten macht den Link ungültig.'
+      : 'Schalt den Leselink an, um den Text z. B. deinem Producer zu schicken. Ein Account ist zum Lesen nicht nötig.');
+  }
+  function renderInfoShare(p) {
+    var seq = ++shareSeq;
+    $('infoShareField').hidden = !account || !p || !!p._owner;
+    if ($('infoShareField').hidden) return;
+    $('shareToggle').disabled = true;
+    showShare(null, 'Lade …');
+    RaimCloud.shareLink(p.id).then(function (token) {
+      if (seq !== shareSeq) return;
+      showShare(token);
+    }, function (err) {
+      if (seq !== shareSeq) return;
+      showShare(null, RaimCloud.message(err));
+    }).then(function () { if (seq === shareSeq) $('shareToggle').disabled = false; });
+  }
+  $('shareToggle').addEventListener('change', function (e) {
+    var p = infoProject, on = e.target.checked, seq = ++shareSeq;
+    if (!p) return;
+    e.target.disabled = true;
+    // the project has to be in the cloud before a link can point to it
+    var create = function () { return RaimCloud.createShareLink(p.id); };
+    (on ? create().catch(function () { return RaimCloud.saveProject(p).then(create); })
+      : RaimCloud.deleteShareLink(p.id).then(function () { return null; })).then(function (token) {
+      if (seq !== shareSeq) return;
+      showShare(token);
+      if (token) copyShare();
+    }, function (err) {
+      if (seq !== shareSeq) return;
+      toast(RaimCloud.message(err));
+      renderInfoShare(p);
+    }).then(function () { if (seq === shareSeq) e.target.disabled = false; });
+  });
+  function copyShare() {
+    var input = $('shareUrl');
+    (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject()).then(function () {
+      toast('Leselink kopiert.');
+    }, function () {
+      input.focus();
+      input.select();
+      toast('Markier den Link und kopier ihn selbst.');
+    });
+  }
+  $('shareCopy').addEventListener('click', copyShare);
+
   function renderInfoFeatures(p) {
     var field = $('infoFeatureField'), note = $('infoFeatureNote'), sw = $('featureToggle').closest('.switch');
     field.hidden = !account;

@@ -907,3 +907,20 @@ body.prompter-open { overflow: hidden; }
 .marker-go:last-child { padding-right: 12px; }
 .marker-del { padding: 6px 10px 6px 6px; font-size: 16px; line-height: 1; opacity: .7; }
 .marker-del:hover, .marker-del:focus-visible { opacity: 1; }
+
+/* ---------- read link ---------- */
+.share-box { display: flex; gap: 8px; margin-top: 6px; }
+.share-box input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(10, 8, 30, .6); font-size: 13px; color: var(--muted); }
+.share-page { padding-bottom: 40px; }
+.share { max-width: 640px; margin: 0 auto; padding: 24px var(--gutter) 0; }
+.share h1 { font-size: 32px; line-height: 1.15; letter-spacing: -.02em; margin: 0; overflow-wrap: anywhere; }
+.share-artist { margin: 6px 0 0; color: var(--muted); font-size: 17px; }
+.share-meta { margin: 8px 0 0; color: var(--dim); font-size: 14px; }
+.share-msg { color: var(--muted); }
+.share-text { margin-top: 26px; display: grid; gap: 22px; }
+.share-sec h2 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--cyan); }
+.share-sec p { margin: 0; font-size: 18px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+.share-sec p.is-gap { height: .8em; }
+.share-updated { margin: 28px 0 0; color: var(--dim); font-size: 13px; }
+.share-foot { margin: 36px 0 0; padding-top: 16px; border-top: 1px solid var(--border); color: var(--dim); font-size: 14px; }
+.share-foot a { color: var(--muted); }

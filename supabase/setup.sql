@@ -106,6 +106,15 @@ create table if not exists public.bars (
   primary key (user_id, id)
 );
 
+-- Read links: anyone with the link may read the song text, without an account
+create table if not exists public.share_links (
+  token text primary key check (length(token) >= 20),
+  owner uuid not null default auth.uid() references auth.users on delete cascade,
+  project_id text not null,
+  created bigint not null default (extract(epoch from now()) * 1000)::bigint,
+  unique (owner, project_id)
+);
+
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
 create or replace function public.are_friends(a uuid, b uuid) returns boolean
@@ -193,6 +202,7 @@ begin
   delete from project_members where owner = old.user_id and project_id = old.id;
   delete from project_comments where owner = old.user_id and project_id = old.id;
   delete from project_versions where owner = old.user_id and project_id = old.id;
+  delete from share_links where owner = old.user_id and project_id = old.id;
   return old;
 end;
 $$;
@@ -224,6 +234,21 @@ $$;
 revoke execute on function public.find_profile(text) from anon, public;
 grant execute on function public.find_profile(text) to authenticated;
 
+-- the song behind a read link: only what the read page shows, never the files or the friends
+create or replace function public.shared_project(t text) returns jsonb
+language sql security definer stable set search_path = public as $$
+  select jsonb_build_object(
+    'title', p.data ->> 'title', 'text', p.data ->> 'text', 'bpm', p.data ->> 'bpm', 'key', p.data ->> 'key',
+    'genres', coalesce(p.data -> 'genres', '[]'::jsonb), 'updated', p.updated,
+    'artist', coalesce(nullif(pr.artist, ''), nullif(pr.name, ''), ''))
+  from share_links s
+  join projects p on p.user_id = s.owner and p.id = s.project_id
+  left join profiles pr on pr.id = s.owner
+  where s.token = t and (p.data ->> 'deletedAt') is null;
+$$;
+revoke execute on function public.shared_project(text) from public;
+grant execute on function public.shared_project(text) to anon, authenticated;
+
 -- ---------- rules: everyone only sees what is theirs or shared with them ----------
 
 alter table public.projects enable row level security;
@@ -234,6 +259,7 @@ alter table public.project_members enable row level security;
 alter table public.project_comments enable row level security;
 alter table public.project_versions enable row level security;
 alter table public.bars enable row level security;
+alter table public.share_links enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;
@@ -325,6 +351,11 @@ create policy "versions delete" on public.project_versions for delete to authent
 drop policy if exists "own bars" on public.bars;
 create policy "own bars" on public.bars for all to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "own links" on public.share_links;
+create policy "own links" on public.share_links for all to authenticated
+  using (auth.uid() = owner)
+  with check (auth.uid() = owner and exists (select 1 from public.projects p where p.user_id = owner and p.id = project_id));
 
 -- ---------- file storage: private bucket, a folder per user ----------
 
