@@ -376,8 +376,6 @@
     if (p.license.type) top.append(el('span', 'badge', p.license.type));
     if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
     b.append(top);
-    var first = RaimSong.lines(p.text)[0];
-    b.append(el('p', 'project-line', first || 'Noch kein Text'));
     var meta = songFacts(p);
     if (p.features.length) meta.unshift('feat. ' + featureNames(p));
     if (!isIdea(p) && statusOf(p) === 'done') meta.unshift(releaseText(p));
