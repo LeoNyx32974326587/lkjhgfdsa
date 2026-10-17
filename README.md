@@ -16,7 +16,7 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat vier Bereiche: Text, Beat, Prompter und Reime.
 
-**Neues Projekt:** Vor dem Öffnen fragt RAIM die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genre** (Pflicht), Sprache und optional das Thema. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos stehen im Text-Bereich oben (antippen zum Ändern), auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
+**Neues Projekt:** Vor dem Öffnen fragt RAIM die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genres** und **Sprachen** (Pflicht, jeweils mehrere möglich, z. B. Trap + Drill, Deutsch + Englisch; 18 Sprachen zur Auswahl) und optional das Thema. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos stehen im Text-Bereich oben (antippen zum Ändern), auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
 
 - **Text**
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
@@ -30,7 +30,7 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat v
 - **Prompter**
   - Eigener Bereich für den **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
 - **Reime**
-  - Reimsuche nach Klang auf **Deutsch und Englisch**, auch über beide Sprachen hinweg (z. B. „Money“ → honey, funny, Manie). Sprachen per DE/EN an- und ausschalten.
+  - Reimsuche nach Klang auf **Deutsch und Englisch** (für andere Sprachen helfen die KI-Ideen, die in allen Sprachen des Songs schreiben), auch über beide Sprachen hinweg (z. B. „Money“ → honey, funny, Manie). Sprachen per DE/EN an- und ausschalten.
   - Häufige Wörter stehen bei gleich guten Reimen weiter oben.
   - **Synonyme**: Bedeutung eingeben, optional „reimt auf“ – dann nach Reim sortiert. Deutsch offline (OpenThesaurus), Englisch online (Datamuse).
   - Reimenden aus deinem Text (farbig gruppiert), Gemerkt-Liste, Verlauf, „Passt nicht“.

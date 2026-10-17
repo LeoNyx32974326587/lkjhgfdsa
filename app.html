@@ -346,6 +346,7 @@
           <button type="button" class="seg-btn lang-chip" data-rlang="de" aria-pressed="true">DE</button>
           <button type="button" class="seg-btn lang-chip" data-rlang="en" aria-pressed="true">EN</button>
         </div>
+        <p class="hint" id="rhymeLangNote" hidden></p>
         <div id="searchOut"></div>
         </div>
       </section>
@@ -435,17 +436,12 @@
         <label class="field">Tonart *
           <select name="key"></select>
         </label>
-        <label class="field">Genre *
-          <select name="genre">
-            <option value="">– wählen –</option>
-            <option>Deutschrap / Hip-Hop</option><option>Trap</option><option>Drill</option><option>Boom Bap</option>
-            <option>Cloud Rap</option><option>Emo Rap</option><option>R&amp;B</option><option>Pop</option>
-            <option>Afro / Dancehall</option><option>Latin / Reggaeton</option><option>Rock / Punk</option><option>Andere</option>
-          </select>
-        </label>
-        <label class="field">Sprache
-          <select name="lang"><option value="de">Deutsch</option><option value="en">English</option></select>
-        </label>
+      </div>
+      <div class="field">Genre * <span class="field-note">mehrere möglich</span>
+        <div class="chips chips--wrap" id="infoGenres"></div>
+      </div>
+      <div class="field">Sprache * <span class="field-note">mehrere möglich, z. B. Deutsch + Englisch</span>
+        <div class="chips chips--wrap" id="infoLangs"></div>
       </div>
       <label class="field">Worum geht's? (optional, hilft der KI)
         <input name="topic" placeholder="z. B. Aufstieg aus dem Nichts, Herzschmerz, Party">

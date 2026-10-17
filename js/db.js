@@ -44,8 +44,9 @@
       id: uid(),
       title: title || '',
       text: '',
-      lang: 'de',          // song language: 'de' or 'en'
-      genre: '',
+      langs: ['de'],       // languages sung in, e.g. ['de', 'en']; codes in app.js LANGS
+      lang: 'de',          // the one of them the rhyme engine uses ('de' or 'en')
+      genres: [],
       bpm: '',
       key: '',             // e.g. "A-Moll"
       topic: '',           // what the song is about, for the AI

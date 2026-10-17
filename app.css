@@ -608,3 +608,7 @@ body.prompter-open { overflow: hidden; }
 .form-error { margin: 0; font-size: 14px; color: #ffb4c0; }
 #infoBeatField .check { display: flex; justify-self: start; align-items: center; gap: 8px; width: auto; }
 #infoBeatField .check input { width: 18px; height: 18px; flex: none; }
+.field-note { font-size: 12px; color: var(--dim); margin-left: 4px; }
+#infoGenres, #infoLangs { gap: 6px; }
+#infoGenres .chip, #infoLangs .chip { font-size: 14px; padding: 7px 12px; }
+#rhymeLangNote { margin: 4px 0 0; }

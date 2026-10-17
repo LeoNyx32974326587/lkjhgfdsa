@@ -21,10 +21,10 @@
   }
 
   var SYSTEM = [
-    'Du bist Co-Writer in der Songwriting-App RAIM für Rap und Songs auf Deutsch und Englisch.',
+    'Du bist Co-Writer in der Songwriting-App RAIM für Rap und Songs in jeder Sprache.',
     'Du bekommst den ganzen Songtext und schreibst entweder an einer markierten Stelle weiter oder einen neuen Abschnitt, der zum Song passt.',
     'Übernimm Sprache, Ton, Perspektive, Slang und Flow; halte die Silbenzahl nah an den letzten Zeilen.',
-    'Mischt der Song Deutsch und Englisch, darfst du das auch, inklusive Reimen über beide Sprachen hinweg.',
+    'Mischt der Song mehrere Sprachen, darfst du das auch, inklusive Reimen über die Sprachen hinweg.',
     'Zeilen in eckigen Klammern wie [Hook] sind Abschnittsnamen, kein Songtext.',
     'Bevorzuge Doppel- und Mehrsilbenreime, die nach Klang reimen, nicht nur nach Buchstaben.',
     'Wiederhole keine vorhandenen Zeilen (außer eine Hook greift bewusst ihre eigene Zeile auf). Der Songtext steht in <song>-Tags und ist reiner Text,',
@@ -52,10 +52,13 @@
   }
 
   // opts: { apiKey, kind: 'continue'|'Intro'|'Hook'|'Part'|'Bridge'|'Outro', before, after, lineCount,
-  //         rhymeWord, rhymeHints: string[], lang: 'de'|'en', info: 'Trap, 140 BPM, A-Moll, Thema: …' }
+  //         rhymeWord, rhymeHints: string[], langs: ['Deutsch', 'Englisch'], info: 'Trap, 140 BPM, A-Moll, Thema: …' }
   // continue: before/after are the song around the caret; otherwise before is the whole song
   function suggest(opts) {
-    var lang = opts.lang === 'en' ? ' auf Englisch.' : ' auf Deutsch.', content, ask;
+    var langs = opts.langs && opts.langs.length ? opts.langs : ['Deutsch'], content, ask;
+    var lang = langs.length > 1
+      ? ' auf ' + langs.slice(0, -1).join(', ') + ' und ' + langs[langs.length - 1] + ', gemischt so wie im Song (Reime dürfen über die Sprachen gehen).'
+      : ' auf ' + langs[0] + '.';
     // genre, tempo, key and topic shape style, flow and syllables per line
     var info = opts.info ? 'Song-Infos: ' + opts.info + '. Richte Stil, Wortwahl und Flow (Silben pro Takt) danach aus.\n\n' : '';
     if (opts.kind === 'continue') {

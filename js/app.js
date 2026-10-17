@@ -84,6 +84,10 @@
     Object.keys(base).forEach(function (k) { if (p[k] === undefined) p[k] = base[k]; });
     Object.keys(base.license).forEach(function (k) { if (p.license[k] === undefined) p.license[k] = base.license[k]; });
     Object.keys(base.rhymes).forEach(function (k) { if (!p.rhymes[k]) p.rhymes[k] = []; });
+    // projects from before several genres/languages were possible
+    if (p.genre && !p.genres.length) p.genres = [p.genre];
+    delete p.genre;
+    if (!p.langs || !p.langs.length) p.langs = [p.lang || 'de'];
     return p;
   }
 
@@ -553,12 +557,12 @@
       doc.text(pdfSafe(p.title || 'Ohne Titel'), M, 17);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(pdfSafe('Songtext · ' + (p.lang === 'en' ? 'Englisch' : 'Deutsch') + ' · Stand ' + new Date().toLocaleDateString('de-DE')), M, 26);
+      doc.text(pdfSafe('Songtext · ' + langsText(p) + ' · Stand ' + new Date().toLocaleDateString('de-DE')), M, 26);
       y = 46;
 
       // song facts only: no beat, producer or license in the PDF
       var info = [];
-      if (p.genre) info.push(['Genre', p.genre]);
+      if (p.genres.length) info.push([p.genres.length > 1 ? 'Genres' : 'Genre', p.genres.join(', ')]);
       if (songBpm(p)) info.push(['BPM', songBpm(p)]);
       if (songKey(p)) info.push(['Tonart', songKey(p)]);
       if (p.topic) info.push(['Thema', p.topic]);
@@ -624,12 +628,26 @@
   $('exportPdf').addEventListener('click', exportPdf);
 
   // ---------- song infos (asked when a project is created, editable from the text tab) ----------
+  var LANGS = [
+    ['de', 'Deutsch'], ['en', 'Englisch'], ['tr', 'Türkisch'], ['ar', 'Arabisch'], ['fr', 'Französisch'], ['es', 'Spanisch'],
+    ['it', 'Italienisch'], ['pt', 'Portugiesisch'], ['pl', 'Polnisch'], ['ru', 'Russisch'], ['uk', 'Ukrainisch'], ['sq', 'Albanisch'],
+    ['ku', 'Kurdisch'], ['bks', 'Bosnisch/Kroatisch/Serbisch'], ['el', 'Griechisch'], ['ro', 'Rumänisch'], ['nl', 'Niederländisch'],
+    ['fa', 'Persisch'], ['other', 'Andere']
+  ];
+  var GENRES = ['Deutschrap / Hip-Hop', 'Trap', 'Drill', 'Boom Bap', 'Cloud Rap', 'Emo Rap', 'R&B', 'Pop', 'Afro / Dancehall',
+    'Latin / Reggaeton', 'Rock / Punk', 'Elektro', 'Andere'];
+  function langName(code) { var x = LANGS.filter(function (l) { return l[0] === code; })[0]; return x ? x[1] : code; }
+  // "Deutsch + Englisch"
+  function langsText(p) { return p.langs.map(langName).join(' + '); }
+  // the rhyme engine knows German and English: use the first of those the song is in
+  function rhymeLang(langs) { return langs.filter(function (l) { return l === 'de' || l === 'en'; })[0] || 'de'; }
+
   function songBpm(p) { return p.bpm || p.license.bpm || ''; }
   function songKey(p) { return p.key && p.key !== 'unbekannt' ? p.key : p.license.key || ''; }
   // ["Trap", "140 BPM", "A-Moll"]
   function songFacts(p) {
     var out = [];
-    if (p.genre) out.push(p.genre);
+    if (p.genres.length) out.push(p.genres.join(' / '));
     if (songBpm(p)) out.push(songBpm(p) + ' BPM');
     if (songKey(p)) out.push(songKey(p));
     return out;
@@ -643,7 +661,7 @@
 
   function renderSongInfo() {
     var facts = songFacts(current);
-    facts.push(current.lang === 'en' ? 'English' : 'Deutsch');
+    facts.push(langsText(current));
     $('songInfoText').textContent = facts.join(' · ');
   }
   $('songInfo').addEventListener('click', function () { openInfo(current); });
@@ -656,7 +674,26 @@
     sel.append(new Option('Weiß ich nicht', 'unbekannt'));
   })();
 
-  var infoProject = null, infoBeat = null, infoAuto = {}, infoSeq = 0;
+  var infoProject = null, infoBeat = null, infoAuto = {}, infoSeq = 0, infoGenres = [], infoLangs = [];
+
+  // multi-select chips for genres and languages
+  function renderPicks(boxId, options, picked) {
+    var box = $(boxId);
+    box.textContent = '';
+    options.forEach(function (o) {
+      var value = Array.isArray(o) ? o[0] : o, label = Array.isArray(o) ? o[1] : o;
+      var c = el('button', 'chip chip--pick' + (picked.indexOf(value) >= 0 ? ' is-on' : ''), label);
+      c.type = 'button';
+      c.setAttribute('aria-pressed', String(picked.indexOf(value) >= 0));
+      c.addEventListener('click', function () {
+        var i = picked.indexOf(value);
+        if (i >= 0) picked.splice(i, 1); else picked.push(value);
+        $('infoError').hidden = true;
+        renderPicks(boxId, options, picked);
+      });
+      box.append(c);
+    });
+  }
 
   // p = null: new project; otherwise edit that project's infos
   function openInfo(p) {
@@ -672,14 +709,16 @@
     $('infoBeatName').textContent = 'Beat hochladen (MP3, WAV, M4A …)';
     $('infoAnalyze').hidden = true;
     $('infoError').hidden = true;
+    infoGenres = p ? p.genres.slice() : [];
+    infoLangs = p ? p.langs.slice() : ['de'];
     if (p) {
       f.elements.title.value = p.title;
       f.elements.bpm.value = songBpm(p);
       setKeyValue(p.key || p.license.key || '');
-      f.elements.genre.value = p.genre;
-      f.elements.lang.value = p.lang;
       f.elements.topic.value = p.topic || '';
     }
+    renderPicks('infoGenres', GENRES, infoGenres);
+    renderPicks('infoLangs', LANGS, infoLangs);
     $('infoDlg').showModal();
     if (!p) f.elements.title.focus();
   }
@@ -750,12 +789,13 @@
   $('infoForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = $('infoForm'), v = {};
-    ['title', 'bpm', 'key', 'genre', 'lang', 'topic'].forEach(function (n) { v[n] = f.elements[n].value.trim(); });
+    ['title', 'bpm', 'key', 'topic'].forEach(function (n) { v[n] = f.elements[n].value.trim(); });
     var bpm = parseFloat(v.bpm.replace(',', '.')), missing = [];
     if (!infoProject && !infoBeat && !$('infoNoBeat').checked) missing.push('Beat hochladen (oder „Ohne Beat-Datei“ ankreuzen)');
     if (!(bpm >= 40 && bpm <= 250)) missing.push('BPM (40–250)');
     if (!v.key) missing.push('Tonart');
-    if (!v.genre) missing.push('Genre');
+    if (!infoGenres.length) missing.push('Genre');
+    if (!infoLangs.length) missing.push('Sprache');
     if (missing.length) {
       $('infoError').textContent = 'Bitte noch eintragen: ' + missing.join(', ') + '.';
       $('infoError').hidden = false;
@@ -766,8 +806,10 @@
     p.title = v.title;
     p.bpm = v.bpm;
     p.key = v.key;
-    p.genre = v.genre;
-    p.lang = v.lang;
+    // keep the order of the lists, not the click order
+    p.genres = GENRES.filter(function (g) { return infoGenres.indexOf(g) >= 0; });
+    p.langs = LANGS.map(function (l) { return l[0]; }).filter(function (l) { return infoLangs.indexOf(l) >= 0; });
+    p.lang = rhymeLang(p.langs);
     p.topic = v.topic;
     p.updated = Date.now();
     var beat = infoBeat;
@@ -899,7 +941,7 @@
       if (!ok) return;
       var p = current, req = again && aiReq ? aiReq : null;
       if (!req) {
-        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), lang: p.lang, info: songInfoForAi(p), apiKey: key };
+        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), langs: p.langs.map(langName), info: songInfoForAi(p), apiKey: key };
         if (req.kind === 'continue') {
           var around = songAroundCaret(), lines = RaimSong.lines(around.before);
           var lastWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
@@ -1363,6 +1405,11 @@
   // which languages rhymes may come from, per project
   function renderRhymeLangs() {
     var on = rhymeLangs();
+    // the rhyme search knows German and English only
+    var others = current.langs.filter(function (l) { return l !== 'de' && l !== 'en'; }).map(langName);
+    $('rhymeLangNote').textContent = others.length
+      ? 'Die Reimsuche kennt Deutsch und Englisch. Für ' + others.join(' und ') + ' helfen dir die KI-Ideen.' : '';
+    $('rhymeLangNote').hidden = !others.length;
     document.querySelectorAll('[data-rlang]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(on.indexOf(b.dataset.rlang) >= 0));
       b.classList.toggle('is-on', on.indexOf(b.dataset.rlang) >= 0);
