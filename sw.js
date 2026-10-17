@@ -5,7 +5,7 @@ var CACHE = 'barbook-v1';
 var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest',
   'assets/icon.svg', 'assets/icon-192.png', 'js/config.js', 'js/cloud.js', 'js/login.js', 'js/words.js', 'js/rhyme.js',
   'js/song.js', 'js/store.js', 'js/db.js', 'js/ai.js', 'js/license-reader.js', 'js/wav.js', 'js/prompter.js',
-  'js/analyze.js', 'js/beats.js', 'js/app.js'];
+  'js/analyze.js', 'js/beats.js', 'js/dictate.js', 'js/app.js'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));

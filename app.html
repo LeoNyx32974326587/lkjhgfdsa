@@ -142,7 +142,12 @@
     <main>
       <form class="bar-new" id="barNew" autocomplete="off">
         <textarea id="barNewText" rows="3" placeholder="Neue Bar, Punchline oder Idee … mit #hook #liebe als Schlagworte"></textarea>
-        <button class="btn btn--primary" type="submit">Speichern</button>
+        <div class="bar-new-actions">
+          <button type="button" class="mic-btn mic-btn--big" id="barNewMic" title="Einsprechen statt tippen" aria-label="Einsprechen statt tippen" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          </button>
+          <button class="btn btn--primary" type="submit">Speichern</button>
+        </div>
       </form>
       <div class="bar-tools">
         <input type="search" id="barSearch" placeholder="Bars durchsuchen" enterkeyhint="search">
@@ -599,6 +604,9 @@
     </div>
     <form class="bar-quick" id="barQuick" autocomplete="off">
       <input id="barQuickText" placeholder="Idee schnell festhalten … #hook" maxlength="400">
+      <button type="button" class="mic-btn mic-btn--big" id="barQuickMic" title="Einsprechen statt tippen" aria-label="Einsprechen statt tippen" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
       <button class="btn btn--small" type="submit">Merken</button>
     </form>
     <div class="bar-tools">
@@ -828,6 +836,7 @@
   <script src="js/prompter.js"></script>
   <script src="js/analyze.js"></script>
   <script src="js/beats.js"></script>
+  <script src="js/dictate.js"></script>
   <script src="js/app.js"></script>
   <script>
     // installable app and offline start (only on a real web address, not from a file)

@@ -405,6 +405,7 @@
   function closeProject() {
     clearTimeout(saveTimer);
     var p = current;
+    RaimDictate.stop();
     RaimBeats.close();
     $('miniBar').hidden = true;
     if (snapshot(p) !== openedAs) saveNow(p);
@@ -523,6 +524,7 @@
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
+    if (name !== 'text') RaimDictate.stop();
     if (name === 'beat') RaimBeats.redraw();
     if (name === 'text') {
       renderSongInfo();
@@ -540,6 +542,32 @@
   // current.text. Text without headers is a single card, like a plain notepad.
   var WORD_RE = /[A-Za-zÄÖÜäöüß']+/g;
   var sections = [], collapsed = new Set(), activeTA = null, activeIdx = 0;
+
+  // ---------- speaking instead of typing ----------
+  var MIC_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+  function micButton(cls, title) {
+    var b = el('button', 'mic-btn' + (cls ? ' ' + cls : ''));
+    b.type = 'button';
+    b.title = title || 'Einsprechen statt tippen';
+    b.setAttribute('aria-label', b.title);
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = MIC_SVG;
+    b.hidden = !RaimDictate.supported();
+    return b;
+  }
+  // the song's first language; bars follow the browser
+  function dictateLang() {
+    var l = current && current.langs && current.langs.filter(function (x) { return x !== 'other'; })[0];
+    return l || (navigator.language || 'de').slice(0, 2);
+  }
+  function dictate(field, btn) {
+    RaimDictate.start(field, btn, { lang: dictateLang(), onError: toast });
+  }
+  function dictateSection(i) {
+    if (collapsed.has(i)) { collapsed.delete(i); renderSections(); }
+    var card = $('sections').querySelector('.sec[data-i="' + i + '"]');
+    if (card) dictate(card.querySelector('.sec-text'), card.querySelector('.mic-btn'));
+  }
 
   // the text tab opens with every section folded; a tap on one opens it
   function collapseAll(except) {
@@ -607,6 +635,11 @@
           b.addEventListener('click', function () { moveSection(i, m[2]); });
           tools.append(b);
         });
+        if (may('text')) {
+          var mic = micButton('sec-tool');
+          mic.addEventListener('click', function () { dictateSection(i); });
+          tools.append(mic);
+        }
         var ren = el('button', 'sec-tool', '✎');
         ren.type = 'button';
         ren.title = 'Umbenennen';
@@ -643,6 +676,11 @@
       });
       ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; });
       card.append(ta);
+      if (s.name === null && may('text')) {
+        var pmic = micButton('sec-tool mic-btn--corner');
+        pmic.addEventListener('click', function () { dictateSection(i); });
+        card.append(pmic);
+      }
       box.append(card);
       if (!collapsed.has(i)) autosize(ta);
     });
@@ -3191,6 +3229,7 @@
     window.scrollTo(0, 0);
   });
   $('closeBars').addEventListener('click', function () {
+    RaimDictate.stop();
     $('barsPage').hidden = true;
     $('home').hidden = false;
     renderProjects();
@@ -3210,7 +3249,13 @@
     loadBars().then(function () { renderBarPick(); $('barsDlg').showModal(); });
   });
   $('closeBarsDlg').addEventListener('click', function () { $('barsDlg').close(); });
+  $('barsDlg').addEventListener('close', function () { RaimDictate.stop(); });
   $('barPickSearch').addEventListener('input', function (e) { barFilter.pick.q = e.target.value; renderBarList('barPickList', 'pick'); });
+  ['barNew', 'barQuick'].forEach(function (id) {
+    var btn = $(id + 'Mic'), field = $(id === 'barNew' ? 'barNewText' : 'barQuickText');
+    btn.hidden = !RaimDictate.supported();
+    btn.addEventListener('click', function () { dictate(field, btn); });
+  });
   $('barQuick').addEventListener('submit', function (e) {
     e.preventDefault();
     addBar($('barQuickText').value).then(function () { $('barQuickText').value = ''; renderBarPick(); toast('Bar gemerkt.'); });

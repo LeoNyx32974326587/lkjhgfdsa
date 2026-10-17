@@ -935,3 +935,25 @@ body.prompter-open { overflow: hidden; }
 .master-box audio { width: 100%; height: 40px; }
 .master-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .master-actions a.btn { text-decoration: none; }
+
+/* ---------- speaking instead of typing ---------- */
+.mic-btn { display: inline-grid; place-items: center; cursor: pointer; }
+.mic-btn svg { width: 16px; height: 16px; }
+.mic-btn--big { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 1px solid var(--border); background: rgba(90, 60, 230, .55); color: #fff; }
+.mic-btn--big svg { width: 20px; height: 20px; }
+.mic-btn.is-listening { background: #ff3b4e; color: #fff; border-color: #ff3b4e; animation: mic-pulse 1.4s ease-out infinite; }
+@keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 78, .55); } 100% { box-shadow: 0 0 0 12px rgba(255, 59, 78, 0); } }
+.sec--plain { position: relative; }
+.mic-btn--corner { position: absolute; top: 10px; right: 10px; }
+.sec--plain .sec-text { padding-right: 48px; }
+.bar-new-actions { display: flex; gap: 10px; align-items: center; }
+.dictate-bar {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 14px);
+  width: min(560px, calc(100% - 2 * var(--gutter)));
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 999px;
+  background: rgba(20, 12, 50, .96); border: 1px solid rgba(255, 59, 78, .55); box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.dictate-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b4e; flex: none; animation: mic-pulse 1.4s ease-out infinite; }
+.dictate-live { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 14px; }
+.dictate-stop { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: #fff; color: #2a1592; font-weight: 700; cursor: pointer; }
