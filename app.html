@@ -188,32 +188,6 @@
           <p class="hint" id="ytInfo"></p>
         </div>
 
-        <h2 class="sub">Teleprompter</h2>
-        <div class="card prompter-card">
-          <p>Zeigt deinen Songtext groß und lässt ihn im Takt mitlaufen – zum Beispiel zum Einsingen in FL Studio. Damit das Tempo stimmt, braucht er die BPM des Beats.</p>
-          <div class="sec-pick" id="secPickBlock" hidden>
-            <span class="sec-pick-label">Was soll laufen?</span>
-            <div class="chips chips--wrap" id="secPick"></div>
-          </div>
-          <div class="rec-row">
-            <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
-            <button type="button" class="link-btn" id="bpmDetect">aus Beat erkennen</button>
-            <label class="mini-field">Takte pro Zeile
-              <select id="barsPerLine"><option value="0.5">½</option><option value="1" selected>1</option><option value="2">2</option><option value="4">4</option></select>
-            </label>
-            <label class="mini-field">Einzähler
-              <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
-            </label>
-            <label class="check" id="withBeatLabel"><input type="checkbox" id="withBeat" checked> Beat mitspielen</label>
-            <span class="rec-start" id="recStart" hidden>ab 0:00</span>
-          </div>
-          <p class="bpm-hint" id="bpmHint"></p>
-          <button type="button" class="btn btn--primary practice" id="practiceBtn">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-            Teleprompter starten
-          </button>
-        </div>
-
         <h2 class="sub">Lizenz</h2>
         <button type="button" class="license-add" id="licenseAdd">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -296,6 +270,34 @@
         <ul class="takes" id="takes"></ul>
       </section>
 
+      <!-- ---------- Teleprompter ---------- -->
+      <section class="view" data-view="prompter" hidden>
+        <div class="card prompter-card">
+          <p>Zeigt deinen Songtext groß und lässt ihn im Takt mitlaufen – zum Beispiel zum Einsingen in FL Studio. Damit das Tempo stimmt, braucht er die BPM des Beats.</p>
+          <div class="sec-pick" id="secPickBlock" hidden>
+            <span class="sec-pick-label">Was soll laufen?</span>
+            <div class="chips chips--wrap" id="secPick"></div>
+          </div>
+          <div class="rec-row">
+            <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
+            <button type="button" class="link-btn" id="bpmDetect">aus Beat erkennen</button>
+            <label class="mini-field">Takte pro Zeile
+              <select id="barsPerLine"><option value="0.5">½</option><option value="1" selected>1</option><option value="2">2</option><option value="4">4</option></select>
+            </label>
+            <label class="mini-field">Einzähler
+              <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
+            </label>
+            <label class="check" id="withBeatLabel"><input type="checkbox" id="withBeat" checked> Beat mitspielen</label>
+            <span class="rec-start" id="recStart" hidden title="Startstelle: im Bereich Beat auf die Wellenform tippen">Beat ab 0:00</span>
+          </div>
+          <p class="bpm-hint" id="bpmHint"></p>
+          <button type="button" class="btn btn--primary practice" id="practiceBtn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Teleprompter starten
+          </button>
+        </div>
+      </section>
+
       <!-- ---------- Reime ---------- -->
       <section class="view" data-view="rhymes" hidden>
         <div class="seg seg--wide" role="tablist" aria-label="Suche">
@@ -363,6 +365,9 @@
       </button>
       <button type="button" class="tab" data-tab="beat">
         <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4"/></svg>Beat
+      </button>
+      <button type="button" class="tab" data-tab="prompter">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>Prompter
       </button>
       <button type="button" class="tab" data-tab="rhymes">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Reime

@@ -157,7 +157,7 @@
     }
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
     RaimPrompter.setTime(fmt(audio.currentTime));
-    $('recStart').textContent = 'ab ' + fmt(startPos());
+    $('recStart').textContent = 'Beat ab ' + fmt(startPos());
     $('tDur').textContent = fmt(dur);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
@@ -634,5 +634,11 @@
     $('ytRate').addEventListener('change', function (e) { if (yt) yt.setPlaybackRate(parseFloat(e.target.value)); });
   }
 
-  root.RaimBeats = { init: init, open: open, close: close, pause: pause, redraw: draw };
+  // the teleprompter tab shows the current start point and beat options
+  function refreshPrompter() {
+    updatePrompterCard();
+    $('recStart').textContent = 'Beat ab ' + fmt(startPos());
+  }
+
+  root.RaimBeats = { init: init, open: open, close: close, pause: pause, redraw: draw, refreshPrompter: refreshPrompter };
 })(this);

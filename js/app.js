@@ -289,7 +289,8 @@
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
-    if (name === 'beat') { RaimBeats.redraw(); renderPromptPick(); }
+    if (name === 'beat') RaimBeats.redraw();
+    if (name === 'prompter') { renderPromptPick(); RaimBeats.refreshPrompter(); }
     if (name === 'rhymes') renderRhymeBlocks();
   }
   document.querySelectorAll('.tab').forEach(function (t) {
