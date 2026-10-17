@@ -1,10 +1,16 @@
 # Barbook
 
-Web-App für Rap- und Songtexte. Läuft komplett im Browser, ohne Installation und ohne Build.
+Dein Notizbuch für Rap und Songs: Web-App für Texte, Reime, Beats und Lizenzen. Läuft im Browser, ohne Installation und ohne Build.
 
 ## Starten
 
 `index.html` (Startseite) oder direkt `app.html` (App) per Doppelklick öffnen.
+
+## Accounts
+
+Mit eingerichteten Accounts (Supabase) muss man sich anmelden, bevor die App aufgeht: „App öffnen“ führt dann zuerst auf `login.html` (Anmelden, Registrieren, Passwort vergessen). Projekte, Beats und Lizenzen werden mit dem Account synchronisiert und sind auf jedem Gerät da; offline wird weitergearbeitet und später hochgeladen. Projekte aus der Zeit ohne Account bietet Barbook nach der ersten Anmeldung zur Übernahme an. Abmelden geht in den Einstellungen.
+
+Einrichten: Schritt für Schritt in [`SUPABASE.md`](SUPABASE.md) (Supabase-Projekt anlegen, `supabase/setup.sql` ausführen, zwei Werte in `js/config.js` eintragen). Solange `js/config.js` leer ist, läuft Barbook ohne Account nur im Browser.
 
 Nur YouTube-Beats brauchen einen kleinen Webserver, weil YouTube keine lokal geöffneten Dateien abspielt:
 
@@ -43,12 +49,14 @@ Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und we
 
 Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.
 
-Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kannst du **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren. Mach das regelmäßig: Wenn du die Browserdaten löschst, sind die Projekte weg.
+Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser. Unter Einstellungen kannst du zusätzlich **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren.
 
 ## Dateien
 
 - `index.html`, `styles.css`, `script.js`: Startseite
+- `login.html`, `js/login.js`: Anmelden und Registrieren
 - `app.html`, `app.css`: App
+- `js/config.js`: Supabase-Zugang (leer = ohne Accounts); `js/cloud.js`: Accounts und Cloud-Speicher; `supabase/setup.sql`: Tabellen und Regeln
 - `js/rhyme.js`: Reim-Engine (deutsche Aussprache-Näherung, Klang-Codes aller Sprachen und Bewertung)
 - `js/words.js`, `js/words-en.js`: Wortlisten Deutsch/Englisch; `js/words-<sprache>.js`: alle weiteren Sprachen (Aussprache als Klang-Code)
 - `js/thesaurus-de.js`: deutsche Synonyme
@@ -59,7 +67,7 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kanns
 - `js/analyze.js`: BPM- und Tonart-Erkennung
 - `js/beats.js`: Beat-Player, Loop, Tempo, Teleprompter-Steuerung, YouTube, frühere Aufnahmen
 - `js/wav.js`: WAV-Lesen und -Schreiben für frühere Aufnahmen
-- `js/db.js`: Projekte und Dateien (IndexedDB)
+- `js/db.js`: Projekte und Dateien (IndexedDB, mit Account synchronisiert)
 - `js/store.js`: Einstellungen
 - `js/app.js`: Oberfläche
 
@@ -74,6 +82,7 @@ Die Dateien in `js/words.js`, `js/words-en.js` und `js/thesaurus-de.js` erzeugt 
 - Englische Synonyme: [Datamuse API](https://www.datamuse.com/api/) (online)
 - PDF: [jsPDF](https://github.com/parallax/jsPDF) (MIT, per CDN)
 - Lizenz-PDFs lesen: [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0, per CDN)
+- Accounts: [supabase-js](https://github.com/supabase/supabase-js) (MIT, per CDN)
 
 Die Wortlisten der weiteren Sprachen (`js/words-<sprache>.js`) erzeugt `tools/build_langs.py` aus:
 

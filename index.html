@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>RAIM – Reime, die klingen.</title>
-  <meta name="description" content="Dein Schreibblock für Rap und Songs – mit deutschen Doppelreimen, die nach Klang gesucht werden, nicht nach Buchstaben.">
+  <title>Barbook – Dein Notizbuch für Bars</title>
+  <meta name="description" content="Barbook ist dein Notizbuch für Rap und Songs: Texte in Abschnitten schreiben, Reime nach Klang finden – in 18 Sprachen –, Beat und Lizenz griffbereit und ein Teleprompter fürs Einsingen.">
   <meta name="theme-color" content="#07060f">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,8 +21,9 @@
       <span>Barbook</span>
     </a>
     <nav>
-      <a href="#support">Support</a>
+      <a href="#funktionen">Funktionen</a>
       <a href="#datenschutz">Datenschutz</a>
+      <a href="login.html">Anmelden</a>
     </nav>
   </header>
 
@@ -43,8 +44,8 @@
         <g id="logoLayers" font-family="Michroma, 'Arial Black', sans-serif" font-size="210" text-anchor="middle" stroke-linejoin="round"></g>
       </svg>
 
-      <h1>Reime, die klingen.</h1>
-      <p class="lead">Dein Schreibblock für Rap und Songs – mit deutschen Doppelreimen, die nach Klang gesucht werden, nicht nach Buchstaben.</p>
+      <h1>Deine Bars.<br>An einem Ort.</h1>
+      <p class="lead">Das Notizbuch für Rap und Songs: Texte in Abschnitten schreiben, Reime nach Klang finden – in 18 Sprachen –, Beat und Lizenz griffbereit und ein Teleprompter fürs Einsingen.</p>
 
       <a class="cta" href="app.html">
         <span class="cta-icon" aria-hidden="true">
@@ -52,12 +53,60 @@
         </span>
         App öffnen
       </a>
-      <p class="fineprint">Läuft direkt im Browser – auf Handy und Computer.</p>
+      <p class="fineprint">Kostenloser Account – deine Songs auf Handy und Computer.</p>
     </section>
 
     <!-- Features -->
-    <section class="features">
-      <h2 class="section-title">Vom ersten Wort<br>bis zur Aufnahme.</h2>
+    <section class="features" id="funktionen">
+      <h2 class="section-title">Von der ersten Zeile<br>bis in die Booth.</h2>
+
+      <!-- Projekte -->
+      <article class="feature">
+        <div class="card card--hatch">
+          <div class="panel panel--projects">
+            <p class="mock-group">In Bearbeitung <span>2</span></p>
+            <div class="mock-project">
+              <strong>Festivalgagen</strong>
+              <span>Trap · 140 BPM · A-Moll · 24 Zeilen</span>
+            </div>
+            <div class="mock-project">
+              <strong>Nachtschicht</strong>
+              <span>Drill · 142 BPM · F#m · 12 Zeilen</span>
+            </div>
+            <p class="mock-group">Fertig <span>1</span></p>
+            <div class="mock-project mock-project--done">
+              <strong>Lebensgefahr <em>Fertig</em></strong>
+              <span>Boom Bap · 92 BPM · C-Moll · 48 Zeilen</span>
+            </div>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span class="shimmer">Projekte</span></span>
+        <h3>Ein Projekt<br>pro Song</h3>
+        <p>Text, Beat, Lizenz, BPM, Tonart, Genre und Sprache an einem Ort. Was noch in Bearbeitung ist, steht oben – fertige Songs darunter.</p>
+      </article>
+
+      <!-- Text -->
+      <article class="feature">
+        <div class="card card--waves">
+          <div class="panel panel--editor">
+            <p class="mock-section">Hook</p>
+            <p class="line">Sie sagt, dass ich phänomenal bin,</p>
+            <p class="line">und bekomm jetzt sechsstellige <span class="caret"></span>Festivalgagen</p>
+            <p class="mock-section">Part 1</p>
+            <p class="line line--ai">5 Sterne auf der Hotelzimmerkarte …</p>
+            <p class="mock-section mock-section--repeat">Hook <span>wiederholt sich</span></p>
+            <div class="chips">
+              <span class="chip">+ Intro</span>
+              <span class="chip">+ Part</span>
+              <span class="chip">+ Bridge</span>
+              <span class="chip chip--muted">PDF</span>
+            </div>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg><span class="shimmer">Text</span></span>
+        <h3>Schreiben in<br>Abschnitten</h3>
+        <p>Intro, Hook, Part, Bridge, Outro: Du baust den Song Stück für Stück. Die Hook schreibst du einmal, Wiederholungen füllen sich von selbst. Fertig? Als PDF mit BPM und Tonart exportieren.</p>
+      </article>
 
       <!-- Reimsuche -->
       <article class="feature">
@@ -65,44 +114,22 @@
           <div class="panel">
             <div class="search">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-              <span>Nachrichtendienst</span>
+              <span>Lebensgefahr</span>
             </div>
-            <div class="group">
-              <div class="group-head">
-                <strong>–dienst</strong><em>Endungsreime</em>
-                <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-              </div>
-              <div class="group-sub">Nachtgottesdienst, Mädchennotdienst, …</div>
+            <div class="mock-filters">
+              <span class="is-on">Alle Reime</span><span>Reine</span><span>Unreine</span><span>Mehrsilbig</span><span>Vokalreime</span><span>Alliteration</span>
             </div>
             <ul class="results">
-              <li><span class="score" style="--s:1">1,00</span>Amphetamin</li>
-              <li><span class="score" style="--s:.98">0,98</span>Zahnmedizin</li>
-              <li><span class="score" style="--s:.98">0,98</span>Adrenalin</li>
-              <li><span class="score" style="--s:.97">0,97</span>Tagesverdienst</li>
+              <li><span class="score" style="--s:.96">0,96</span>Lebensbedarf</li>
+              <li><span class="score" style="--s:.93">0,93</span>Gesellenjahr <em class="tag">Vokalreim</em></li>
+              <li><span class="score" style="--s:.9">0,90</span>legendär <em class="tag">unrein</em></li>
+              <li><span class="score" style="--s:.88">0,88</span>déjà <em class="tag">französisch</em></li>
             </ul>
           </div>
         </div>
-        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="shimmer">Reimsuche</span></span>
-        <h3>Doppelreime nach Klang</h3>
-        <p>Gib ein Wort ein: RAIM findet Doppelreime, Mehrsilbenreime und Endungsreime – die besten oben.</p>
-      </article>
-
-      <!-- Schreibblock -->
-      <article class="feature">
-        <div class="card card--waves">
-          <div class="panel panel--editor">
-            <p class="line">Sie sagt, dass ich phänomenal bin,</p>
-            <p class="line">und bekomm jetzt sechsstellige <span class="caret"></span>Festivalgagen</p>
-            <div class="chips">
-              <span class="chip chip--muted">phänomenal bin</span>
-              <span class="chip">Festivalgagen</span>
-              <span class="chip">Todesfall</span>
-            </div>
-          </div>
-        </div>
-        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg><span class="shimmer">Schreibblock</span></span>
-        <h3>Reime beim Schreiben</h3>
-        <p>Unter deinem Text erscheinen Reime auf dein letztes Wort. Antippen, weiterschreiben.</p>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="shimmer">Reime</span></span>
+        <h3>Reime nach Klang –<br>in 18 Sprachen</h3>
+        <p>Barbook sucht nach Klang, nicht nach Buchstaben: reine und unreine Reime, Doppel- und Mehrsilbenreime, Vokalreime und Alliterationen. Und es reimt über Sprachen hinweg – Deutsch auf Englisch, Spanisch auf Türkisch, wie du willst. Dazu Synonyme, die sich nach Reim sortieren lassen.</p>
       </article>
 
       <!-- KI-Ideen -->
@@ -122,25 +149,42 @@
         </div>
         <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6Z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8Z"/></svg><span class="shimmer">KI-Ideen</span></span>
         <h3>KI-Ideen, wenn<br>du festhängst</h3>
-        <p>Zwei oder vier Zeilen passend zu deinem Song, auf Wunsch genau auf dein Reimende. Ab 18. 3 KI-Ideen gratis zum Ausprobieren, in Pro 20 im Monat.</p>
+        <p>Lass dir Zeilen für Intro, Hook, Part, Bridge oder Outro vorschlagen – passend zu Genre, Thema und Sprache deines Songs – oder lass den Text an der Stelle weiterschreiben, an der du hängst. Mit deinem eigenen Claude-Schlüssel.</p>
       </article>
 
-      <!-- Beats -->
+      <!-- Beat & Lizenz -->
       <article class="feature">
         <div class="card card--waves card--beats">
           <div class="panel panel--wave">
             <div class="wave" id="waveform">
               <div class="loop"></div>
             </div>
-            <span class="rec" aria-hidden="true"></span>
+          </div>
+          <div class="mock-license">
+            <strong>Exclusive</strong><span>Prod. Nightdrive · 92 BPM · F#m · gekauft 03.10.2026</span>
           </div>
           <div class="beat-chips">
-            <span>Loop</span><span>Tempo</span><span>Aufnehmen</span>
+            <span>Loop</span><span>Tempo</span><span>BPM &amp; Tonart</span>
           </div>
         </div>
-        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4M21 12h0"/></svg><span class="shimmer">Beats</span></span>
-        <h3>Beats und Aufnahmen</h3>
-        <p>Spiel deinen Beat oder einen YouTube-Beat ab und loop ihn. Zu deinen eigenen Beats nimmst du dich direkt auf.</p>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4M21 12h0"/></svg><span class="shimmer">Beat &amp; Lizenz</span></span>
+        <h3>Beat und Lizenz<br>griffbereit</h3>
+        <p>Lade deinen Beat hoch oder nimm einen YouTube-Beat, loop die Stelle, an der du schreibst. BPM und Tonart werden erkannt, die Lizenzdatei wird automatisch ausgelesen – und Barbook warnt dich, wenn bei der Lizenz etwas fehlt.</p>
+      </article>
+
+      <!-- Teleprompter -->
+      <article class="feature">
+        <div class="card card--hatch">
+          <div class="panel panel--prompter">
+            <p class="mock-prompt mock-prompt--past">Sie sagt, dass ich phänomenal bin,</p>
+            <p class="mock-prompt">und bekomm jetzt sechsstellige Festivalgagen</p>
+            <p class="mock-prompt mock-prompt--next">5 Sterne auf der Hotelzimmerkarte</p>
+            <div class="mock-count"><span>92 BPM</span><span>1 Takt pro Zeile</span><span>Einzähler</span></div>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 9h10M7 12h6"/></svg><span class="shimmer">Teleprompter</span></span>
+        <h3>Teleprompter<br>fürs Einsingen</h3>
+        <p>Dein Text läuft groß und gleichmäßig im Tempo deines Beats durch – mit Einzähler, auf Wunsch nur Hook oder ein einzelner Part. Ideal neben FL Studio oder in der Booth.</p>
       </article>
     </section>
 
@@ -148,8 +192,8 @@
     <section class="privacy" id="datenschutz">
       <div class="privacy-card">
         <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="shimmer">Datenschutz</span></span>
-        <h2>Kein Konto,<br>keine Werbung,<br>kein Tracking.</h2>
-        <p>Deine Songs bleiben auf deinem iPhone. Für die Reimsuche geht nur das Suchwort an unseren Server in Deutschland, dauerhaft gespeichert wird es nicht – außer als Wortpaar, wenn du einen Reim mit „Passt nicht“ wegwischst. Für KI-Ideen gehen bis zu 80 Zeilen deines Songs – erst nach deiner ausdrücklichen Zustimmung – über unseren Server an Claude von Anthropic. <a href="#datenschutz">Mehr dazu im Datenschutz</a>.</p>
+        <h2>Deine Songs<br>gehören dir.</h2>
+        <p>Du meldest dich mit E-Mail und Passwort an. Deine Projekte, Beats und Lizenzen werden in deinem Account gespeichert, damit sie auf all deinen Geräten da sind – sehen kann sie nur du. Keine Werbung, kein Tracking. Die Reimsuche läuft komplett auf deinem Gerät. Für KI-Ideen gehen bis zu 80 Zeilen deines Songs – erst nach deiner ausdrücklichen Zustimmung – direkt an Claude von Anthropic.</p>
       </div>
     </section>
 
@@ -163,7 +207,7 @@
         </span>
         App öffnen
       </a>
-      <p class="fineprint">Läuft direkt im Browser – auf Handy und Computer.</p>
+      <p class="fineprint">Läuft direkt im Browser – auf Handy und Computer. <a href="login.html">Account anlegen</a></p>
     </section>
   </main>
 
@@ -173,7 +217,7 @@
         <img src="assets/icon.svg" alt="" width="36" height="36">
         <span>Barbook</span>
       </a>
-      <a class="cta-small" href="app.html">App öffnen</a>
+      <a class="cta-small" href="login.html">Anmelden</a>
     </div>
     <nav class="footer-links">
       <a href="#datenschutz">Datenschutz</a>
