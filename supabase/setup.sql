@@ -504,6 +504,21 @@ create policy "own links" on public.share_links for all to authenticated
   using (auth.uid() = owner)
   with check (auth.uid() = owner and exists (select 1 from public.projects p where p.user_id = owner and p.id = project_id));
 
+-- ---------- live updates (Supabase Realtime) ----------
+-- new messages, friend requests and song invitations reach the open app right away; the rules above still apply
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['notifications', 'friendships', 'project_members'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end;
+$$;
+
 -- ---------- file storage: private bucket, a folder per user ----------
 
 insert into storage.buckets (id, name, public, file_size_limit)

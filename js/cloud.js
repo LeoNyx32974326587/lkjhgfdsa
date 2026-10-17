@@ -204,6 +204,18 @@
       return sb.from('notifications').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // live updates: calls onChange as soon as a message, friend request or song invitation for me arrives
+    // (Supabase Realtime; the tables are in the publication "supabase_realtime", see setup.sql)
+    live: function (onChange) {
+      if (!sb || !sb.channel || !uid) return;
+      var ch = sb.channel('barbook-' + uid);
+      [['notifications', 'user_id'], ['friendships', 'addressee'], ['friendships', 'requester'], ['project_members', 'member'], ['project_members', 'owner']]
+        .forEach(function (t) {
+          ch.on('postgres_changes', { event: '*', schema: 'public', table: t[0], filter: t[1] + '=eq.' + uid }, function () { onChange(t[0]); });
+        });
+      ch.subscribe();
+    },
+
     // ---------- Claude, through the Edge Function "claude" (the API key stays on the server) ----------
     // -> { stop_reason, text }; errors carry .status and .code ('limit', 'not_signed_in', 'not_configured', 'claude')
     claude: function (task, content) {

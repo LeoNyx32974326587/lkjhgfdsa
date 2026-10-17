@@ -2476,6 +2476,7 @@
       RaimCloud.setUser(u.id);
       RaimDB.useAccount(u.id, RaimCloud.online() ? RaimCloud : null);
       RaimCloud.onAuth(function (event) { if (event === 'SIGNED_OUT') location.replace('login.html'); });
+      startLive();
       return RaimDB.sync().then(function (r) {
         if (r.offline) toast('Offline – Änderungen werden hochgeladen, sobald du wieder online bist.');
       }, function () {
@@ -2680,7 +2681,8 @@
   var ownFeatures = {};   // my songs -> [{ member, accepted, rights }]
   var friendsProblem = '';
   var messages = [];      // [{ id, kind, actor, actor_name, title, created, read }], newest first
-  var freshMessages = new Set();   // ids that were new when the friends area was opened
+  var freshMessages = new Set();
+  var messagesLoaded = false;   // ids that were new when the friends area was opened
   var friendPics = {};    // id -> picture as data URL ('' while loading)
   function personName(x) { return x ? x.artist || x.name || '#' + x.code : ''; }
   function personById(id) { return people.find(function (x) { return x.id === id; }); }
@@ -2705,7 +2707,14 @@
     ]).then(function (r) {
       if (r[0]) people = r[0];
       if (r[1]) invites = r[1];
-      if (r[3]) messages = r[3];
+      if (r[3]) {
+        // a message that just arrived pops up once, unless the friends area is open anyway
+        var known = new Set(messages.map(function (m) { return m.id; }));
+        var arrived = messagesLoaded ? r[3].filter(function (m) { return !m.read && !known.has(m.id); }) : [];
+        messages = r[3];
+        messagesLoaded = true;
+        if (arrived.length && $('friends').hidden) toast(arrived.length === 1 ? messageText(arrived[0]) : arrived.length + ' neue Nachrichten – tipp oben auf das Freunde-Symbol.');
+      }
       // opened while new messages arrive: they count as read right away, highlighted until closing
       if (!$('friends').hidden) markMessagesRead();
       if (r[2]) { ownFeatures = r[2]; pruneFeatures(); }
@@ -2785,7 +2794,14 @@
     freshMessages.clear();
     renderFriends();
   }
-  // new messages and requests also show up while the app stays open
+  // new messages and requests show up right away (live), with a check every minute as a safety net
+  var liveTimer = null;
+  function startLive() {
+    RaimCloud.live(function () {
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(loadFriends, 400);
+    });
+  }
   setInterval(function () { if (!document.hidden && account) loadFriends(); }, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && account) loadFriends(); });
 

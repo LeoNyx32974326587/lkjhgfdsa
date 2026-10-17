@@ -76,7 +76,7 @@ Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und we
 
 Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser.
 
-**Nachrichten:** Im Freunde-Bereich stehen Nachrichten, z. B. wenn dich jemand als Freund entfernt, deine Anfrage annimmt oder ablehnt, bei deinem Song einsteigt, ihn verlässt, eine Einladung ablehnt oder dich aus einem Song nimmt. Die rote Zahl am Freunde-Symbol zählt neue Nachrichten, Anfragen und Einladungen; sie aktualisiert sich auch bei offener App (jede Minute und beim Zurückkehren in die App).
+**Nachrichten:** Im Freunde-Bereich stehen Nachrichten, z. B. wenn dich jemand als Freund entfernt, deine Anfrage annimmt oder ablehnt, bei deinem Song einsteigt, ihn verlässt, eine Einladung ablehnt oder dich aus einem Song nimmt. Die rote Zahl am Freunde-Symbol zählt neue Nachrichten, Anfragen und Einladungen; sie springt live hoch, ohne Neuladen (Supabase Realtime), und neue Nachrichten werden kurz eingeblendet.
 
 **Feature-Markierung und Freunde entfernen:** Songs und Ideen, an denen Freunde mitschreiben, tragen auf der Karte die Markierung „Feature“. Entfernst du jemanden als Freund, endet automatisch jedes gemeinsame Feature in beide Richtungen – die Datenbank setzt das durch.
 
