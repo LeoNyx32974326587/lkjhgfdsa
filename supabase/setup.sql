@@ -68,6 +68,21 @@ do $$ begin
   end if;
 end $$;
 
+-- Comments on lines of a song, by the owner and featured friends
+create table if not exists public.project_comments (
+  id uuid primary key default gen_random_uuid(),
+  owner uuid not null references auth.users on delete cascade,
+  project_id text not null,
+  author uuid not null default auth.uid() references auth.users on delete cascade,
+  author_name text not null default '',
+  section text not null default '',
+  line text not null default '',
+  line_no int not null default 0,
+  body text not null check (char_length(body) between 1 and 500),
+  created_at timestamptz not null default now()
+);
+create index if not exists project_comments_project on public.project_comments (owner, project_id);
+
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
 create or replace function public.are_friends(a uuid, b uuid) returns boolean
@@ -104,6 +119,8 @@ declare
   k text;
   locked text[] := array['features', 'featureOn', 'ownerName', 'deletedAt'];   -- only the owner
 begin
+  -- the version time never goes back (an old copy must not look newer than the latest save)
+  new.updated := greatest(old.updated, new.updated);
   if auth.uid() is null or auth.uid() = old.user_id then return new; end if;
   select rights into r from project_members where owner = old.user_id and project_id = old.id and member = auth.uid();
   r := coalesce(r, '{}'::jsonb);
@@ -118,6 +135,7 @@ begin
   end loop;
   new.user_id := old.user_id;
   new.id := old.id;
+  new.updated := greatest(old.updated, new.updated);
   return new;
 end;
 $$;
@@ -150,6 +168,7 @@ create or replace function public.drop_project_members() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   delete from project_members where owner = old.user_id and project_id = old.id;
+  delete from project_comments where owner = old.user_id and project_id = old.id;
   return old;
 end;
 $$;
@@ -174,6 +193,7 @@ alter table public.files enable row level security;
 alter table public.profiles enable row level security;
 alter table public.friendships enable row level security;
 alter table public.project_members enable row level security;
+alter table public.project_comments enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;
@@ -241,6 +261,16 @@ create policy "members remove" on public.project_members for delete to authentic
   using (auth.uid() in (owner, member));
 create policy "members rights" on public.project_members for update to authenticated
   using (auth.uid() in (owner, member)) with check (auth.uid() in (owner, member) and public.are_friends(owner, member));
+
+drop policy if exists "comments read" on public.project_comments;
+drop policy if exists "comments write" on public.project_comments;
+drop policy if exists "comments delete" on public.project_comments;
+create policy "comments read" on public.project_comments for select to authenticated
+  using (auth.uid() = owner or public.is_member(owner, project_id));
+create policy "comments write" on public.project_comments for insert to authenticated
+  with check (author = auth.uid() and (auth.uid() = owner or public.is_member(owner, project_id)));
+create policy "comments delete" on public.project_comments for delete to authenticated
+  using (author = auth.uid() or owner = auth.uid());
 
 -- ---------- file storage: private bucket, a folder per user ----------
 

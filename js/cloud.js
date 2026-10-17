@@ -181,6 +181,18 @@
       return sb.from('project_members').delete().eq('owner', owner).eq('project_id', projectId).eq('member', uid).then(ok);
     },
 
+    // ---------- comments on lines (owner and featured friends) ----------
+    comments: function (owner, projectId) {
+      return sb.from('project_comments').select('id,author,author_name,section,line,line_no,body,created_at')
+        .eq('owner', owner).eq('project_id', projectId).then(ok);
+    },
+    addComment: function (c) {
+      return sb.from('project_comments').insert(c).then(ok);
+    },
+    deleteComment: function (id) {
+      return sb.from('project_comments').delete().eq('id', id).then(ok);
+    },
+
     // ---------- data ----------
     // own projects and the ones friends featured you on; -> [{ id, user_id, data, updated }]
     listProjects: function () {

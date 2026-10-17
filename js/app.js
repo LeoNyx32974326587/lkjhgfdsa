@@ -294,7 +294,10 @@
 
   function openProject(p) {
     current = p;
+    openedAs = snapshot(p);
     releaseOpen = false;
+    comments = [];
+    renderCommentCount();
     applyRights();
     $('home').hidden = true;
     $('project').hidden = false;
@@ -314,17 +317,23 @@
     $('synInput').value = $('synTarget').value = '';
     $('synOut').textContent = $('synInfo').textContent = '';
     RaimBeats.open(p);
+    setTextMode('write');
+    loadComments();
     showTab('text');
     window.scrollTo(0, 0);
     try { sessionStorage.setItem('raim.project', p.id); } catch (e) { /* private mode */ }
   }
 
+  // the project as it was when opened: closing saves only when something changed, so an
+  // unchanged copy never overwrites what a featured friend saved in the meantime
+  var openedAs = '';
+  function snapshot(p) { return JSON.stringify(p, function (k, v) { return k === '_cloud' ? undefined : v; }); }
   function closeProject() {
     clearTimeout(saveTimer);
     var p = current;
     RaimBeats.close();
     $('miniBar').hidden = true;
-    saveNow(p);
+    if (snapshot(p) !== openedAs) saveNow(p);
     current = null;
     $('project').hidden = true;
     $('home').hidden = false;
@@ -642,6 +651,208 @@
     if (!s.body.trim()) return go();
     confirmDialog('Abschnitt entfernen?', '„' + s.name + '“ mit ' + RaimSong.lines(s.body).length + ' Zeilen wird aus dem Song entfernt.', 'Entfernen')
       .then(function (ok) { if (ok) go(); });
+  }
+
+  // ---------- reading view: rhyme scheme and comments ----------
+  // "Lesen" shows the song with rhyming words in the same colour (line ends and inside the lines)
+  // and the end-rhyme scheme (A, B, A, B). With an account, a tap on a line opens its comments.
+  var textMode = 'write', comments = [], openThread = null;
+  var RHYME_COLORS = ['#5ee7ff', '#ff7ad9', '#ffd166', '#8fff9f', '#ff9b6b', '#b59bff', '#7aa8ff', '#ff6b8a'];
+  // small words that rhyme with everything and would only add noise inside lines
+  var STOP = new Set(('ich mich dich sich mir dir wir ihr er sie es und oder der die das den dem des ein eine einen einem ' +
+    'einer nicht ist bin bist sind hat hab habe zu in im an am auf mit von vom so wie was wo da du man mein meine dein deine ' +
+    'sein seine noch nur auch schon doch ja nein the a an i you to and me my is it of on').split(' '));
+  var WORD = /([\p{L}'’]+)/u;
+  // last stressed vowel(s) and the consonants at the end: "Nacht", "Macht", "lacht" share "a|Xt"
+  function soundKey(word) {
+    var t = engine.wordT(word, current.lang, rhymeLangs()).t, v = t.v, n = v.length;
+    if (!n) return '';
+    var k = n - 1;
+    if ('aeiouöüAYW'.indexOf(v[k]) < 0 && k > 0) k--;
+    return v.slice(k).join('') + '|' + (t.cons[n] || '');
+  }
+
+  function setTextMode(m) {
+    textMode = m;
+    document.querySelectorAll('[data-textmode]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.textmode === m); });
+    $('project').classList.toggle('mode-read', m === 'read');
+    $('readView').hidden = m !== 'read';
+    if (m === 'read') {
+      openThread = null;
+      renderReadView();
+      whenReady(function () { if (textMode === 'read') renderReadView(); });
+      loadComments();
+    } else {
+      renderSections();
+    }
+  }
+  document.querySelectorAll('[data-textmode]').forEach(function (b) {
+    b.addEventListener('click', function () { setTextMode(b.dataset.textmode); });
+  });
+
+  function renderReadView() {
+    var box = $('readView');
+    box.textContent = '';
+    if (!sections.length) { box.append(el('p', 'empty', 'Noch kein Text – schreib unter „Schreiben“ deinen ersten Abschnitt.')); return; }
+    var placed = new Set();
+    sections.forEach(function (s, si) {
+      var card = el('div', 'read-sec');
+      if (s.name !== null) card.append(el('h3', 'read-name', s.name));
+      var lines = s.body.split('\n');
+      if (!s.body.trim()) {
+        card.append(el('p', 'read-repeat', 'wiederholt den Abschnitt „' + s.name + '“ von oben'));
+        box.append(card);
+        return;
+      }
+      // rhyme groups of this section. Line ends with the same rhyme vowels form the scheme (A, B …)
+      // and share a colour; inside the lines, multi-syllable words with those vowels join that colour,
+      // other words that rhyme purely with each other ("Macht", "lacht") get their own colour.
+      var tokens = lines.map(function (l) { return l.split(WORD); });
+      var endKeys = [], endCount = {}, pure = {};
+      tokens.forEach(function (tk, li) {
+        var idx = [];
+        for (var i = 1; i < tk.length; i += 2) idx.push(i);
+        var last = idx.length ? tk[idx[idx.length - 1]] : '';
+        endKeys[li] = last ? rhymeKey(last) : '';
+        if (endKeys[li]) endCount[endKeys[li]] = (endCount[endKeys[li]] || 0) + 1;
+        idx.forEach(function (i, wi) {
+          var lw = tk[i].toLowerCase(), end = wi === idx.length - 1;
+          if (lw.length < 2 || (!end && (lw.length < 3 || STOP.has(lw)))) return;
+          var key = soundKey(tk[i]);
+          if (key) (pure[key] = pure[key] || new Set()).add(lw);
+        });
+      });
+      var colorOf = {}, n = 0;
+      function pick(k) { return colorOf[k] || (colorOf[k] = RHYME_COLORS[n++ % RHYME_COLORS.length]); }
+      var letters = {}, next = 0, endColor = {};
+      lines.forEach(function (l, li) {
+        var k = endKeys[li];
+        if (!l.trim() || !k) return;
+        if (!letters[k]) letters[k] = String.fromCharCode(65 + (next++ % 26));
+      });
+      function wordColor(word, isEnd) {
+        var vk = rhymeKey(word);
+        if (isEnd && endCount[vk] > 1) return pick('E' + vk);
+        if (!isEnd && vk.length > 1 && endCount[vk] > 1) return pick('E' + vk);
+        var key = soundKey(word);
+        return key && pure[key] && pure[key].size > 1 ? pick('P' + key) : '';
+      }
+      lines.forEach(function (l, li) {
+        if (!l.trim()) { card.append(el('div', 'read-gap')); return; }
+        var row = el('div', 'read-line'), text = el('span', 'read-text'), tk = tokens[li];
+        var lastIdx = -1;
+        for (var i = 1; i < tk.length; i += 2) lastIdx = i;
+        tk.forEach(function (part, i) {
+          if (i % 2 === 0) { if (part) text.append(document.createTextNode(part)); return; }
+          var lw = part.toLowerCase(), end = i === lastIdx;
+          var c = (end || (lw.length >= 3 && !STOP.has(lw))) ? wordColor(part, end) : '';
+          var span = el('span', 'rw' + (end ? ' is-end' : ''), part);
+          if (c) { span.classList.add('is-rhyme'); span.style.setProperty('--c', c); if (end) endColor[li] = c; }
+          text.append(span);
+        });
+        var scheme = el('span', 'read-scheme', letters[endKeys[li]] || '');
+        if (endColor[li]) scheme.style.color = endColor[li];
+        row.append(text, scheme);
+        var mine = commentsAt(s, si, li, lines);
+        mine.forEach(function (c) { placed.add(c.id); });
+        if (account) {
+          var bubble = el('span', 'read-bubble' + (mine.length ? ' has' : ''), mine.length ? String(mine.length) : '+');
+          bubble.title = mine.length ? mine.length + (mine.length === 1 ? ' Kommentar' : ' Kommentare') : 'Kommentieren';
+          row.append(bubble);
+          row.classList.add('can-comment');
+          row.addEventListener('click', function () {
+            openThread = openThread === si + ':' + li ? null : si + ':' + li;
+            renderReadView();
+          });
+        }
+        card.append(row);
+        if (openThread === si + ':' + li) card.append(threadBox(s, li, l, mine));
+      });
+      box.append(card);
+    });
+    // comments whose line no longer exists
+    var lost = comments.filter(function (c) { return !placed.has(c.id); });
+    if (lost.length) {
+      var old = el('div', 'read-sec read-lost');
+      old.append(el('h3', 'read-name', 'Kommentare zu geänderten Zeilen'));
+      lost.forEach(function (c) { old.append(commentItem(c, '„' + c.line + '“')); });
+      box.append(old);
+    }
+    if (!account) box.append(el('p', 'hint', 'Mit einem Account kannst du hier Zeilen kommentieren – auch deine Feature-Partner.'));
+  }
+
+  // comments of one line: same section and same line text; if the text appears more than once,
+  // the line with the original line number (else the first one)
+  function commentsAt(s, si, li, lines) {
+    var text = lines[li].trim();
+    return comments.filter(function (c) {
+      if ((c.section || '') !== (s.name || '') || c.line !== text) return false;
+      var hits = [];
+      lines.forEach(function (l, i) { if (l.trim() === text) hits.push(i); });
+      return hits.indexOf(c.line_no) >= 0 ? li === c.line_no : li === hits[0];
+    });
+  }
+
+  function commentItem(c, quote) {
+    var item = el('div', 'comment');
+    var head = el('div', 'comment-head');
+    head.append(el('strong', '', c.author === (account && account.id) ? 'Du' : c.author_name || 'Jemand'),
+      el('span', '', new Date(c.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })));
+    if (account && (c.author === account.id || !current._owner)) {
+      var del = el('button', 'link-btn', 'Löschen');
+      del.type = 'button';
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        RaimCloud.deleteComment(c.id).then(loadComments, function (err) { toast(RaimCloud.message(err)); });
+      });
+      head.append(del);
+    }
+    item.append(head);
+    if (quote) item.append(el('p', 'comment-quote', quote));
+    item.append(el('p', 'comment-body', c.body));
+    return item;
+  }
+
+  function threadBox(s, li, line, list) {
+    var box = el('div', 'thread');
+    box.addEventListener('click', function (e) { e.stopPropagation(); });
+    list.forEach(function (c) { box.append(commentItem(c)); });
+    var form = el('form', 'thread-form'), input = el('input');
+    input.placeholder = list.length ? 'Antworten …' : 'Kommentar zu dieser Zeile …';
+    input.maxLength = 500;
+    var send = el('button', 'btn btn--primary btn--small', 'Senden');
+    send.type = 'submit';
+    form.append(input, send);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var body = input.value.trim();
+      if (!body) return;
+      if (!RaimCloud.online()) { toast('Offline – Kommentare gehen nur mit Internet.'); return; }
+      send.disabled = true;
+      RaimCloud.addComment({
+        owner: current._owner || account.id, project_id: current.id, section: s.name || '', line: line.trim(), line_no: li, body: body,
+        author_name: profile.artist || profile.name || account.email
+      }).then(loadComments, function (err) { send.disabled = false; toast(RaimCloud.message(err)); });
+    });
+    box.append(form);
+    setTimeout(function () { input.focus(); }, 0);
+    return box;
+  }
+
+  function renderCommentCount() {
+    var c = $('commentCount');
+    c.textContent = String(comments.length);
+    c.hidden = !comments.length;
+  }
+  function loadComments() {
+    if (!account || !current || !RaimCloud.online()) { comments = []; renderCommentCount(); return Promise.resolve(); }
+    var p = current;
+    return RaimCloud.comments(p._owner || account.id, p.id).then(function (list) {
+      if (current !== p) return;
+      comments = list.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+      renderCommentCount();
+      if (textMode === 'read') renderReadView();
+    }, function () { /* no comments table yet */ });
   }
 
   $('collapseAll').addEventListener('click', function () {

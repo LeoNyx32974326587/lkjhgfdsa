@@ -796,3 +796,44 @@ body.prompter-open { overflow: hidden; }
 .release-checks .check { color: var(--text); font-size: 15px; }
 .release-date { max-width: 260px; }
 .release .hint { margin: 0; }
+
+/* ---------- reading view: rhyme scheme and comments ---------- */
+.text-mode .seg-btn { padding: 7px 14px; font-size: 14px; }
+.comment-count {
+  display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 999px;
+  background: #ff4d7d; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.mode-read #sections, .mode-read #addSection, .mode-read .ai-bar, .mode-read #aiSetup, .mode-read #collapseAll { display: none !important; }
+.read-view { display: grid; gap: 14px; }
+.read-sec { padding: 16px 18px; border-radius: 22px; border: 1px solid var(--border); background: rgba(28, 20, 70, .6); }
+.read-name { margin: 0 0 8px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); }
+.read-repeat { margin: 0; color: var(--dim); font-style: italic; font-size: 14px; }
+.read-gap { height: 10px; }
+.read-line { display: flex; align-items: baseline; gap: 10px; padding: 3px 6px; margin: 0 -6px; border-radius: 10px; font-size: 18px; line-height: 1.55; }
+.read-line.can-comment { cursor: pointer; }
+.read-line.can-comment:hover { background: rgba(255, 255, 255, .04); }
+.read-text { flex: 1; min-width: 0; }
+.rw.is-rhyme { color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); border-radius: 5px; padding: 0 2px; }
+.rw.is-end { font-weight: 700; }
+.read-scheme { flex: none; width: 18px; text-align: center; font-family: "Roboto Mono", ui-monospace, monospace; font-weight: 700; font-size: 14px; color: var(--dim); }
+.read-bubble {
+  flex: none; min-width: 24px; height: 22px; padding: 0 6px; border-radius: 11px; font-size: 12px; font-weight: 700; line-height: 22px; text-align: center;
+  color: var(--dim); border: 1px dashed rgba(160, 140, 255, .35); opacity: 0; transition: opacity .15s;
+}
+.read-line:hover .read-bubble, .read-bubble.has { opacity: 1; }
+.read-bubble.has { color: #fff; background: #ff4d7d; border: 0; }
+@media (hover: none) { .read-bubble { opacity: .55; } }
+.thread { margin: 4px 0 10px 12px; padding: 10px 12px; border-left: 2px solid #ff4d7d; display: grid; gap: 8px; }
+.comment { display: grid; gap: 2px; }
+.comment-head { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.comment-head span { color: var(--dim); }
+.comment-head .link-btn { margin-left: auto; font-size: 12px; }
+.comment-body { margin: 0; color: var(--text); font-size: 15px; }
+.comment-quote { margin: 0; color: var(--dim); font-size: 13px; font-style: italic; }
+.thread-form { display: flex; gap: 8px; }
+.thread-form input {
+  flex: 1; min-width: 0; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: rgba(10, 8, 30, .6); outline: none;
+}
+.thread-form input:focus { border-color: var(--violet); }
+.read-lost { border-style: dashed; }

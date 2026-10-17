@@ -184,6 +184,10 @@
       <!-- ---------- Text ---------- -->
       <section class="view" data-view="text">
         <div class="text-tools">
+          <div class="seg text-mode" id="textMode" role="tablist" aria-label="Ansicht">
+            <button type="button" class="seg-btn is-on" data-textmode="write">Schreiben</button>
+            <button type="button" class="seg-btn" data-textmode="read">Lesen <span class="comment-count" id="commentCount" hidden></span></button>
+          </div>
           <span class="text-tools-right">
             <button type="button" class="tool-btn" id="collapseAll">Alle einklappen</button>
             <button type="button" class="tool-btn" id="exportPdf">
@@ -194,6 +198,7 @@
         </div>
 
         <div class="sections" id="sections"></div>
+        <div class="read-view" id="readView" hidden></div>
 
         <div class="add-section" id="addSection">
           <span>Abschnitt +</span>
