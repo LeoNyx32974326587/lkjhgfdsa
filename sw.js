@@ -1,8 +1,8 @@
 // Barbook offline: pages and code come fresh from the network when there is one (fallback: the
 // last copy), word lists, pictures and libraries from the cache (refreshed in the background).
 // Accounts and project data (Supabase) always go to the network.
-var CACHE = 'barbook-v2';
-var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest',
+var CACHE = 'barbook-v3';
+var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest', 'assets/fonts/fonts.css',
   'assets/icon.svg', 'assets/icon-192.png', 'js/config.js', 'js/cloud.js', 'js/login.js', 'js/words.js', 'js/rhyme.js',
   'js/song.js', 'js/store.js', 'js/db.js', 'js/ai.js', 'js/license-reader.js', 'js/wav.js', 'js/prompter.js',
   'js/analyze.js', 'js/beats.js', 'js/dictate.js', 'js/app.js'];
@@ -45,8 +45,8 @@ self.addEventListener('fetch', function (e) {
   if (same && /\/js\/(words|thesaurus)/.test(url.pathname)) return e.respondWith(cacheFirst(req));
   if (same && /\/assets\//.test(url.pathname)) return e.respondWith(cacheFirst(req));
   if (same) return e.respondWith(networkFirst(req));
-  // libraries and fonts from CDNs
-  if (/(jsdelivr\.net|cdnjs\.cloudflare\.com|esm\.sh|fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname)) {
+  // libraries from CDNs
+  if (/(jsdelivr\.net|cdnjs\.cloudflare\.com|esm\.sh)$/.test(url.hostname)) {
     return e.respondWith(cacheFirst(req));
   }
 });

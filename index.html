@@ -13,9 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Barbook">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Roboto:wght@400;500;700;800&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -199,7 +197,7 @@
       <div class="privacy-card">
         <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="shimmer">Datenschutz</span></span>
         <h2>Deine Songs<br>gehören dir.</h2>
-        <p>Du meldest dich mit E-Mail und Passwort an. Deine Projekte, Beats und Lizenzen werden in deinem Account gespeichert, damit sie auf all deinen Geräten da sind – sehen kann sie nur du. Keine Werbung, kein Tracking. Die Reimsuche läuft komplett auf deinem Gerät. Für KI-Ideen gehen bis zu 80 Zeilen deines Songs – erst nach deiner ausdrücklichen Zustimmung – direkt an Claude von Anthropic.</p>
+        <p>Du meldest dich mit E-Mail und Passwort an. Deine Projekte, Beats und Lizenzen werden in deinem Account gespeichert, damit sie auf all deinen Geräten da sind – sehen kann sie nur du. Keine Werbung, kein Tracking. Die Reimsuche läuft komplett auf deinem Gerät. Für KI-Ideen gehen bis zu 80 Zeilen deines Songs – erst nach deiner ausdrücklichen Zustimmung – direkt an Claude von Anthropic. <a class="privacy-more" href="datenschutz.html">Alles zum Datenschutz</a></p>
       </div>
     </section>
 
@@ -226,15 +224,16 @@
       <a class="cta-small" href="login.html">Anmelden</a>
     </div>
     <nav class="footer-links">
-      <a href="#datenschutz">Datenschutz</a>
-      <a href="#">Nutzungsbedingungen</a>
-      <a href="#support">Support</a>
-      <a href="#">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="nutzungsbedingungen.html">Nutzungsbedingungen</a>
+      <a href="support.html">Support</a>
+      <a href="impressum.html">Impressum</a>
     </nav>
-    <p class="copy">© 2026 Dein Name</p>
+    <p class="copy">© 2026 <span data-legal="name"></span></p>
   </footer>
 
   <script src="script.js"></script>
+  <script src="js/legal.js"></script>
   <script>
     // installable app and offline start (only on a real web address, not from a file)
     if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href)) navigator.serviceWorker.register('sw.js');

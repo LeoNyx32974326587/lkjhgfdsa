@@ -117,3 +117,9 @@ Die Wortlisten der weiteren Sprachen (`js/words-<sprache>.js`) erzeugt `tools/bu
 - Worthäufigkeiten: [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) (CC BY-SA 4.0), für Bosnisch/Kroatisch/Serbisch aus allen drei Listen
 
 Wegen DeReWo (nicht-kommerziell) sollte die deutsche Wortliste für eine kommerzielle Nutzung ersetzt oder die Lizenz geklärt werden.
+
+## Impressum, Datenschutz, Nutzungsbedingungen, Support
+
+Die Seiten `impressum.html`, `datenschutz.html`, `nutzungsbedingungen.html` und `support.html` sind verlinkt (Startseite unten, Anmeldung, App unten, Leselink-Seite). Name, Anschrift, E-Mail und die Supabase-Region stehen an einer Stelle: `js/legal.js`. Solange dort etwas fehlt, zeigen die Seiten einen gelben Platzhalter. Die Texte sind eine sorgfältige Vorlage, aber keine Rechtsberatung.
+
+Schriften (Roboto, Roboto Mono, Michroma) liegen in `assets/fonts/` und werden nicht mehr von Google geladen.

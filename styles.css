@@ -641,3 +641,4 @@ main { max-width: 1100px; margin: 0 auto; padding: 0 var(--gutter); }
   .shimmer, .caret { animation: none; }
   html { scroll-behavior: auto; }
 }
+.privacy-more { display: inline-block; margin-top: 10px; color: #c9b8ff; }
