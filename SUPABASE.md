@@ -20,13 +20,13 @@ Damit gibt es die Tabellen `projects` und `files` und einen privaten Speicher-Be
 
 1. Links **Project Settings** (Zahnrad) → **API** (bzw. **Data API** und **API Keys**).
 2. **Project URL** kopieren, z. B. `https://abcdefgh.supabase.co`.
-3. Den **anon public**-Schlüssel kopieren (langer Text, beginnt mit `eyJ…`). Der darf öffentlich in der Seite stehen; geschützt wird alles über die Regeln aus Schritt 2. Den **service_role**-Schlüssel niemals eintragen!
+3. Den **Publishable key** kopieren (beginnt mit `sb_publishable_…`; in älteren Projekten heißt er **anon public** und beginnt mit `eyJ…`). Der darf öffentlich in der Seite stehen; geschützt wird alles über die Regeln aus Schritt 2. Den **Secret key** bzw. **service_role**-Schlüssel niemals eintragen!
 4. In `js/config.js` einsetzen:
 
 ```js
 window.BARBOOK_CONFIG = {
   supabaseUrl: 'https://abcdefgh.supabase.co',
-  supabaseAnonKey: 'eyJ…'
+  supabaseAnonKey: 'sb_publishable_…'
 };
 ```
 
