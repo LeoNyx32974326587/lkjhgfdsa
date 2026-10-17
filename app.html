@@ -167,6 +167,20 @@
 
     <main>
       <p class="rights-note" id="rightsNote" hidden></p>
+      <section class="release" id="releaseBox" hidden>
+        <button type="button" class="release-head" id="releaseHead" aria-expanded="false" aria-controls="releaseBody">
+          <strong>Release</strong>
+          <span class="release-sum" id="releaseSum"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="release-body" id="releaseBody" hidden>
+          <div class="release-checks" id="releaseChecks"></div>
+          <label class="field release-date">Veröffentlichung am
+            <input type="date" id="releaseDate">
+          </label>
+          <p class="hint" id="releaseHint"></p>
+        </div>
+      </section>
       <!-- ---------- Text ---------- -->
       <section class="view" data-view="text">
         <div class="text-tools">

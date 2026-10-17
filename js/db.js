@@ -192,7 +192,8 @@
       license: { producer: '', type: '', bpm: '', key: '', date: '', notes: '', fileId: null, fileName: '' },
       rhymes: { saved: [], history: [], blocked: [], langs: [] },  // langs: rhyme languages, empty = all
       takes: [],           // [{ fileId, name, created }]
-      features: []         // friends featured on the song: [{ id, name }] (the owner's list)
+      features: [],        // friends featured on the song: [{ id, name }] (the owner's list)
+      release: {}          // checklist once the song is finished: { recorded: true, …, date: '2026-12-01' }
     };
   }
 

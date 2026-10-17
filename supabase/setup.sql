@@ -111,7 +111,7 @@ begin
   if not coalesce((r ->> 'beat')::boolean, false) then locked := locked || array['beat', 'youtube']; end if;
   if not coalesce((r ->> 'license')::boolean, false) then locked := locked || array['license']; end if;
   if not coalesce((r ->> 'info')::boolean, false) then locked := locked || array['title', 'bpm', 'key', 'genres', 'langs', 'lang', 'topic']; end if;
-  if not coalesce((r ->> 'status')::boolean, false) then locked := locked || array['status']; end if;
+  if not coalesce((r ->> 'status')::boolean, false) then locked := locked || array['status', 'release']; end if;
   foreach k in array locked loop
     if old.data ? k then new.data := jsonb_set(new.data, array[k], old.data -> k);
     else new.data := new.data - k; end if;

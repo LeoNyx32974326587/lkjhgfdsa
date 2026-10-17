@@ -152,10 +152,69 @@
     b.className = 'status-pill status-pill--' + st;
     b.disabled = !may('status');
     b.setAttribute('aria-label', 'Status: ' + STATUS[st] + (may('status') ? ' – antippen zum Umschalten' : ''));
+    renderRelease();
   }
+
+  // ---------- release checklist for finished songs ----------
+  var RELEASE = [['recorded', 'Aufgenommen'], ['mixed', 'Gemischt'], ['mastered', 'Gemastert'], ['cover', 'Cover fertig'],
+    ['license', 'Lizenz geklärt'], ['uploaded', 'Beim Distributor hochgeladen']];
+  var releaseOpen = false;
+  function releaseDone(p) { return RELEASE.filter(function (k) { return p.release && p.release[k[0]]; }).length; }
+  // "Release 3/6", "Release am 01.12.2026", "Released 01.12.2026"
+  function releaseText(p) {
+    var r = p.release || {}, n = releaseDone(p);
+    if (r.date) {
+      var d = new Date(r.date + 'T12:00:00'), when = d.toLocaleDateString('de-DE');
+      if (n === RELEASE.length) return d <= new Date() ? 'Released ' + when : 'Release am ' + when + ' ✓';
+      return 'Release am ' + when + ' · ' + n + '/' + RELEASE.length;
+    }
+    return 'Release ' + n + '/' + RELEASE.length;
+  }
+  function renderRelease() {
+    var box = $('releaseBox'), p = current;
+    box.hidden = !p || statusOf(p) !== 'done';
+    if (box.hidden) return;
+    if (!p.release) p.release = {};
+    var edit = may('status'), n = releaseDone(p);
+    $('releaseSum').textContent = n === RELEASE.length ? 'Alles erledigt' + (p.release.date ? ' · ' + releaseText(p).replace(/^Release(d)? (am )?/, '') : '')
+      : n + ' von ' + RELEASE.length + ' erledigt' + (p.release.date ? ' · ' + new Date(p.release.date + 'T12:00:00').toLocaleDateString('de-DE') : '');
+    box.classList.toggle('is-done', n === RELEASE.length);
+    $('releaseHead').setAttribute('aria-expanded', String(releaseOpen));
+    box.classList.toggle('is-open', releaseOpen);
+    $('releaseBody').hidden = !releaseOpen;
+    var checks = $('releaseChecks');
+    checks.textContent = '';
+    RELEASE.forEach(function (k) {
+      var label = el('label', 'check'), cb = el('input');
+      cb.type = 'checkbox';
+      cb.checked = !!p.release[k[0]];
+      cb.disabled = !edit;
+      cb.addEventListener('change', function () {
+        p.release[k[0]] = cb.checked;
+        scheduleSave();
+        renderRelease();
+      });
+      label.append(cb, document.createTextNode(' ' + k[1]));
+      checks.append(label);
+    });
+    $('releaseDate').value = p.release.date || '';
+    $('releaseDate').disabled = !edit;
+    var warn = licenseWarnings(p).some(function (w) { return w[0] === 'warn'; });
+    $('releaseHint').textContent = warn ? 'Achtung: Bei der Lizenz ist noch etwas offen – schau im Beat-Bereich nach, bevor du veröffentlichst.'
+      : !edit ? 'Die Checkliste kann nur ändern, wer den Status ändern darf.' : '';
+    $('releaseHint').hidden = !$('releaseHint').textContent;
+  }
+  $('releaseHead').addEventListener('click', function () { releaseOpen = !releaseOpen; renderRelease(); });
+  $('releaseDate').addEventListener('change', function (e) {
+    if (!current || !may('status')) return;
+    current.release.date = e.target.value;
+    scheduleSave();
+    renderRelease();
+  });
   $('statusToggle').addEventListener('click', function () {
     if (!current || !may('status')) return;
     current.status = statusOf(current) === 'done' ? 'edit' : 'done';
+    releaseOpen = current.status === 'done';
     renderStatus();
     scheduleSave();
     toast(current.status === 'done' ? 'Als fertig markiert.' : 'Wieder in Bearbeitung.');
@@ -197,6 +256,7 @@
     b.append(el('p', 'project-line', first || 'Noch kein Text'));
     var meta = songFacts(p);
     if (p.features.length) meta.unshift('feat. ' + featureNames(p));
+    if (statusOf(p) === 'done') meta.unshift(releaseText(p));
     if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
     else if (p.youtube) meta.push('♪ YouTube-Beat');
     if (p.license.producer) meta.push(p.license.producer);
@@ -234,6 +294,7 @@
 
   function openProject(p) {
     current = p;
+    releaseOpen = false;
     applyRights();
     $('home').hidden = true;
     $('project').hidden = false;
