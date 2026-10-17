@@ -115,6 +115,14 @@ create table if not exists public.share_links (
   unique (owner, project_id)
 );
 
+-- AI requests per account and day (the Edge Function "claude" counts them; nobody reads this table directly)
+create table if not exists public.ai_usage (
+  user_id uuid not null references auth.users on delete cascade,
+  day date not null default current_date,
+  count int not null default 0,
+  primary key (user_id, day)
+);
+
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
 create or replace function public.are_friends(a uuid, b uuid) returns boolean
@@ -210,6 +218,19 @@ drop trigger if exists drop_project_members on public.projects;
 create trigger drop_project_members after delete on public.projects
   for each row execute function public.drop_project_members();
 
+-- ending a friendship ends every feature between the two, in both directions
+create or replace function public.drop_features_on_unfriend() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from project_members
+  where (owner = old.requester and member = old.addressee) or (owner = old.addressee and member = old.requester);
+  return old;
+end;
+$$;
+drop trigger if exists drop_features_on_unfriend on public.friendships;
+create trigger drop_features_on_unfriend after delete on public.friendships
+  for each row execute function public.drop_features_on_unfriend();
+
 -- keep the newest 100 saved states per song
 create or replace function public.trim_versions() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -258,6 +279,22 @@ begin
   delete from auth.users where id = auth.uid();
 end;
 $$;
+-- takes one AI request off today's allowance; false when it is used up
+create or replace function public.ai_take(max_per_day int) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if auth.uid() is null then return false; end if;
+  delete from ai_usage where user_id = auth.uid() and day < current_date - 7;
+  insert into ai_usage (user_id, day, count) values (auth.uid(), current_date, 1)
+  on conflict (user_id, day) do update set count = ai_usage.count + 1 where ai_usage.count < max_per_day
+  returning count into n;
+  return n is not null;
+end;
+$$;
+revoke execute on function public.ai_take(int) from anon, public;
+grant execute on function public.ai_take(int) to authenticated;
+
 revoke execute on function public.delete_my_account() from anon, public;
 grant execute on function public.delete_my_account() to authenticated;
 
@@ -272,6 +309,7 @@ alter table public.project_comments enable row level security;
 alter table public.project_versions enable row level security;
 alter table public.bars enable row level security;
 alter table public.share_links enable row level security;
+alter table public.ai_usage enable row level security;   -- no policies: only ai_take() touches it
 
 drop policy if exists "own projects" on public.projects;
 drop policy if exists "projects read" on public.projects;

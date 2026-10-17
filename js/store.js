@@ -12,12 +12,13 @@
     try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
   }
 
+  // API keys are no longer kept in the browser: the AI runs through Barbook's server
+  try { localStorage.removeItem('raim.apiKey'); } catch (e) { /* private mode */ }
+
   root.RaimStore = {
     // songs from the first version, moved into projects once
     legacySongs: function () { return read('raim.songs', []); },
     clearLegacySongs: function () { try { localStorage.removeItem('raim.songs'); localStorage.removeItem('raim.blocked'); } catch (e) { /* ignore */ } },
-    apiKey: function () { return read('raim.apiKey', ''); },
-    saveApiKey: function (k) { return write('raim.apiKey', k); },
     // v2: the AI now gets the whole song (up to 80 lines), so it asks again
     consent: function () { return read('raim.aiConsent2', false); },
     saveConsent: function (v) { return write('raim.aiConsent2', v); }

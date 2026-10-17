@@ -52,6 +52,17 @@ Ohne Anpassung schickt Supabase englische Standard-Mails ohne den Namen Barbook.
 
 Jeweils **Save** drücken. Der Absender bleibt beim eingebauten Mail-Versand „Supabase Auth“; einen eigenen Absender (z. B. „Barbook“) gibt es nur mit eigenem Mail-Anbieter unter **SMTP Settings**.
 
+## 6. KI-Ideen freischalten (Claude)
+
+Die KI läuft über eine kleine Supabase-Funktion. Der Anthropic-API-Schlüssel liegt dort als Geheimnis und steht nie im Code der Webseite – sonst könnte ihn jeder Besucher auslesen und auf deine Kosten benutzen.
+
+1. **Schlüssel hinterlegen:** links **Edge Functions** → **Secrets** (bzw. Project Settings → Edge Functions) → **Add new secret**: Name `ANTHROPIC_API_KEY`, Wert = dein Schlüssel von [console.anthropic.com](https://console.anthropic.com) → *API Keys* (beginnt mit `sk-ant-api03-…`). Optional ein zweites Secret `AI_DAILY_LIMIT` (Anfragen pro Account und Tag, Standard 50).
+2. **Funktion anlegen:** **Edge Functions** → **Deploy a new function** → **Via Editor**. Name genau `claude`. Den kompletten Inhalt von `supabase/functions/claude/index.ts` hineinkopieren → **Deploy function**.
+3. In den Einstellungen der Funktion **„Verify JWT“ (Enforce JWT verification) ausschalten** – die Funktion prüft die Anmeldung selbst; mit dem Schalter lehnt Supabase bei neuen Schlüsseln manchmal gültige Anfragen ab.
+4. `supabase/setup.sql` noch einmal ausführen (legt den Zähler für das Tageslimit an).
+
+Danach gehen KI-Ideen und das Auslesen von Lizenzen für alle angemeldeten Nutzer, ohne Einstellungen. Die Kosten laufen über dein Anthropic-Konto; dort kannst du unter *Limits* zusätzlich ein Monatslimit setzen.
+
 ## Wie die Daten laufen
 
 - Jede Änderung wird sofort auf dem Gerät gespeichert und im Hintergrund hochgeladen. Offline geht alles weiter; hochgeladen wird beim nächsten Öffnen mit Internet.

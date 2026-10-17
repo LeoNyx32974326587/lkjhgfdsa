@@ -32,9 +32,6 @@
       <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
       <span class="topbar-right">
         <span class="dict-status" id="dictStatus" hidden>Wörterbuch lädt …</span>
-        <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
-          <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
         <button class="icon-btn friends-btn" id="openFriends" type="button" aria-label="Freunde" hidden>
           <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.6c2.9.2 5 1.9 5 5.4"/></svg>
           <span class="badge-count" id="friendsBadge" hidden></span>
@@ -563,36 +560,6 @@
   </div>
 
   <!-- ================= Einstellungen ================= -->
-  <dialog id="settingsDlg" class="sheet">
-    <div class="sheet-head">
-      <h2>Einstellungen</h2>
-      <button class="icon-btn" type="button" id="closeSettings" aria-label="Schließen">
-        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
-    </div>
-    <div class="card">
-      <h2>KI-Ideen</h2>
-      <p>KI-Ideen nutzen Claude von Anthropic. Trag deinen eigenen API-Schlüssel ein (console.anthropic.com). Er bleibt nur in diesem Browser gespeichert.</p>
-      <label class="field">API-Schlüssel
-        <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
-      </label>
-      <div class="row">
-        <button class="btn btn--primary" id="saveKey" type="button">Speichern</button>
-        <button class="btn" id="testKey" type="button">Schlüssel testen</button>
-        <button class="btn" id="revokeConsent" type="button">Zustimmung widerrufen</button>
-      </div>
-      <p class="key-result" id="keyResult" role="status" hidden></p>
-    </div>
-    <div class="card">
-      <h2>Sicherung</h2>
-      <p id="backupText">Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.</p>
-      <div class="row">
-        <button class="btn" id="exportAll" type="button">Alles exportieren</button>
-        <label class="btn">Importieren<input type="file" id="importAll" accept="application/json,.json" hidden></label>
-      </div>
-      <p class="hint" id="storageInfo"></p>
-    </div>
-  </dialog>
 
   <dialog id="barsDlg" class="sheet">
     <div class="sheet-head">
@@ -702,7 +669,7 @@
     <form id="deleteForm" novalidate>
       <h2>Account löschen?</h2>
       <p>Das löscht <strong>endgültig und auf allen Geräten</strong>: alle Projekte und Ideen mit Texten, Beats, Lizenzen, Aufnahmen und fertigen Songs, deine Bars, Freundschaften, Leselinks und dein Profil. Songs, zu denen dich Freunde eingeladen haben, bleiben bei ihnen erhalten. Das lässt sich nicht rückgängig machen.</p>
-      <p class="hint">Tipp: Exportiere vorher alles unter Einstellungen → Sicherung.</p>
+      <p class="hint">Tipp: Exportiere vorher die Songs, die du behalten willst (im Text-Bereich über „Export“).</p>
       <label class="field">Zur Bestätigung dein Passwort
         <input name="password" type="password" autocomplete="current-password">
       </label>
@@ -807,7 +774,7 @@
   <dialog id="consentDlg">
     <form method="dialog">
       <h2>KI-Ideen aktivieren?</h2>
-      <p>Für eine KI-Idee wird dein Songtext (bis zu 80 Zeilen) an Claude von Anthropic geschickt, damit die Idee zum ganzen Song passt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von Barbook gespeichert.</p>
+      <p>Für eine KI-Idee wird dein Songtext (bis zu 80 Zeilen) über den Barbook-Server an Claude von Anthropic geschickt, damit die Idee zum ganzen Song passt. Barbook speichert davon nichts. Pro Account gibt es ein Tageslimit.</p>
       <label class="check"><input type="checkbox" id="ageOk"> Ich bin mindestens 18 Jahre alt.</label>
       <div class="row">
         <button class="btn" value="no">Abbrechen</button>

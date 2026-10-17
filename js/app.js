@@ -370,6 +370,8 @@
     var top = el('div', 'project-top');
     top.append(el('strong', '', p.title || 'Ohne Titel'));
     if (!isIdea(p) && statusOf(p) === 'done') top.append(el('span', 'badge badge--done', 'Fertig'));
+    // written together with friends: own song with features, or a friend's song I am featured on
+    if (p._owner || (p.features && p.features.length)) top.append(el('span', 'badge badge--feature', 'Feature'));
     if (p._owner) top.append(el('span', 'badge badge--feat', 'von ' + ownerName(p)));
     if (p.license.type) top.append(el('span', 'badge', p.license.type));
     if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
@@ -1686,18 +1688,12 @@
 
   function runAi(again) {
     if (aiBusy) return;
-    var key = Store.apiKey();
-    if (!key) {
-      toast('Trag zuerst deinen API-Schlüssel in den Einstellungen ein.');
-      openSettings();
-      $('apiKey').focus();
-      return;
-    }
+    if (!account) { toast('Für KI-Ideen musst du angemeldet sein.'); return; }
     ensureConsent().then(function (ok) {
       if (!ok) return;
       var p = current, req = again && aiReq ? aiReq : null;
       if (!req) {
-        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), langs: p.langs.map(langName), info: songInfoForAi(p), apiKey: key };
+        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), langs: p.langs.map(langName), info: songInfoForAi(p) };
         if (req.kind === 'continue') {
           var around = songAroundCaret(), lines = RaimSong.lines(around.before);
           var lastWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
@@ -1716,7 +1712,6 @@
         }
         req.at = sections.length ? activeIndex() : -1;
       }
-      req.apiKey = key;
       aiReq = req;
       closeAiSetup();
 
@@ -1920,9 +1915,9 @@
     r.hidden = !text;
   }
 
-  // with an API key Claude reads the file (also photos), otherwise Barbook reads PDFs itself
+  // signed in, Claude reads the file (also photos); otherwise Barbook reads PDFs itself
   function licenseEngine() {
-    if (!Store.apiKey()) return Promise.resolve('local');
+    if (!account) return Promise.resolve('local');
     var choice = null;
     try { choice = localStorage.getItem('raim.licenseAi'); } catch (e) { /* private mode */ }
     if (choice) return Promise.resolve(choice === 'yes' ? 'claude' : 'local');
@@ -1941,10 +1936,10 @@
     licenseEngine().then(function (engine) {
       if (seq !== readSeq) return null;
       if (engine === 'local' && isImage) {
-        licenseStatus('Fotos kann Barbook nur mit API-Schlüssel (Claude) auslesen. Trag die Angaben bitte selbst ein.', 'warn');
+        licenseStatus('Fotos kann Barbook nur mit Claude auslesen (dafür anmelden). Trag die Angaben bitte selbst ein.', 'warn');
         return null;
       }
-      var job = engine === 'claude' ? RaimAI.readLicense(Store.apiKey(), file) : RaimLicenseReader.read(file);
+      var job = engine === 'claude' ? RaimAI.readLicense(file) : RaimLicenseReader.read(file);
       return job.then(function (r) { return { r: r, engine: engine }; }, function (err) {
         if (engine !== 'claude' || isImage) throw err;
         // Claude not reachable: fall back to reading the PDF ourselves
@@ -2413,48 +2408,6 @@
     li.addEventListener('pointercancel', end);
   }
 
-  // ---------- settings ----------
-  function openSettings() {
-    $('apiKey').value = Store.apiKey();
-    keyResult('');
-    $('storageInfo').textContent = '';
-    if (navigator.storage && navigator.storage.estimate) {
-      navigator.storage.estimate().then(function (e) {
-        $('storageInfo').textContent = 'Belegt: ' + (e.usage / 1048576).toFixed(1) + ' MB von ca. ' + Math.round(e.quota / 1048576) + ' MB';
-      });
-    }
-    $('settingsDlg').showModal();
-  }
-  $('openSettings').addEventListener('click', openSettings);
-  $('closeSettings').addEventListener('click', function () { $('settingsDlg').close(); });
-  function keyResult(text, ok) {
-    var r = $('keyResult');
-    r.textContent = text;
-    r.className = 'key-result' + (ok === true ? ' is-ok' : ok === false ? ' is-error' : '');
-    r.hidden = !text;
-  }
-  $('saveKey').addEventListener('click', function () {
-    Store.saveApiKey($('apiKey').value.trim());
-    keyResult('Gespeichert.', true);
-  });
-  $('testKey').addEventListener('click', function () {
-    var key = $('apiKey').value.trim(), btn = $('testKey');
-    btn.disabled = true;
-    keyResult('Teste Schlüssel …');
-    RaimAI.testKey(key).then(function (msg) {
-      Store.saveApiKey(key);
-      keyResult(msg + ' (gespeichert)', true);
-    }, function (err) {
-      keyResult(err.message, false);
-    }).then(function () { btn.disabled = false; });
-  });
-  $('revokeConsent').addEventListener('click', function () {
-    Store.saveConsent(false);
-    try { localStorage.removeItem('raim.licenseAi'); } catch (e) { /* private mode */ }
-    toast('Zustimmung widerrufen.');
-  });
-
-  // export everything, files included, as one JSON file
   function blobToDataUrl(blob) {
     return new Promise(function (resolve, reject) {
       var r = new FileReader();
@@ -2463,68 +2416,6 @@
       r.readAsDataURL(blob);
     });
   }
-  function fileIds(p) {
-    var ids = [];
-    p.takes.forEach(function (t) { [t.fileId, t.voiceId, t.beatId].forEach(function (id) { if (id) ids.push(id); }); });
-    if (p.beat) ids.push(p.beat.fileId);
-    if (p.license.fileId) ids.push(p.license.fileId);
-    if (p.release && p.release.master) ids.push(p.release.master.fileId);
-    return ids;
-  }
-  $('exportAll').addEventListener('click', function () {
-    var btn = $('exportAll');
-    btn.disabled = true;
-    btn.textContent = 'Exportiere …';
-    var files = [];
-    Promise.all(projects.map(function (p) {
-      return Promise.all(fileIds(p).map(function (id) {
-        return RaimDB.getFile(id).then(function (rec) {
-          if (!rec) return;
-          return blobToDataUrl(rec.blob).then(function (data) {
-            files.push({ id: rec.id, project: rec.project, name: rec.name, type: rec.type, data: data });
-          });
-        });
-      }));
-    })).then(function () {
-      var blob = new Blob([JSON.stringify({ app: 'barbook', version: 1, projects: projects, files: files })], { type: 'application/json' });
-      var a = el('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'Barbook-Sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
-    }).catch(function () { toast('Export fehlgeschlagen.'); })
-      .then(function () { btn.disabled = false; btn.textContent = 'Alles exportieren'; });
-  });
-
-  $('importAll').addEventListener('change', function (e) {
-    var f = e.target.files[0];
-    e.target.value = '';
-    if (!f) return;
-    f.text().then(function (txt) {
-      var data = JSON.parse(txt);
-      if (!data || (data.app !== 'barbook' && data.app !== 'raim') || !Array.isArray(data.projects)) throw new Error('format');
-      var have = new Set(projects.map(function (p) { return p.id; }));
-      var incoming = data.projects.filter(function (p) { return p && p.id && !have.has(p.id); });
-      var ids = new Set(incoming.map(function (p) { return p.id; }));
-      return Promise.all((data.files || []).filter(function (x) { return ids.has(x.project); }).map(function (x) {
-        return fetch(x.data).then(function (r) { return r.blob(); }).then(function (blob) {
-          return RaimDB.getFile(x.id).then(function (exists) {
-            if (exists) return;
-            // keep the original id so the project's references stay valid
-            return RaimDB.putFileRecord({ id: x.id, project: x.project, name: x.name, type: x.type, blob: blob });
-          });
-        });
-      })).then(function () {
-        return Promise.all(incoming.map(function (p) { normalize(p); projects.push(p); return RaimDB.saveProject(p); }));
-      }).then(function () {
-        renderProjects();
-        toast(incoming.length + (incoming.length === 1 ? ' Projekt' : ' Projekte') + ' importiert.');
-      });
-    }).catch(function () { toast('Diese Datei ist keine Barbook-Sicherung.'); });
-  });
-
   // ---------- start ----------
   RaimBeats.init(toast, {
     project: function () { return current; },
@@ -2609,12 +2500,6 @@
             .then(function () { toast(list.length + (list.length === 1 ? ' Projekt' : ' Projekte') + ' übernommen.'); });
         });
     }).catch(function () { /* nothing to take over */ });
-  }
-
-  function renderAccount() {
-    $('backupText').textContent = RaimCloud.configured
-      ? 'Deine Projekte liegen in deinem Account und auf diesem Gerät. Zusätzlich kannst du alles als Datei sichern.'
-      : 'Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.';
   }
 
   // ---------- profile ----------
@@ -2890,7 +2775,29 @@
     });
   }
   function accept(x) { friendAction(RaimCloud.acceptFriend(x.id), 'Du bist jetzt mit ' + personName(x) + ' befreundet.'); }
-  function unfriend(x, text) { friendAction(RaimCloud.endFriendship(x.id), text); }
+  // songs we write together: mine with them as feature, theirs with me as feature
+  function sharedSongs(id) {
+    return projects.filter(function (p) {
+      return p._owner === id || (!p._owner && p.features.some(function (f) { return f.id === id; }));
+    });
+  }
+  // ending a friendship also ends every feature between the two (the database does the same)
+  function unfriend(x, text) {
+    friendAction(RaimCloud.endFriendship(x.id).then(function () {
+      var theirs = projects.filter(function (p) { return p._owner === x.id; });
+      if (current && theirs.indexOf(current) >= 0) closeProject();
+      projects = projects.filter(function (p) { return theirs.indexOf(p) < 0; });
+      return Promise.all(theirs.map(function (p) { return RaimDB.forgetProject(p.id); })).then(function () {
+        projects.forEach(function (p) {
+          if (p._owner || !p.features.some(function (f) { return f.id === x.id; })) return;
+          p.features = p.features.filter(function (f) { return f.id !== x.id; });
+          p.updated = Date.now();
+          saveNow(p);
+        });
+        renderProjects();
+      });
+    }), text);
+  }
 
   function renderFriends() {
     var badge = $('friendsBadge'), incoming = people.filter(function (x) { return x.status === 'incoming'; });
@@ -2929,7 +2836,9 @@
     var mine = friends();
     mine.sort(function (a, b) { return personName(a).localeCompare(personName(b), 'de'); }).forEach(function (x) {
       list.append(personRow(x, [{ label: 'Entfernen', run: function () {
-        confirmDialog('Freund entfernen?', personName(x) + ' ist dann nicht mehr in deiner Freundesliste. Gemeinsame Songs bleiben, bis jemand das Feature entfernt.', 'Entfernen')
+        var shared = sharedSongs(x.id).length;
+        confirmDialog('Freund entfernen?', personName(x) + ' ist dann nicht mehr in deiner Freundesliste' +
+          (shared ? ' und fliegt aus ' + (shared === 1 ? 'eurem gemeinsamen Song' : 'euren ' + shared + ' gemeinsamen Songs') + ' (Feature). Deine eigenen Songs bleiben bei dir, Songs von ' + personName(x) + ' verschwinden aus deiner Liste.' : '.'), 'Entfernen')
           .then(function (yes) { if (yes) unfriend(x, personName(x) + ' entfernt.'); else renderFriends(); });
       } }]));
     });
@@ -3483,7 +3392,6 @@
   });
 
   startAccount().then(takeOverLegacy).then(function () {
-    renderAccount();
     loadProfile();
     loadBars().then(function () { if (homeTab === 'ideas') renderBarsPage(); });
     $('openFriends').hidden = !account;

@@ -97,14 +97,13 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
       <ul>
         <li><strong>jsDelivr</strong> (cdn.jsdelivr.net): die Supabase-Bibliothek für Accounts.</li>
         <li><strong>cdnjs</strong> (Cloudflare, Inc., USA): die PDF-Bibliothek – nur, wenn du ein PDF exportierst.</li>
-        <li><strong>esm.sh</strong> (esm.sh): die Anthropic-Bibliothek – nur, wenn du KI-Ideen nutzt.</li>
       </ul>
       <p>Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer zuverlässigen Auslieferung). Nach dem ersten Laden kommen die Bibliotheken aus dem Speicher deines Geräts.</p>
 
       <h2>7. Funktionen, die du selbst einschaltest</h2>
       <ul>
         <li><strong>YouTube-Beats:</strong> Fügst du einen YouTube-Link ein, wird der YouTube-Player von Google geladen (Google Ireland Limited). Dabei gehen u. a. deine IP-Adresse und Nutzungsdaten an Google; Google kann Cookies setzen. Das passiert erst, wenn du einen Link einfügst (Art. 6 Abs. 1 lit. a DSGVO, Einwilligung durch deine Aktion).</li>
-        <li><strong>KI-Ideen:</strong> Mit deinem eigenen API-Schlüssel schickt Barbook nach deiner ausdrücklichen Bestätigung bis zu 80 Zeilen des Songs, Song-Infos und deine Anweisung direkt an Claude von Anthropic (Anthropic PBC, San Francisco, USA). Auch die KI-Lizenzerkennung schickt die Lizenzdatei an Anthropic. Der API-Schlüssel bleibt nur in deinem Browser. Es gelten zusätzlich die Bedingungen von Anthropic für deinen API-Zugang.</li>
+        <li><strong>KI-Ideen und Lizenz-Erkennung:</strong> Nur wenn du sie nutzt und nach deiner ausdrücklichen Bestätigung schickt Barbook bis zu 80 Zeilen des Songs, Song-Infos und deine Anweisung bzw. die Lizenzdatei über unseren Server bei Supabase (Edge Function) an Claude von Anthropic (Anthropic PBC, San Francisco, USA). Dabei wird pro Account und Tag gezählt, wie viele Anfragen gestellt wurden (für ein Tageslimit; die Zähler werden nach 7 Tagen gelöscht). Inhalte speichern wir dabei nicht. Anthropic verarbeitet die Daten als unser Dienstleister nach seinen kommerziellen Bedingungen und nutzt sie nicht zum Training seiner Modelle; die Übermittlung in die USA erfolgt auf Grundlage der EU-Standardvertragsklauseln. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</li>
         <li><strong>Englische Synonyme:</strong> Bei der Synonymsuche für englische Wörter wird das gesuchte Wort an Datamuse (datamuse.com, USA) geschickt. Reime und deutsche Synonyme werden komplett auf deinem Gerät gesucht.</li>
         <li><strong>Spracheingabe (Mikrofon):</strong> Wenn du das Mikrofon antippst, nimmt die Spracherkennung deines Browsers deine Stimme auf und wandelt sie in Text um. Je nach Browser geschieht das auf Servern des Browser-Herstellers (z. B. Google bei Chrome, Apple bei Safari). Barbook selbst speichert keine Sprachaufnahmen.</li>
         <li><strong>Leselink:</strong> Schaltest du einen Leselink an, kann jede Person mit dem Link den Text des Songs lesen, bis du den Link wieder ausschaltest.</li>
@@ -114,7 +113,7 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
       <p>Deine Daten speichern wir, solange dein Account besteht. Gelöschte Projekte liegen 28 Tage im Papierkorb und werden dann endgültig gelöscht. Vom Versionsverlauf bleiben die neuesten 100 Stände pro Song. Löschst du deinen Account, werden alle zugehörigen Daten gelöscht. Server-Logfiles von GitHub werden nach deren Vorgaben gelöscht.</p>
 
       <h2>9. Deine Rechte</h2>
-      <p>Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21). Eine Einwilligung kannst du jederzeit für die Zukunft widerrufen. Schreib uns dazu an <span data-legal="email"></span>. Eine Kopie deiner Projekte kannst du jederzeit selbst über „Einstellungen → Sicherung“ exportieren.</p>
+      <p>Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21). Eine Einwilligung kannst du jederzeit für die Zukunft widerrufen. Schreib uns dazu an <span data-legal="email"></span>. Deine Songs kannst du jederzeit selbst als PDF oder Text exportieren.</p>
       <p>Du kannst dich außerdem bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der Behörde deines Wohnorts.</p>
 
       <h2>10. Account löschen</h2>
@@ -149,10 +148,10 @@ nutzung = '''      <p class="legal-lead">Diese Bedingungen gelten für die Nutzu
       <p>Lädst du Freunde zu einem Song oder einer Idee ein, sehen sie diesen Song und dürfen ihn im Rahmen der von dir vergebenen Rechte bearbeiten. Wer an einem Song mitschreibt, regelt Credits und Rechte am Song mit den anderen Beteiligten selbst. Ein Leselink macht den Text für jede Person mit dem Link lesbar, bis du ihn ausschaltest.</p>
 
       <h2>6. KI-Ideen</h2>
-      <p>KI-Ideen nutzen deinen eigenen API-Schlüssel bei Anthropic. Kosten und Bedingungen dafür richten sich nach deinem Vertrag mit Anthropic. Vorschläge der KI sind ohne Gewähr; prüfe sie, bevor du sie verwendest.</p>
+      <p>KI-Ideen und die Lizenz-Erkennung sind für angemeldete Nutzer kostenlos, mit einem Tageslimit pro Account. Wir können das Limit anpassen oder die Funktion einstellen. Vorschläge der KI sind ohne Gewähr; prüfe sie, bevor du sie verwendest. Die Rechte an übernommenen Zeilen liegen wie bei deinen anderen Texten bei dir.</p>
 
       <h2>7. Sicherung deiner Daten</h2>
-      <p>Wir speichern deine Daten sorgfältig, können einen Verlust aber nicht völlig ausschließen. Exportiere wichtige Songs regelmäßig über „Einstellungen → Sicherung“ oder als PDF.</p>
+      <p>Wir speichern deine Daten sorgfältig, können einen Verlust aber nicht völlig ausschließen. Exportiere wichtige Songs regelmäßig im Text-Bereich über „Export“ als PDF oder Text.</p>
 
       <h2>8. Haftung</h2>
       <p>Barbook ist kostenlos. Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit sowie nach dem Produkthaftungsgesetz. Bei leichter Fahrlässigkeit haften wir nur für die Verletzung wesentlicher Pflichten und begrenzt auf den typischerweise vorhersehbaren Schaden. Im Übrigen ist die Haftung ausgeschlossen, insbesondere für Datenverlust, soweit er durch regelmäßige Sicherung vermeidbar gewesen wäre.</p>
@@ -185,13 +184,13 @@ support = '''      <p class="legal-lead">Hier findest du Antworten auf die häuf
 ''' + '\n'.join([
     faq('Die Bestätigungs-Mail kommt nicht an.', '<p>Schau im Spam-Ordner nach und warte ein paar Minuten. Kommt nichts, registriere dich nicht neu, sondern schreib uns – wir prüfen den Mail-Versand.</p>'),
     faq('Ich habe mein Passwort vergessen.', '<p>Tippe auf der Anmeldeseite auf „Passwort vergessen?“. Du bekommst eine Mail mit einem Link, über den du ein neues Passwort setzt.</p>'),
-    faq('Wie lösche ich meinen Account?', '<p>In der App oben rechts auf dein Profilbild → „Account löschen“ und mit deinem Passwort bestätigen. Das löscht alles endgültig – exportiere vorher unter Einstellungen → Sicherung, was du behalten willst. Mehr dazu in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>'),
+    faq('Wie lösche ich meinen Account?', '<p>In der App oben rechts auf dein Profilbild → „Account löschen“ und mit deinem Passwort bestätigen. Das löscht alles endgültig – exportiere vorher die Songs, die du behalten willst (im Text-Bereich über „Export“). Mehr dazu in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>'),
 ]) + '''
 
       <h2>Songs und Daten</h2>
 ''' + '\n'.join([
     faq('Sind meine Songs auf allen Geräten da?', '<p>Ja, wenn du angemeldet bist. Jede Änderung wird zuerst auf dem Gerät gespeichert und dann hochgeladen. Offline geht alles weiter; hochgeladen wird, sobald du wieder online bist. Beats und Dateien lädt ein neues Gerät beim ersten Öffnen herunter.</p>'),
-    faq('Wie sichere ich meine Songs?', '<p>Unter „Einstellungen“ (Zahnrad auf der Startseite) → „Sicherung“ exportierst du alle Projekte mit Beats, Lizenzen und Aufnahmen in eine Datei. Einzelne Songs exportierst du im Text-Bereich über „Export“ als PDF oder Text.</p>'),
+    faq('Wie sichere ich meine Songs?', '<p>Mit Account liegen deine Songs in der Cloud und auf deinem Gerät. Zusätzlich kannst du jeden Song im Text-Bereich über „Export“ als PDF oder als Text sichern.</p>'),
     faq('Ich habe aus Versehen Text gelöscht.', '<p>Im Text-Bereich unter „Verlauf“ findest du ältere Stände deines Songs und kannst sie wiederherstellen. Gelöschte Projekte liegen 28 Tage im Papierkorb unten auf der Startseite.</p>'),
     faq('Was ist der Unterschied zwischen Projekten und Ideen?', '<p>Ein Projekt ist ein richtiger Song mit BPM, Tonart und Genre. Eine Idee legst du ohne diese Angaben sofort an. Wird ein Song daraus, machst du sie über die gelbe Leiste zum Projekt. Unter „Ideen“ liegen außerdem deine Bars.</p>'),
 ]) + '''
@@ -208,7 +207,7 @@ support = '''      <p class="legal-lead">Hier findest du Antworten auf die häuf
     faq('Wie installiere ich Barbook als App?', '<p><strong>iPhone:</strong> In Safari auf „Teilen“ → „Zum Home-Bildschirm“. <strong>Android:</strong> In Chrome im Menü (⋮) auf „App installieren“ bzw. „Zum Startbildschirm hinzufügen“. <strong>PC:</strong> In Chrome oder Edge rechts in der Adressleiste auf das Installieren-Symbol.</p>'),
     faq('Das Mikrofon funktioniert nicht.', '<p>Die Spracheingabe geht in Chrome, Edge und Safari, nicht in Firefox, und braucht Internet. Erlaube der Seite den Zugriff aufs Mikrofon (Schloss-Symbol neben der Adresse). Auf dem iPhone muss unter Einstellungen → Allgemein → Tastatur „Diktierfunktion“ an sein.</p>'),
     faq('Nach einem Update sieht etwas komisch aus oder Projekte fehlen.', '<p>Lade die Seite einmal neu (am PC: Strg + Umschalt + R). Als installierte App: ganz schließen und neu öffnen. Deine Daten sind dabei sicher.</p>'),
-    faq('Die KI-Ideen gehen nicht.', '<p>KI-Ideen brauchen einen eigenen API-Schlüssel von Anthropic (console.anthropic.com), den du unter „Einstellungen“ einträgst. Ein Werbeblocker kann das Laden der KI-Verbindung verhindern.</p>'),
+    faq('Die KI-Ideen gehen nicht.', '<p>KI-Ideen gehen nur, wenn du angemeldet und online bist. Pro Account gibt es ein Tageslimit; ist es erreicht, geht es am nächsten Tag weiter.</p>'),
 ])
 
 for f, title, body in [('impressum.html', 'Impressum', impressum), ('datenschutz.html', 'Datenschutzerklärung', datenschutz),

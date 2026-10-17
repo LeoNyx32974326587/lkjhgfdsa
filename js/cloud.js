@@ -192,6 +192,24 @@
       return sb.from('bars').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // ---------- Claude, through the Edge Function "claude" (the API key stays on the server) ----------
+    // -> { stop_reason, text }; errors carry .status and .code ('limit', 'not_signed_in', 'not_configured', 'claude')
+    claude: function (task, content) {
+      if (!sb) return Promise.reject(Object.assign(new Error('offline'), { status: 0 }));
+      return sb.functions.invoke('claude', { body: { task: task, content: content } }).then(function (res) {
+        if (!res.error) return res.data;
+        var ctx = res.error.context;
+        var read = ctx && typeof ctx.json === 'function' ? ctx.json().catch(function () { return {}; }) : Promise.resolve({});
+        return read.then(function (body) {
+          var e = new Error((body && body.message) || res.error.message || 'Fehler');
+          e.code = body && body.error;
+          e.status = (body && body.status) || (ctx && ctx.status) || 0;
+          e.limit = body && body.limit;
+          throw e;
+        });
+      });
+    },
+
     // ---------- deleting the account ----------
     // the password is asked again before anything goes
     checkPassword: function (email, password) {

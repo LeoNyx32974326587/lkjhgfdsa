@@ -1045,3 +1045,4 @@ body.prompter-open { overflow: hidden; }
 @supports (-webkit-touch-callout: none) {
   input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
 }
+.badge--feature { background: rgba(255, 120, 220, .14); color: #ff9be3; border-color: rgba(255, 120, 220, .45); }

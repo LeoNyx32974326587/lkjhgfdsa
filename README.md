@@ -40,12 +40,12 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat v
   - **Kommentare** (mit Account): in der Lesen-Ansicht eine Zeile antippen und kommentieren – du und deine Feature-Partner, auch ohne Text-Haken. Zahl der Kommentare am Umschalter; Kommentare zu Zeilen, die inzwischen geändert wurden, stehen gesammelt darunter. Löschen kann der Verfasser und der Besitzer des Songs.
   - **Verlauf**: Barbook sichert den Text automatisch als Fassung – beim Öffnen und Schließen, alle 10 Minuten beim Schreiben und wenn die App in den Hintergrund geht (nur wenn er sich geändert hat). Unter „Verlauf“ im Text-Bereich: alle Fassungen mit Zeit, wer sie gesichert hat und „+3 / −1 Zeilen gegenüber jetzt“; jede lässt sich ansehen und wiederherstellen (der jetzige Text wird vorher selbst gesichert). Mit Account teilen du und deine Feature-Partner den Verlauf; die neuesten 100 Fassungen pro Song bleiben.
   - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
-  - **KI-Ideen** (Claude von Anthropic, eigener API-Schlüssel): erst „Wofür?“ wählen – **Weiterschreiben** (Claude liest den ganzen Song und schreibt an der Cursorstelle weiter, auf Wunsch auf dein Reimende) oder ein neues **Intro, Hook, Part, Bridge oder Outro**, das zum ganzen Song passt und als eigener Abschnitt eingefügt wird. Länge 2–16 Zeilen; es werden bis zu 80 Zeilen des Songs gesendet.
+  - **KI-Ideen** (Claude von Anthropic, mit Account, ohne eigenen Schlüssel – läuft über die Supabase-Funktion `claude`, Tageslimit pro Account): erst „Wofür?“ wählen – **Weiterschreiben** (Claude liest den ganzen Song und schreibt an der Cursorstelle weiter, auf Wunsch auf dein Reimende) oder ein neues **Intro, Hook, Part, Bridge oder Outro**, das zum ganzen Song passt und als eigener Abschnitt eingefügt wird. Länge 2–16 Zeilen; es werden bis zu 80 Zeilen des Songs gesendet.
   - **Export**: als **PDF** (Songtext mit BPM und Tonart; lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz), als **Text kopieren** (nur die Zeilen, Wiederholungen ausgeschrieben – für Spotify, Apple Music, Musixmatch) oder **mit Abschnitten kopieren** ([Intro], [Hook] … – für Genius).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
   - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann Barbook nicht mehr.
-  - **Lizenz** als schmale Leiste mit allen Angaben und Datei. Beim Hochladen der Lizenzdatei werden Produzent, Lizenzart, BPM, Tonart, Kaufdatum und Bedingungen automatisch ausgelesen: mit API-Schlüssel durch Claude (PDF und Fotos, nach einmaliger Zustimmung), sonst lokal aus PDFs (pdf.js, Mustererkennung). Dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
+  - **Lizenz** als schmale Leiste mit allen Angaben und Datei. Beim Hochladen der Lizenzdatei werden Produzent, Lizenzart, BPM, Tonart, Kaufdatum und Bedingungen automatisch ausgelesen: mit Account durch Claude (PDF und Fotos, nach einmaliger Zustimmung), sonst lokal aus PDFs (pdf.js, Mustererkennung). Dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Prompter**
   - Eigener Bereich für den **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
 - **Reime**
@@ -74,9 +74,9 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
-Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.
+Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser.
 
-Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser. Unter Einstellungen kannst du zusätzlich **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren.
+**Feature-Markierung und Freunde entfernen:** Songs und Ideen, an denen Freunde mitschreiben, tragen auf der Karte die Markierung „Feature“. Entfernst du jemanden als Freund, endet automatisch jedes gemeinsame Feature in beide Richtungen – die Datenbank setzt das durch.
 
 ## Dateien
 
