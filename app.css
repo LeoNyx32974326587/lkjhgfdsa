@@ -483,16 +483,6 @@ a.btn { color: var(--text); }
   border: 1px dashed rgba(160, 140, 255, .5); background: transparent; color: #d8d0ff;
 }
 .add-section button:hover { background: rgba(90, 60, 230, .35); }
-.chip-dock {
-  position: sticky; bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 6px); z-index: 4;
-  margin: 10px -6px 0; padding: 4px 6px; border-radius: 22px;
-  background: rgba(14, 10, 36, .88); backdrop-filter: blur(12px);
-  border: 1px solid rgba(160, 140, 255, .18);
-}
-.chip-dock .chips { min-height: 44px; padding: 6px 2px; }
-.chip-dock .chips:empty { display: none; }
-.chip-dock:has(.chips:empty + .chips[hidden]) { display: none; }
-.chip--foreign { background: rgba(255, 122, 217, .22); border-color: rgba(255, 122, 217, .45); }
 
 /* ---------- rhymes: language filter, synonyms ---------- */
 #filters { align-items: center; }
@@ -578,3 +568,10 @@ body.prompter-open { overflow: hidden; }
   padding: 12px 18px; font-size: 15px; border-style: solid; border-color: rgba(120, 210, 255, .5);
   background: linear-gradient(100deg, rgba(138, 107, 255, .35), rgba(74, 36, 201, .35));
 }
+
+/* license: reading the uploaded file */
+.license-read { margin: 0 !important; font-size: 14px; color: var(--muted) !important; }
+.license-read.is-busy { color: #c9bdff !important; }
+.license-read.is-ok { color: #8ff0c0 !important; }
+.license-read.is-warn { color: #ffd27a !important; }
+.field .is-filled, .field input.is-filled, .field select.is-filled, .field textarea.is-filled { border-color: #8ff0c0; box-shadow: 0 0 0 3px rgba(143, 240, 192, .18); transition: box-shadow .3s; }

@@ -155,10 +155,7 @@
     loadSections();
     promptPick = null;
     renderLang();
-    chipsFor = null;
     hideAi();
-    updateChips();
-    renderSavedChips();
     updateStats();
     fillLicense();
     $('searchInput').value = '';
@@ -294,7 +291,6 @@
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
     if (name === 'beat') { RaimBeats.redraw(); renderPromptPick(); }
     if (name === 'rhymes') renderRhymeBlocks();
-    if (name === 'text') { renderSavedChips(); chipsFor = null; updateChips(); }
   }
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () { showTab(t.dataset.tab); window.scrollTo(0, 0); });
@@ -393,15 +389,13 @@
         s.body = ta.value;
         autosize(ta);
         syncText();
-        updateChips();
         refreshRepeats();
       });
       // typing a "[Name]" line splits the section into cards
       ta.addEventListener('blur', function () {
         if (ta.value.split('\n').some(RaimSong.isHeader)) { loadSectionsFromText(); }
       });
-      ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; updateChips(); });
-      ['click', 'keyup'].forEach(function (ev) { ta.addEventListener(ev, updateChips); });
+      ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; });
       card.append(ta);
       box.append(card);
       if (!collapsed.has(i)) autosize(ta);
@@ -641,60 +635,8 @@
       current.lang = b.dataset.lang;
       scheduleSave();
       renderLang();
-      chipsFor = null;
-      updateChips();
     });
   });
-
-  // the last word before the caret; on an empty line, the last word of the line above
-  function wordAtCaret() {
-    var ta = activeTA;
-    if (!ta) return '';
-    var before = ta.value.slice(0, ta.selectionStart);
-    var line = before.split('\n').pop();
-    var source = line.trim() ? line : before.replace(/\n[^\n]*$/, '');
-    var words = source.match(WORD_RE);
-    return words ? words[words.length - 1] : '';
-  }
-
-  // rhymes for the word at the caret, searched once typing pauses
-  var chipsFor = null, chipsTimer = null;
-  function updateChips() {
-    if (!current) return;
-    var word = wordAtCaret();
-    if (word === chipsFor) return;
-    chipsFor = word;
-    clearTimeout(chipsTimer);
-    if (!word || word.length < 2) { $('rhymeChips').textContent = ''; return; }
-    chipsTimer = setTimeout(function () { whenReady(showChips); }, 160);
-    function showChips() {
-      var box = $('rhymeChips');
-      if (chipsFor !== word || !current) return;
-      var r = searchRhymes(word, 24);
-      box.textContent = '';
-      box.append(el('span', 'chip chip--muted', word));
-      r.results.forEach(function (h) { box.append(insertChip(h.word, h.lang !== current.lang ? 'chip--foreign' : '')); });
-      if (!r.results.length) box.append(el('span', 'chip chip--muted', 'keine Reime gefunden'));
-    }
-  }
-
-  function insertChip(word, cls) {
-    var c = el('button', 'chip' + (cls ? ' ' + cls : ''), word);
-    c.type = 'button';
-    c.addEventListener('mousedown', function (e) { e.preventDefault(); });
-    c.addEventListener('click', function () { insertAtCaret(word); });
-    return c;
-  }
-
-  function renderSavedChips() {
-    var box = $('savedChips');
-    box.textContent = '';
-    var saved = current ? current.rhymes.saved : [];
-    box.hidden = !saved.length;
-    if (!saved.length) return;
-    box.append(el('span', 'chip-label', 'Gemerkt'));
-    saved.forEach(function (w) { box.append(insertChip(w, 'chip--saved')); });
-  }
 
   // change the active card's text and keep everything in sync
   function setActiveValue(value, caret) {
@@ -703,14 +645,6 @@
     ta.selectionStart = ta.selectionEnd = caret;
     ta.focus();
     ta.dispatchEvent(new Event('input'));
-  }
-
-  function insertAtCaret(text) {
-    if (!activeTA) return;
-    var ta = activeTA, s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
-    var pre = v.slice(0, s);
-    var ins = (pre && !/[\s(„"]$/.test(pre) ? ' ' : '') + text;
-    setActiveValue(pre + ins + v.slice(e), s + ins.length);
   }
 
   // ---------- KI-Ideen ----------
@@ -921,6 +855,8 @@
 
   function editLicense() {
     var f = $('licenseForm'), l = current.license;
+    readSeq++;
+    licenseStatus('');
     LICENSE_FIELDS.forEach(function (k) { f.elements[k].value = l[k] || ''; });
     licenseDraft = { file: null, removeFile: false };
     licenseEditing = true;
@@ -945,7 +881,69 @@
     licenseDraft.file = file;
     licenseDraft.removeFile = false;
     showDraftFile();
+    readLicenseFile(file);
   });
+
+  // ---------- fill the license form from the uploaded file ----------
+  var LICENSE_LABELS = { producer: 'Produzent', type: 'Lizenzart', bpm: 'BPM', key: 'Tonart', date: 'Kaufdatum', notes: 'Bedingungen' };
+
+  function licenseStatus(text, kind) {
+    var r = $('licenseRead');
+    r.textContent = text;
+    r.className = 'license-read' + (kind ? ' is-' + kind : '');
+    r.hidden = !text;
+  }
+
+  // with an API key Claude reads the file (also photos), otherwise RAIM reads PDFs itself
+  function licenseEngine() {
+    if (!Store.apiKey()) return Promise.resolve('local');
+    var choice = null;
+    try { choice = localStorage.getItem('raim.licenseAi'); } catch (e) { /* private mode */ }
+    if (choice) return Promise.resolve(choice === 'yes' ? 'claude' : 'local');
+    return confirmDialog('Lizenz mit Claude auslesen?',
+      'Die Lizenzdatei wird an Claude von Anthropic geschickt, um Produzent, Lizenzart, BPM, Tonart, Datum und Bedingungen herauszulesen. Ohne Claude liest RAIM nur PDFs selbst aus – das ist ungenauer.',
+      'Mit Claude auslesen').then(function (ok) {
+      try { localStorage.setItem('raim.licenseAi', ok ? 'yes' : 'no'); } catch (e) { /* private mode */ }
+      return ok ? 'claude' : 'local';
+    });
+  }
+
+  var readSeq = 0;
+  function readLicenseFile(file) {
+    var seq = ++readSeq, isImage = /^image\//.test(file.type);
+    licenseStatus('Lese Lizenz aus …', 'busy');
+    licenseEngine().then(function (engine) {
+      if (seq !== readSeq) return null;
+      if (engine === 'local' && isImage) {
+        licenseStatus('Fotos kann RAIM nur mit API-Schlüssel (Claude) auslesen. Trag die Angaben bitte selbst ein.', 'warn');
+        return null;
+      }
+      var job = engine === 'claude' ? RaimAI.readLicense(Store.apiKey(), file) : RaimLicenseReader.read(file);
+      return job.then(function (r) { return { r: r, engine: engine }; }, function (err) {
+        if (engine !== 'claude' || isImage) throw err;
+        // Claude not reachable: fall back to reading the PDF ourselves
+        return RaimLicenseReader.read(file).then(function (r) { return { r: r, engine: 'local', note: err.message }; });
+      });
+    }).then(function (out) {
+      if (!out || seq !== readSeq || !licenseEditing) return;
+      var f = $('licenseForm'), filled = [];
+      Object.keys(LICENSE_LABELS).forEach(function (k) {
+        var v = (out.r[k] || '').trim();
+        if (!v) return;
+        if (k === 'notes' && f.elements.notes.value.trim() && f.elements.notes.value.indexOf(v) < 0) v = f.elements.notes.value.trim() + '\n' + v;
+        f.elements[k].value = v;
+        f.elements[k].classList.add('is-filled');
+        filled.push(LICENSE_LABELS[k]);
+      });
+      setTimeout(function () { f.querySelectorAll('.is-filled').forEach(function (x) { x.classList.remove('is-filled'); }); }, 2500);
+      var prefix = out.note ? out.note + ' Darum ohne Claude gelesen. ' : '';
+      if (filled.length) licenseStatus(prefix + 'Aus der Datei übernommen: ' + filled.join(', ') + '. Bitte prüfen und speichern.', 'ok');
+      else licenseStatus(prefix + 'In der Datei habe ich keine Angaben gefunden. Trag sie bitte selbst ein.', 'warn');
+    }).catch(function (err) {
+      if (seq !== readSeq) return;
+      licenseStatus((err && err.message && !/pdf\.js/.test(err.message) ? err.message : 'Die Datei konnte nicht gelesen werden.') + ' Trag die Angaben bitte selbst ein.', 'warn');
+    });
+  }
   $('licenseRemove').addEventListener('click', function () {
     licenseDraft.file = null;
     licenseDraft.removeFile = true;
@@ -1151,7 +1149,6 @@
       current.rhymes.langs = on;
       scheduleSave();
       renderRhymeLangs();
-      chipsFor = null;
       if ($('searchInput').value.trim().length >= 2) runSearch(false);
     });
   });
@@ -1410,6 +1407,7 @@
   });
   $('revokeConsent').addEventListener('click', function () {
     Store.saveConsent(false);
+    try { localStorage.removeItem('raim.licenseAi'); } catch (e) { /* private mode */ }
     toast('Zustimmung widerrufen.');
   });
 

@@ -20,14 +20,13 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat d
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
   - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
   - Sprache des Songs: **Deutsch** oder **English**.
-  - Unten Reime auf dein letztes Wort (rosa = andere Sprache) und deine gemerkten Wörter.
   - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).
   - **PDF**: Songtext mit BPM und Tonart als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
   - **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
   - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann RAIM nicht mehr.
-  - **Lizenz** als schmale Leiste mit allen Angaben und Datei, dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
+  - **Lizenz** als schmale Leiste mit allen Angaben und Datei. Beim Hochladen der Lizenzdatei werden Produzent, Lizenzart, BPM, Tonart, Kaufdatum und Bedingungen automatisch ausgelesen: mit API-Schlüssel durch Claude (PDF und Fotos, nach einmaliger Zustimmung), sonst lokal aus PDFs (pdf.js, Mustererkennung). Dazu dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Reime**
   - Reimsuche nach Klang auf **Deutsch und Englisch**, auch über beide Sprachen hinweg (z. B. „Money“ → honey, funny, Manie). Sprachen per DE/EN an- und ausschalten.
   - Häufige Wörter stehen bei gleich guten Reimen weiter oben.
@@ -49,7 +48,8 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kanns
 - `js/thesaurus-de.js`: deutsche Synonyme
 - `js/song.js`: Song-Abschnitte
 - `js/prompter.js`: Teleprompter
-- `js/ai.js`: KI-Ideen über die Claude API
+- `js/ai.js`: KI-Ideen und Lizenz-Auslesen über die Claude API
+- `js/license-reader.js`: Lizenz-PDFs ohne KI auslesen
 - `js/beats.js`: Beat-Player, Loop, Tempo, Teleprompter-Steuerung, YouTube, frühere Aufnahmen
 - `js/wav.js`: WAV-Lesen und -Schreiben für frühere Aufnahmen
 - `js/db.js`: Projekte und Dateien (IndexedDB)
@@ -66,5 +66,6 @@ Die Dateien in `js/words.js`, `js/words-en.js` und `js/thesaurus-de.js` erzeugt 
 - Deutsche Synonyme: [OpenThesaurus](https://www.openthesaurus.de) (LGPL)
 - Englische Synonyme: [Datamuse API](https://www.datamuse.com/api/) (online)
 - PDF: [jsPDF](https://github.com/parallax/jsPDF) (MIT, per CDN)
+- Lizenz-PDFs lesen: [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0, per CDN)
 
 Wegen DeReWo (nicht-kommerziell) sollte die deutsche Wortliste für eine kommerzielle Nutzung ersetzt oder die Lizenz geklärt werden.
