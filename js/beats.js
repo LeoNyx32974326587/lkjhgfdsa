@@ -14,7 +14,7 @@
   audio.preservesPitch = true;
   audio.mozPreservesPitch = true;
   audio.webkitPreservesPitch = true;
-  var ctx = null, mediaSrc = null, mixDest = null;
+  var ctx = null, mediaSrc = null;
   var peaks = [], loop = null, looping = false, beatUrl = null, takeUrls = [];
   var canvas, g;
   var openId = null; // project currently shown, guards against late async results
@@ -143,7 +143,7 @@
       g.fillStyle = '#5ee7ff';
       g.fillRect(played - 1, 0, 2, h);
     }
-    $('tCur').textContent = fmt(audio.currentTime);
+    $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
     $('tDur').textContent = fmt(dur);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
@@ -160,55 +160,128 @@
     draw();
   }
 
-  // ---------- recording: mic + beat mixed into one take ----------
-  var recorder = null, micStream = null, chunks = [], recProject = null;
+  // ---------- recording ----------
+  // Beat and mic are captured raw from the same audio graph, so both share one sample clock.
+  // What is left is the hardware round trip (beat to headphones, voice back into the mic);
+  // the voice is shifted earlier by that amount when the take is mixed.
+  var rec = null; // running recording: { project, stream, nodes, beatL, beatR, mic (Float32 chunks), hasBeat, sampleRate, offsetMs }
+
+  function autoLatencyMs(ac, stream) {
+    var out = (ac.outputLatency || 0) + (ac.baseLatency || 0);
+    var track = stream && stream.getAudioTracks()[0];
+    var input = track && track.getSettings && track.getSettings().latency || 0.01;
+    return Math.round((out + input) * 1000);
+  }
+  function savedLatency() {
+    try { var v = localStorage.getItem('raim.latencyMs'); return v === null ? null : parseInt(v, 10); } catch (e) { return null; }
+  }
+  function showLatency(ms, auto) {
+    $('latency').value = ms;
+    $('latencyOut').textContent = ms + ' ms';
+    $('latencyAuto').textContent = auto ? 'Auto (an)' : 'Auto';
+  }
 
   function startRec() {
-    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('Aufnehmen wird in diesem Browser nicht unterstützt.'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Aufnehmen wird in diesem Browser nicht unterstützt.'); return; }
     var ac = audioCtx();
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 } })
       .then(function (stream) {
-        micStream = stream;
-        if (!mediaSrc) {
+        var hasBeat = !!audio.src;
+        if (hasBeat && !mediaSrc) {
           mediaSrc = ac.createMediaElementSource(audio);
           mediaSrc.connect(ac.destination);
         }
-        mixDest = ac.createMediaStreamDestination();
-        mediaSrc.connect(mixDest);
-        ac.createMediaStreamSource(stream).connect(mixDest);
-        chunks = [];
-        recProject = hooks.project();
-        recorder = new MediaRecorder(mixDest.stream);
-        recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
-        recorder.onstop = saveTake;
-        recorder.start();
+        // beat -> stereo (upmix mono files) -> channels 0/1, mic -> mono -> channel 2
+        var merger = ac.createChannelMerger(3);
+        var beatIn = ac.createGain();
+        beatIn.channelCount = 2; beatIn.channelCountMode = 'explicit'; beatIn.channelInterpretation = 'speakers';
+        var split = ac.createChannelSplitter(2);
+        if (hasBeat) mediaSrc.connect(beatIn);
+        beatIn.connect(split);
+        split.connect(merger, 0, 0);
+        split.connect(merger, 1, 1);
+        var micSrc = ac.createMediaStreamSource(stream);
+        var micIn = ac.createGain();
+        micIn.channelCount = 1; micIn.channelCountMode = 'explicit'; micIn.channelInterpretation = 'speakers';
+        micSrc.connect(micIn);
+        micIn.connect(merger, 0, 2);
+        var proc = ac.createScriptProcessor(4096, 3, 1);
+        merger.connect(proc);
+        proc.connect(ac.destination); // outputs silence; needed so the processor runs
+
+        var manual = savedLatency();
+        rec = {
+          project: hooks.project(), stream: stream, hasBeat: hasBeat, sampleRate: ac.sampleRate,
+          offsetMs: manual === null ? autoLatencyMs(ac, stream) : manual,
+          nodes: [beatIn, split, merger, micSrc, micIn, proc],
+          beatL: [], beatR: [], mic: []
+        };
+        if (manual === null) showLatency(rec.offsetMs, true);
+        proc.onaudioprocess = function (e) {
+          if (!rec) return;
+          var b = e.inputBuffer;
+          rec.beatL.push(new Float32Array(b.getChannelData(0)));
+          rec.beatR.push(new Float32Array(b.getChannelData(1)));
+          rec.mic.push(new Float32Array(b.getChannelData(2)));
+        };
         $('recBtn').classList.add('is-rec');
+        $('miniRec').classList.add('is-rec');
         if (looping && loop) audio.currentTime = loop[0];
-        if (audio.src) audio.play();
+        if (hasBeat) audio.play();
       })
       .catch(function () { toast('Kein Zugriff aufs Mikrofon.'); });
   }
 
   function stopRec() {
-    if (!recorder) return;
-    recorder.stop();
-    recorder = null;
+    if (!rec) return;
+    var r = rec;
+    rec = null;
     audio.pause();
-    if (micStream) micStream.getTracks().forEach(function (t) { t.stop(); });
-    try { mediaSrc.disconnect(mixDest); } catch (e) { /* already gone */ }
+    r.stream.getTracks().forEach(function (t) { t.stop(); });
+    r.nodes.forEach(function (n) { try { n.disconnect(); } catch (e) { /* gone */ } });
+    if (r.hasBeat) { try { mediaSrc.disconnect(r.nodes[0]); } catch (e) { /* gone */ } }
     $('recBtn').classList.remove('is-rec');
+    $('miniRec').classList.remove('is-rec');
+    saveTake(r);
   }
 
-  function saveTake() {
-    var p = recProject, type = chunks[0] && chunks[0].type || 'audio/webm';
-    var blob = new Blob(chunks, { type: type });
-    var ext = /mp4|aac/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
-    var name = 'Take ' + (p.takes.length + 1) + '.' + ext;
-    RaimDB.putFile(p.id, blob, name).then(function (fileId) {
-      p.takes.unshift({ fileId: fileId, name: name, created: Date.now() });
+  function concat(chunks) {
+    var n = 0, i;
+    for (i = 0; i < chunks.length; i++) n += chunks[i].length;
+    var out = new Float32Array(n), o = 0;
+    for (i = 0; i < chunks.length; i++) { out.set(chunks[i], o); o += chunks[i].length; }
+    return out;
+  }
+
+  function saveTake(r) {
+    var p = r.project, mic = concat(r.mic);
+    if (mic.length < r.sampleRate * 0.3) { toast('Aufnahme zu kurz.'); return; }
+    var n = p.takes.length + 1;
+    var voiceBlob = RaimWav.encode([mic], r.sampleRate);
+    var beatBlob = r.hasBeat ? RaimWav.encode([concat(r.beatL), concat(r.beatR)], r.sampleRate) : null;
+    Promise.all([
+      RaimDB.putFile(p.id, voiceBlob, 'Take ' + n + ' Stimme.wav'),
+      beatBlob ? RaimDB.putFile(p.id, beatBlob, 'Take ' + n + ' Beat.wav') : null
+    ]).then(function (ids) {
+      p.takes.unshift({ voiceId: ids[0], beatId: ids[1], offsetMs: r.offsetMs, name: 'Take ' + n, created: Date.now() });
       hooks.save();
       if (openId === p.id) renderTakes(p);
     }).catch(function () { toast('Aufnahme konnte nicht gespeichert werden – Speicher voll?'); });
+  }
+
+  // voice shifted earlier by offsetMs, laid over the beat recorded in the same pass
+  function mixTake(voice, beat, offsetMs) {
+    var sr = voice.sampleRate, off = Math.round(offsetMs / 1000 * sr);
+    var mic = voice.channels[0];
+    var len = Math.max(0, (beat ? beat.channels[0].length : mic.length) - (beat ? 0 : off));
+    var L = new Float32Array(len), R = new Float32Array(len);
+    for (var i = 0; i < len; i++) {
+      var v = mic[i + off] || 0;
+      var l = (beat ? beat.channels[0][i] : 0) + v, rr = (beat ? beat.channels[1][i] : 0) + v;
+      L[i] = l > 1 ? 1 : l < -1 ? -1 : l;
+      R[i] = rr > 1 ? 1 : rr < -1 ? -1 : rr;
+    }
+    return { mix: RaimWav.encode([L, R], sr), voice: RaimWav.encode([mic.subarray(Math.min(off, mic.length))], sr) };
   }
 
   function renderTakes(p) {
@@ -221,33 +294,80 @@
       head.className = 'take-head';
       var name = document.createElement('span');
       name.textContent = t.name.replace(/\.\w+$/, '') + ' · ' + new Date(t.created).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
-      var actions = document.createElement('span');
-      var dl = document.createElement('a');
-      dl.textContent = 'Herunterladen';
-      dl.download = (p.title || 'RAIM') + ' - ' + t.name;
       var del = document.createElement('button');
       del.type = 'button'; del.textContent = 'Löschen';
       del.addEventListener('click', function () {
         if (!confirm('Aufnahme löschen?')) return;
         p.takes = p.takes.filter(function (x) { return x !== t; });
         hooks.save();
-        RaimDB.deleteFile(t.fileId);
+        [t.fileId, t.voiceId, t.beatId].forEach(function (id) { RaimDB.deleteFile(id); });
         li.remove();
         $('takesHead').hidden = !p.takes.length;
       });
-      actions.append(dl, ' · ', del);
-      head.append(name, actions);
+      head.append(name, del);
       var player = document.createElement('audio');
       player.controls = true;
       player.preload = 'metadata';
-      li.append(head, player);
+      var links = document.createElement('div');
+      links.className = 'take-links';
+      li.append(head, player, links);
       ul.append(li);
-      RaimDB.getFile(t.fileId).then(function (rec) {
-        if (!rec || openId !== p.id) return;
-        var url = URL.createObjectURL(rec.blob);
-        takeUrls.push(url);
-        player.src = url;
-        dl.href = url;
+      var base = (p.title || 'RAIM') + ' - ' + t.name.replace(/\.\w+$/, '');
+
+      function link(text, url, file) {
+        var a = document.createElement('a');
+        a.textContent = text; a.href = url; a.download = file;
+        return a;
+      }
+
+      if (t.fileId) { // takes from before the sync rework: one finished file
+        RaimDB.getFile(t.fileId).then(function (f) {
+          if (!f || openId !== p.id) return;
+          var url = URL.createObjectURL(f.blob);
+          takeUrls.push(url);
+          player.src = url;
+          links.append(link('Herunterladen', url, (p.title || 'RAIM') + ' - ' + t.name));
+        });
+        return;
+      }
+
+      var sync = document.createElement('label');
+      sync.className = 'take-sync';
+      sync.innerHTML = 'Sync <input type="range" min="0" max="800" step="5"> <output></output>';
+      var range = sync.querySelector('input'), out = sync.querySelector('output');
+      range.value = t.offsetMs; out.textContent = t.offsetMs + ' ms';
+      li.insertBefore(sync, links);
+
+      var voice = null, beat = null, urls = [];
+      function render() {
+        urls.forEach(URL.revokeObjectURL);
+        var m = mixTake(voice, beat, t.offsetMs);
+        urls = [URL.createObjectURL(m.mix), URL.createObjectURL(m.voice)];
+        takeUrls.push(urls[0], urls[1]);
+        var at = player.currentTime;
+        player.src = urls[0];
+        if (at) player.currentTime = at;
+        links.textContent = '';
+        links.append(link('Mix herunterladen', urls[0], base + '.wav'), ' · ', link('Nur Stimme', urls[1], base + ' (Stimme).wav'));
+      }
+      Promise.all([RaimDB.getFile(t.voiceId), t.beatId ? RaimDB.getFile(t.beatId) : null]).then(function (f) {
+        if (!f[0] || openId !== p.id) return;
+        return Promise.all([f[0].blob.arrayBuffer(), f[1] ? f[1].blob.arrayBuffer() : null]);
+      }).then(function (bufs) {
+        if (!bufs) return;
+        voice = RaimWav.decode(bufs[0]);
+        beat = bufs[1] ? RaimWav.decode(bufs[1]) : null;
+        render();
+      });
+      var timer = null;
+      range.addEventListener('input', function () {
+        out.textContent = range.value + ' ms';
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          t.offsetMs = parseInt(range.value, 10);
+          hooks.save();
+          if (voice) render();
+        }, 250);
       });
     });
   }
@@ -370,9 +490,20 @@
         audio.play();
       } else audio.pause();
     });
-    audio.addEventListener('play', function () { $('playBtn').classList.add('is-playing'); requestAnimationFrame(tick); });
-    audio.addEventListener('pause', function () { $('playBtn').classList.remove('is-playing'); draw(); });
-    audio.addEventListener('ended', function () { $('playBtn').classList.remove('is-playing'); if (recorder) stopRec(); });
+    function playing(on) { $('playBtn').classList.toggle('is-playing', on); $('miniPlay').classList.toggle('is-playing', on); }
+    audio.addEventListener('play', function () { playing(true); requestAnimationFrame(tick); });
+    audio.addEventListener('pause', function () { playing(false); draw(); });
+    audio.addEventListener('ended', function () { playing(false); if (rec) stopRec(); });
+
+    // when the deck's buttons are scrolled away (e.g. reading the lyrics), show a small bar instead
+    $('miniPlay').addEventListener('click', function () { $('playBtn').click(); });
+    $('miniRec').addEventListener('click', function () { $('recBtn').click(); });
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entries) {
+        var e = entries[entries.length - 1];
+        $('miniBar').hidden = e.isIntersecting || !e.rootBounds || !$('deck').offsetParent;
+      }).observe(document.querySelector('#deck .deck-controls'));
+    }
     audio.addEventListener('loadedmetadata', draw);
     window.addEventListener('resize', draw);
 
@@ -385,7 +516,21 @@
       $('tempoOut').textContent = Math.round(audio.playbackRate * 100) + ' %';
     });
     $('recBtn').addEventListener('click', function () {
-      if (recorder) stopRec(); else startRec();
+      if (rec) stopRec(); else startRec();
+    });
+
+    var manual = savedLatency();
+    showLatency(manual === null ? 0 : manual, manual === null);
+    if (manual === null) $('latencyOut').textContent = 'auto';
+    $('latency').addEventListener('input', function (e) {
+      try { localStorage.setItem('raim.latencyMs', e.target.value); } catch (err) { /* private mode */ }
+      showLatency(parseInt(e.target.value, 10), false);
+    });
+    $('latencyAuto').addEventListener('click', function () {
+      try { localStorage.removeItem('raim.latencyMs'); } catch (err) { /* private mode */ }
+      showLatency(0, true);
+      $('latencyOut').textContent = 'auto';
+      toast('Sync-Ausgleich wird bei der nächsten Aufnahme automatisch gemessen.');
     });
 
     $('ytForm').addEventListener('submit', function (e) {

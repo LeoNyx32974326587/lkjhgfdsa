@@ -356,3 +356,53 @@ dialog.sheet { width: min(560px, calc(100vw - 24px)); max-width: none; max-heigh
 .results .score { margin-right: 4px; }
 .results .word { font-size: 18px; line-height: 1.25; -webkit-hyphens: auto; hyphens: auto; }
 .results .tag { display: block; margin: 2px 0 0; font-size: 11px; }
+
+/* beat tab: read-only lyrics */
+.lyrics {
+  margin-top: 16px; border-radius: 24px; border: 1px solid var(--border);
+  background: rgba(28, 20, 70, .65);
+}
+.lyrics summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px; font-weight: 700; font-size: 17px;
+}
+.lyrics summary::-webkit-details-marker { display: none; }
+.lyrics summary svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.lyrics summary .chev { margin-left: auto; transition: transform .2s; }
+.lyrics[open] summary .chev { transform: rotate(180deg); }
+.lyrics-meta { font-weight: 400; font-size: 13px; color: var(--dim); }
+.lyrics-body {
+  white-space: pre-wrap; overflow-wrap: break-word;
+  max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
+  margin: 0 18px; padding: 4px 0 8px;
+  font-size: 19px; line-height: 1.8; color: #f2efff;
+  -webkit-user-select: text; user-select: text;
+}
+.lyrics-body.is-empty { color: var(--dim); font-size: 15px; }
+.lyrics .link-btn { margin: 4px 18px 16px; }
+.link-btn { border: 0; background: none; color: #c9b8ff; cursor: pointer; font-size: 14px; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+/* recording sync */
+.sync-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; color: #e0d8ff; }
+.sync-row input { flex: 1; min-width: 120px; accent-color: #fff; }
+.sync-row output { font-family: "Roboto Mono", monospace; min-width: 58px; }
+.take-sync { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.take-sync input { flex: 1; accent-color: var(--violet); }
+.take-sync output { font-family: "Roboto Mono", monospace; min-width: 58px; }
+.takes .take-links { display: flex; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.takes .take-status { font-size: 13px; color: var(--dim); }
+
+/* mini player while the deck is scrolled away */
+.mini-bar {
+  position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 10px);
+  display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 8px;
+  border-radius: 999px; border: 1px solid rgba(160, 140, 255, .45);
+  background: rgba(42, 21, 146, .92); backdrop-filter: blur(12px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .5), 0 0 24px rgba(110, 80, 255, .4);
+}
+.round--sm { width: 44px; height: 44px; }
+.round--sm svg { width: 20px; height: 20px; }
+.rec--sm { margin: 0; width: 44px; height: 44px; }
+.rec--sm span { width: 24px; height: 24px; }
+.mini-time { font-family: "Roboto Mono", monospace; font-size: 14px; min-width: 40px; }

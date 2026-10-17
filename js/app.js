@@ -124,6 +124,7 @@
     clearTimeout(saveTimer);
     var p = current;
     RaimBeats.close();
+    $('miniBar').hidden = true;
     saveNow(p);
     current = null;
     $('project').hidden = true;
@@ -153,13 +154,31 @@
   function showTab(name) {
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
-    if (name !== 'beat') RaimBeats.pause();
-    if (name === 'beat') RaimBeats.redraw();
+    if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
+    if (name === 'beat') { RaimBeats.redraw(); renderLyrics(); }
     if (name === 'rhymes') renderRhymeBlocks();
     if (name === 'text') { renderSavedChips(); chipsFor = null; updateChips(); }
   }
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () { showTab(t.dataset.tab); window.scrollTo(0, 0); });
+  });
+
+  // ---------- read-only lyrics in the beat tab ----------
+  function renderLyrics() {
+    var body = $('lyricsBody'), text = current.text.replace(/\s+$/, '');
+    body.textContent = text || 'Noch kein Text. Schreib ihn im Bereich „Text“.';
+    body.classList.toggle('is-empty', !text);
+    var lines = text ? text.split('\n').filter(function (l) { return l.trim(); }).length : 0;
+    $('lyricsMeta').textContent = lines ? lines + (lines === 1 ? ' Zeile' : ' Zeilen') : '';
+  }
+  try { $('lyricsBox').open = localStorage.getItem('raim.lyricsOpen') !== '0'; } catch (e) { $('lyricsBox').open = true; }
+  $('lyricsBox').addEventListener('toggle', function () {
+    try { localStorage.setItem('raim.lyricsOpen', $('lyricsBox').open ? '1' : '0'); } catch (e) { /* private mode */ }
+  });
+  $('editLyrics').addEventListener('click', function () {
+    showTab('text');
+    window.scrollTo(0, 0);
+    $('songText').focus();
   });
 
   // ---------- text ----------
@@ -647,7 +666,8 @@
     });
   }
   function fileIds(p) {
-    var ids = p.takes.map(function (t) { return t.fileId; });
+    var ids = [];
+    p.takes.forEach(function (t) { [t.fileId, t.voiceId, t.beatId].forEach(function (id) { if (id) ids.push(id); }); });
     if (p.beat) ids.push(p.beat.fileId);
     if (p.license.fileId) ids.push(p.license.fileId);
     return ids;

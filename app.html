@@ -108,9 +108,26 @@
               <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
               <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
             </div>
-            <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen.</p>
+            <div class="sync-row">
+              <label for="latency">Sync-Ausgleich</label>
+              <input type="range" id="latency" min="0" max="600" step="5">
+              <output id="latencyOut">0 ms</output>
+              <button type="button" class="link-btn" id="latencyAuto">Auto</button>
+            </div>
+            <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen, am besten mit Kabel.</p>
           </div>
         </div>
+
+        <details class="lyrics" id="lyricsBox">
+          <summary>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+            Songtext
+            <span class="lyrics-meta" id="lyricsMeta"></span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="lyrics-body" id="lyricsBody"></div>
+          <button type="button" class="link-btn" id="editLyrics">Im Bereich „Text“ bearbeiten</button>
+        </details>
 
         <div id="beatYt" hidden>
           <form class="search" id="ytForm" autocomplete="off">
@@ -206,6 +223,15 @@
       </section>
     </main>
 
+    <div class="mini-bar" id="miniBar" hidden>
+      <button type="button" class="round round--sm" id="miniPlay" aria-label="Abspielen">
+        <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+      </button>
+      <span class="mini-time" id="miniTime">0:00</span>
+      <button type="button" class="rec rec--sm" id="miniRec" aria-label="Aufnehmen"><span></span></button>
+    </div>
+
     <nav class="tabbar" aria-label="Projektbereiche">
       <button type="button" class="tab is-on" data-tab="text">
         <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>Text
@@ -269,6 +295,7 @@
   <script src="js/store.js"></script>
   <script src="js/db.js"></script>
   <script src="js/ai.js"></script>
+  <script src="js/wav.js"></script>
   <script src="js/beats.js"></script>
   <script src="js/app.js"></script>
 </body>
