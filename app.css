@@ -1046,3 +1046,12 @@ body.prompter-open { overflow: hidden; }
   input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
 }
 .badge--feature { background: rgba(255, 120, 220, .14); color: #ff9be3; border-color: rgba(255, 120, 220, .45); }
+
+/* ---------- messages in the friends area ---------- */
+.messages { list-style: none; padding: 0; margin: 8px 0 18px; display: grid; gap: 8px; }
+.message { display: flex; align-items: flex-start; gap: 8px; padding: 12px 8px 12px 14px; border-radius: 16px; border: 1px solid var(--border); background: rgba(28, 20, 70, .55); }
+.message.is-new { border-color: rgba(255, 59, 78, .55); background: rgba(255, 59, 78, .08); }
+.message-body { flex: 1; min-width: 0; }
+.message-body p { margin: 0; font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.message-time { font-size: 12px; color: var(--dim); }
+.message-del { flex: none; font-size: 20px; line-height: 1; padding: 4px 10px; }

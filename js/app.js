@@ -1337,8 +1337,9 @@
 
   // Keys are stored in German ("Fis-Moll") and shown in the chosen style:
   // de "Fis-Moll", en "F# Minor", short "F#m"
-  var keyStyle = 'de';
-  try { keyStyle = localStorage.getItem('raim.keyStyle') || 'de'; } catch (e) { /* private mode */ }
+  // default "F# Minor"; a choice made since the switch to that default is kept
+  var keyStyle = 'en';
+  try { keyStyle = localStorage.getItem('barbook.keyStyle') || 'en'; } catch (e) { /* private mode */ }
   function keyName(k) {
     var de = k && RaimLicenseReader.germanKey(k);
     if (!de) return k || '';
@@ -1359,7 +1360,7 @@
   document.querySelectorAll('[data-key-style]').forEach(function (b) {
     b.addEventListener('click', function () {
       keyStyle = b.dataset.keyStyle;
-      try { localStorage.setItem('raim.keyStyle', keyStyle); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('barbook.keyStyle', keyStyle); } catch (e) { /* private mode */ }
       renderKeyStyle();
       if (current) renderSongInfo();
       renderProjects();
@@ -1391,7 +1392,13 @@
   (function () {
     var sel = $('infoForm').elements.key;
     sel.append(new Option('– wählen –', ''));
-    RaimAnalyze.KEYS.forEach(function (k) { sel.append(new Option(k, k)); });
+    // minor keys first: most rap beats are in minor
+    [['Minor (Moll)', /Moll$/], ['Major (Dur)', /Dur$/]].forEach(function (g) {
+      var group = document.createElement('optgroup');
+      group.label = g[0];
+      RaimAnalyze.KEYS.filter(function (k) { return g[1].test(k); }).forEach(function (k) { group.append(new Option(k, k)); });
+      sel.append(group);
+    });
     sel.append(new Option('Weiß ich nicht', 'unbekannt'));
     renderKeyStyle();
   })();
@@ -2672,6 +2679,8 @@
   var invites = [];       // songs friends invited me to: [{ owner, project_id, title }]
   var ownFeatures = {};   // my songs -> [{ member, accepted, rights }]
   var friendsProblem = '';
+  var messages = [];      // [{ id, kind, actor, actor_name, title, created, read }], newest first
+  var freshMessages = new Set();   // ids that were new when the friends area was opened
   var friendPics = {};    // id -> picture as data URL ('' while loading)
   function personName(x) { return x ? x.artist || x.name || '#' + x.code : ''; }
   function personById(id) { return people.find(function (x) { return x.id === id; }); }
@@ -2691,10 +2700,14 @@
     var problem = null;
     function part(job, fallback) { return job.catch(function (err) { problem = err; return fallback; }); }
     return Promise.all([
-      part(RaimCloud.relations(), null), part(RaimCloud.invitations(), null), part(RaimCloud.myFeatures(), null)
+      part(RaimCloud.relations(), null), part(RaimCloud.invitations(), null), part(RaimCloud.myFeatures(), null),
+      RaimCloud.notifications().catch(function () { return null; })   // older database: no messages yet
     ]).then(function (r) {
       if (r[0]) people = r[0];
       if (r[1]) invites = r[1];
+      if (r[3]) messages = r[3];
+      // opened while new messages arrive: they count as read right away, highlighted until closing
+      if (!$('friends').hidden) markMessagesRead();
       if (r[2]) { ownFeatures = r[2]; pruneFeatures(); }
       friendsProblem = problem ? RaimCloud.message(problem) : '';
       renderFriends();
@@ -2717,6 +2730,64 @@
         ' ist bei „' + (p.title || 'Ohne Titel') + '“ nicht mehr dabei.');
     });
   }
+
+  // ---------- messages: what friends did that concerns you ----------
+  function messageText(m) {
+    var who = m.actor_name || 'Jemand', song = '„' + (m.title || 'Ohne Titel') + '“';
+    switch (m.kind) {
+      case 'unfriended': return who + ' hat dich als Freund entfernt. Gemeinsame Features sind damit beendet.';
+      case 'gone': return who + ' hat den Barbook-Account gelöscht. Gemeinsame Features sind damit beendet.';
+      case 'accepted': return who + ' hat deine Freundschaftsanfrage angenommen.';
+      case 'declined_friend': return who + ' hat deine Freundschaftsanfrage abgelehnt.';
+      case 'joined': return who + ' ist jetzt bei ' + song + ' dabei.';
+      case 'removed': return who + ' hat dich aus ' + song + ' entfernt.';
+      case 'left': return who + ' hat ' + song + ' verlassen.';
+      case 'declined_invite': return who + ' hat die Einladung zu ' + song + ' abgelehnt.';
+      default: return who + ': ' + m.kind;
+    }
+  }
+  function messageTime(iso) {
+    var d = new Date(iso), now = new Date(), mins = Math.round((now - d) / 60000);
+    if (mins < 1) return 'gerade eben';
+    if (mins < 60) return 'vor ' + mins + ' Min.';
+    if (d.toDateString() === now.toDateString()) return 'heute, ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' }) + ', ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+  function renderMessages() {
+    var ul = $('messagesList');
+    ul.textContent = '';
+    $('messagesBlock').hidden = !messages.length;
+    messages.slice(0, 30).forEach(function (m) {
+      var li = el('li', 'message' + (m.read && !freshMessages.has(m.id) ? '' : ' is-new'));
+      var body = el('div', 'message-body');
+      body.append(el('p', '', messageText(m)), el('span', 'message-time', messageTime(m.created)));
+      var del = el('button', 'icon-btn message-del', '×');
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Nachricht löschen');
+      del.addEventListener('click', function () {
+        messages = messages.filter(function (x) { return x !== m; });
+        renderFriends();
+        RaimCloud.deleteNotification(m.id).catch(function () {});
+      });
+      li.append(body, del);
+      ul.append(li);
+    });
+  }
+  // opening the friends area reads the messages; they stay highlighted until it is closed
+  function markMessagesRead() {
+    var unread = messages.filter(function (m) { return !m.read; });
+    if (!unread.length) return;
+    unread.forEach(function (m) { freshMessages.add(m.id); });
+    RaimCloud.markNotificationsRead().catch(function () {});
+  }
+  function settleMessages() {
+    messages.forEach(function (m) { m.read = true; });
+    freshMessages.clear();
+    renderFriends();
+  }
+  // new messages and requests also show up while the app stays open
+  setInterval(function () { if (!document.hidden && account) loadFriends(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && account) loadFriends(); });
 
   // a friend's circle: initials first, the picture once it is loaded
   function paintPerson(node, x) {
@@ -2801,8 +2872,10 @@
 
   function renderFriends() {
     var badge = $('friendsBadge'), incoming = people.filter(function (x) { return x.status === 'incoming'; });
-    badge.textContent = String(incoming.length + invites.length);
-    badge.hidden = !incoming.length && !invites.length;
+    var unread = messages.filter(function (m) { return !m.read; }).length, count = incoming.length + invites.length + unread;
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.hidden = !count;
+    renderMessages();
     var banner = $('inviteBanner');
     banner.hidden = !invites.length;
     banner.textContent = invites.length === 1 ? 'Du hast eine Einladung zu einem Song – ansehen'
@@ -2872,12 +2945,14 @@
     $('friends').hidden = false;
     $('friendResult').textContent = '';
     renderFriends();
+    markMessagesRead();
     loadFriends();
     window.scrollTo(0, 0);
   });
   $('closeFriends').addEventListener('click', function () {
     $('friends').hidden = true;
     $('home').hidden = false;
+    settleMessages();
     renderProjects();
   });
 

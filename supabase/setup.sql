@@ -115,6 +115,19 @@ create table if not exists public.share_links (
   unique (owner, project_id)
 );
 
+-- Messages in the friends area ("Bea hat dich als Freund entfernt"), written by the triggers below
+create table if not exists public.notifications (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users on delete cascade,
+  kind text not null,
+  actor uuid,                 -- who did it (no reference: the account may be gone)
+  actor_name text not null default '',
+  title text not null default '',
+  created timestamptz not null default now(),
+  read boolean not null default false
+);
+create index if not exists notifications_user on public.notifications (user_id, created desc);
+
 -- AI requests per account and day (the Edge Function "claude" counts them; nobody reads this table directly)
 create table if not exists public.ai_usage (
   user_id uuid not null references auth.users on delete cascade,
@@ -231,6 +244,74 @@ drop trigger if exists drop_features_on_unfriend on public.friendships;
 create trigger drop_features_on_unfriend after delete on public.friendships
   for each row execute function public.drop_features_on_unfriend();
 
+-- ---------- messages for the friends area ----------
+-- the name a person shows up with: artist name, else name, else their ID
+create or replace function public.display_name(u uuid) returns text
+language sql security definer stable set search_path = public as $$
+  select coalesce(nullif(p.artist, ''), nullif(p.name, ''), '#' || p.code, 'Jemand') from profiles p where p.id = u
+  union all select 'Jemand' limit 1;
+$$;
+create or replace function public.notify(target uuid, k text, who uuid, song text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if target is null or target = who or not exists (select 1 from auth.users where id = target) then return; end if;
+  -- an account being deleted: delete_my_account() has already told the friends
+  if current_setting('barbook.deleting', true) = 'on' or (who is not null and not exists (select 1 from auth.users where id = who)) then return; end if;
+  insert into notifications (user_id, kind, actor, actor_name, title) values (target, k, who, display_name(who), coalesce(song, ''));
+  -- keep the last 50 per person
+  delete from notifications n where n.user_id = target and n.id not in
+    (select id from notifications where user_id = target order by created desc limit 50);
+end;
+$$;
+revoke execute on function public.notify(uuid, text, uuid, text) from anon, authenticated, public;
+revoke execute on function public.display_name(uuid) from anon, public;
+
+create or replace function public.notify_friendship() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid();
+begin
+  if tg_op = 'UPDATE' then
+    if old.status = 'pending' and new.status = 'accepted' then perform notify(new.requester, 'accepted', new.addressee, null); end if;
+    return new;
+  end if;
+  if old.status = 'accepted' then
+    -- the one who ended it is me; the other one gets the message (account deletion: no session, take the deleted side)
+    if me is null then me := case when exists (select 1 from auth.users where id = old.requester) then old.addressee else old.requester end; end if;
+    perform notify(case when me = old.requester then old.addressee else old.requester end, 'unfriended', me, null);
+  elsif me = old.addressee then
+    perform notify(old.requester, 'declined_friend', old.addressee, null);
+  end if;
+  return old;
+end;
+$$;
+drop trigger if exists notify_friendship on public.friendships;
+create trigger notify_friendship after update or delete on public.friendships
+  for each row execute function public.notify_friendship();
+
+create or replace function public.notify_member() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid();
+begin
+  if tg_op = 'UPDATE' then
+    if not old.accepted and new.accepted then perform notify(new.owner, 'joined', new.member, new.title); end if;
+    return new;
+  end if;
+  -- gone with the friendship or the song: the friendship message says enough
+  if not are_friends(old.owner, old.member) or not exists (select 1 from projects where user_id = old.owner and id = old.project_id) then
+    return old;
+  end if;
+  if me = old.owner then
+    if old.accepted then perform notify(old.member, 'removed', old.owner, old.title); end if;
+  elsif me = old.member then
+    perform notify(old.owner, case when old.accepted then 'left' else 'declined_invite' end, old.member, old.title);
+  end if;
+  return old;
+end;
+$$;
+drop trigger if exists notify_member on public.project_members;
+create trigger notify_member after update or delete on public.project_members
+  for each row execute function public.notify_member();
+
 -- keep the newest 100 saved states per song
 create or replace function public.trim_versions() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -274,8 +355,15 @@ grant execute on function public.shared_project(text) to anon, authenticated;
 -- The app deletes the stored files first, the database cannot remove those itself.
 create or replace function public.delete_my_account() returns void
 language plpgsql security definer set search_path = public as $$
+declare f record;
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
+  -- friends hear about it while the name is still there; the triggers stay quiet afterwards
+  for f in select case when requester = auth.uid() then addressee else requester end as other
+           from friendships where status = 'accepted' and auth.uid() in (requester, addressee) loop
+    insert into notifications (user_id, kind, actor, actor_name) values (f.other, 'gone', auth.uid(), display_name(auth.uid()));
+  end loop;
+  perform set_config('barbook.deleting', 'on', true);
   delete from auth.users where id = auth.uid();
 end;
 $$;
@@ -309,6 +397,7 @@ alter table public.project_comments enable row level security;
 alter table public.project_versions enable row level security;
 alter table public.bars enable row level security;
 alter table public.share_links enable row level security;
+alter table public.notifications enable row level security;
 alter table public.ai_usage enable row level security;   -- no policies: only ai_take() touches it
 
 drop policy if exists "own projects" on public.projects;
@@ -398,6 +487,13 @@ create policy "versions write" on public.project_versions for insert to authenti
   with check (author = auth.uid() and (auth.uid() = owner or public.member_can(owner, project_id, 'text')));
 create policy "versions delete" on public.project_versions for delete to authenticated
   using (auth.uid() = owner);
+
+drop policy if exists "own messages read" on public.notifications;
+drop policy if exists "own messages mark" on public.notifications;
+drop policy if exists "own messages delete" on public.notifications;
+create policy "own messages read" on public.notifications for select to authenticated using (auth.uid() = user_id);
+create policy "own messages mark" on public.notifications for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own messages delete" on public.notifications for delete to authenticated using (auth.uid() = user_id);
 
 drop policy if exists "own bars" on public.bars;
 create policy "own bars" on public.bars for all to authenticated

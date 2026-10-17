@@ -192,6 +192,18 @@
       return sb.from('bars').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // ---------- messages in the friends area (written by database triggers) ----------
+    notifications: function () {
+      return sb.from('notifications').select('id,kind,actor,actor_name,title,created,read').eq('user_id', uid).then(ok)
+        .then(function (rows) { return rows.sort(function (a, b) { return b.id - a.id; }); });
+    },
+    markNotificationsRead: function () {
+      return sb.from('notifications').update({ read: true }).eq('user_id', uid).eq('read', false).then(ok);
+    },
+    deleteNotification: function (id) {
+      return sb.from('notifications').delete().eq('user_id', uid).eq('id', id).then(ok);
+    },
+
     // ---------- Claude, through the Edge Function "claude" (the API key stays on the server) ----------
     // -> { stop_reason, text }; errors carry .status and .code ('limit', 'not_signed_in', 'not_configured', 'claude')
     claude: function (task, content) {

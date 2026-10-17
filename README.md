@@ -32,7 +32,7 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat vier Bereiche: Text, Beat, Prompter und Reime.
 
-**Neues Projekt:** Vor dem Öffnen fragt Barbook die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genres** und **Sprachen** (Pflicht, jeweils mehrere möglich, z. B. Trap + Drill, Deutsch + Englisch; 18 Sprachen zur Auswahl) und optional das Thema. Die Schreibweise der Tonart ist wählbar: deutsch (Fis-Moll / A-Dur), englisch (F# Minor / A Major) oder kurz (F#m / A); sie gilt überall in der App. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos änderst du über das Zahnrad oben im Projekt (Projekteinstellungen); sie stehen auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
+**Neues Projekt:** Vor dem Öffnen fragt Barbook die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genres** und **Sprachen** (Pflicht, jeweils mehrere möglich, z. B. Trap + Drill, Deutsch + Englisch; 18 Sprachen zur Auswahl) und optional das Thema. Die Schreibweise der Tonart ist wählbar: englisch (F# Minor / A Major, Standard), deutsch (Fis-Moll / A-Dur) oder kurz (F#m / A); Moll-Tonarten stehen in der Liste oben; sie gilt überall in der App. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos änderst du über das Zahnrad oben im Projekt (Projekteinstellungen); sie stehen auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
 
 - **Text**
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten – beim Öffnen des Text-Bereichs sind alle eingeklappt, ein Tipp auf einen Abschnitt öffnet ihn, ein neuer Abschnitt kommt geöffnet ans Ende; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
@@ -75,6 +75,8 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
 Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser.
+
+**Nachrichten:** Im Freunde-Bereich stehen Nachrichten, z. B. wenn dich jemand als Freund entfernt, deine Anfrage annimmt oder ablehnt, bei deinem Song einsteigt, ihn verlässt, eine Einladung ablehnt oder dich aus einem Song nimmt. Die rote Zahl am Freunde-Symbol zählt neue Nachrichten, Anfragen und Einladungen; sie aktualisiert sich auch bei offener App (jede Minute und beim Zurückkehren in die App).
 
 **Feature-Markierung und Freunde entfernen:** Songs und Ideen, an denen Freunde mitschreiben, tragen auf der Karte die Markierung „Feature“. Entfernst du jemanden als Freund, endet automatisch jedes gemeinsame Feature in beide Richtungen – die Datenbank setzt das durch.
 
