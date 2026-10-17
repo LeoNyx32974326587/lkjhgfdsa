@@ -311,6 +311,7 @@ dialog p { color: var(--muted); }
 .projects--done .project-card:hover { opacity: 1; }
 .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
 .status-row .seg-btn { padding: 7px 12px; font-size: 13px; }
+.status-row .song-info { min-width: 0; }
 #projectStatus .seg-btn[data-status="done"].is-on { background: #1f9d5c; }
 #projectStatus .seg-btn[data-status="edit"].is-on { background: #1b7f9c; }
 .project-line { margin: 0; color: #ddd6ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -449,7 +450,7 @@ a.btn { color: var(--text); }
 
 /* ---------- text: tools, sections, chip dock ---------- */
 .text-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
-.text-tools-right { display: inline-flex; gap: 6px; }
+.text-tools-right { display: inline-flex; gap: 6px; margin-left: auto; }
 .tool-btn {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--border); background: rgba(40, 30, 90, .45); color: var(--muted); font-size: 13px; font-weight: 500;
