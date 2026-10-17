@@ -66,7 +66,7 @@ Jedes Projekt hat einen **Status**: „In Bearbeitung“ oder „Fertig“. Er s
 
 **Beats & Lizenzen:** Über den Knopf unter „Projekte“ siehst du alle Beats und Lizenzen aus allen Projekten auf einer Seite – Lizenzart, Produzent, Kaufdatum, ob die Lizenzdatei da ist, und alle Warnungen. Filter: „Lizenz prüfen“, „Ohne Lizenz“, „Lease / Free“.
 
-**Beat-Marker:** Im Bereich Beat merkst du dir, wo Intro, Hook, Part oder Bridge im Beat anfangen – Abschnitt wählen, an die Stelle tippen, „Marker hier setzen“. Die Marker stehen auf der Wellenform. Wählst du im Teleprompter einen Abschnitt, startet der Beat an seinem Marker.
+**Beat-Marker:** Im Bereich Beat merkst du dir, wo Intro, Hook, Part oder Bridge im Beat anfangen – Abschnitt wählen, auf der Wellenform an die Stelle tippen oder die Zeit eintippen (z. B. 1:24), „Marker hier setzen“. Die Marker stehen auf der Wellenform. Wählst du im Teleprompter einen Abschnitt, startet der Beat an seinem Marker.
 
 **Leselink:** In den Projekteinstellungen schaltest du den **Leselink** an – Barbook kopiert dann einen Link, den du z. B. deinem Producer oder Engineer schickst. Wer ihn öffnet, sieht den aktuellen Songtext mit Abschnitten, Titel, Künstlername, BPM, Tonart und Genre – ohne Account und ohne Beat, Lizenz, Kommentare oder Features. Ausschalten macht den Link sofort ungültig. Nur mit Account und nur für eigene Songs.
 

@@ -954,3 +954,4 @@ body.prompter-open { overflow: hidden; }
 .dictate-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b4e; flex: none; animation: mic-pulse 1.4s ease-out infinite; }
 .dictate-live { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 14px; }
 .dictate-stop { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; background: #fff; color: #2a1592; font-weight: 700; cursor: pointer; }
+.mini-field input.marker-time { width: 72px; font-variant-numeric: tabular-nums; }

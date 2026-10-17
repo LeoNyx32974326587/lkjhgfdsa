@@ -34,7 +34,7 @@
   function open(project) {
     close();
     openId = project.id;
-    loop = null; looping = false; peaks = []; decoded = null;
+    loop = null; looping = false; peaks = []; decoded = null; markerTyped = false;
     $('bpmInput').value = project.bpm || project.license.bpm || '';
     $('barsPerLine').value = project.barsPerLine || '1';
     showBpmHint();
@@ -191,9 +191,29 @@
     });
   }
 
+  // "1:24", "1:24,5", "84" -> seconds, or NaN
+  function parseTime(v) {
+    v = String(v || '').trim().replace(',', '.');
+    var m = v.match(/^(\d+):([0-5]?\d(?:\.\d+)?)$/);
+    if (m) return parseInt(m[1], 10) * 60 + parseFloat(m[2]);
+    return /^\d+(\.\d+)?$/.test(v) ? parseFloat(v) : NaN;
+  }
+  // a typed time moves the playhead there; false if it doesn't fit the beat
+  var markerTyped = false;
+  function takeTypedTime() {
+    if (!markerTyped) return true;
+    var t = parseTime($('markerTime').value), d = audio.duration || 0;
+    if (isNaN(t)) { toast('Schreib die Zeit als Minuten:Sekunden, z. B. 1:24.'); return false; }
+    if (d && t > d) { toast('Der Beat ist nur ' + fmt(d) + ' lang.'); return false; }
+    markerTyped = false;
+    audio.currentTime = t;
+    draw();
+    return true;
+  }
+
   function setMarker() {
     var label = $('markerSec').value;
-    if (!label || !audio.src) return;
+    if (!label || !audio.src || !takeTypedTime()) return;
     var p = hooks.project(), t = Math.round(audio.currentTime * 100) / 100;
     p.markers = markers().filter(function (m) { return m.s.toLowerCase() !== label.toLowerCase(); }).concat([{ s: label, t: t }]);
     hooks.save();
@@ -249,6 +269,7 @@
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
     RaimPrompter.setTime(fmt(audio.currentTime));
     $('recStart').textContent = startLabel();
+    if (!markerTyped && document.activeElement !== $('markerTime')) $('markerTime').value = fmt(audio.currentTime);
     $('tDur').textContent = fmt(audio.duration || 0);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
@@ -663,6 +684,10 @@
     });
     $('practiceBtn').addEventListener('click', practice);
     $('markerSet').addEventListener('click', setMarker);
+    $('markerTime').addEventListener('input', function () { markerTyped = true; });
+    $('markerTime').addEventListener('change', takeTypedTime);
+    $('markerTime').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); setMarker(); } });
+    $('markerTime').addEventListener('blur', function () { if (!markerTyped) $('markerTime').value = fmt(audio.currentTime); });
 
     RaimPrompter.init({
       play: promptPlay,

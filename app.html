@@ -339,9 +339,10 @@
             <p class="hint">Tipp auf die Wellenform, um die Startstelle zu setzen. Ziehen markiert einen Loop-Bereich.</p>
             <div class="markers" id="markers" hidden>
               <h2 class="sub">Marker</h2>
-              <p class="hint">Merk dir, wo Hook, Part und Bridge im Beat anfangen. Der Teleprompter startet den Beat dann am Marker des gewählten Abschnitts.</p>
+              <p class="hint">Merk dir, wo Hook, Part und Bridge im Beat anfangen. Tipp auf die Wellenform oder tipp die Zeit ein (z. B. 1:24). Der Teleprompter startet den Beat dann am Marker des gewählten Abschnitts.</p>
               <div class="marker-row">
                 <label class="mini-field">Abschnitt <select id="markerSec"></select></label>
+                <label class="mini-field">bei <input id="markerTime" class="marker-time" inputmode="decimal" placeholder="0:00" autocomplete="off" title="Minuten:Sekunden, z. B. 1:24 – oder auf die Wellenform tippen"></label>
                 <button type="button" class="pill-btn" id="markerSet">Marker hier setzen</button>
               </div>
               <div class="marker-list" id="markerList"></div>
