@@ -83,6 +83,7 @@ h2 { font-size: 20px; margin: 0 0 8px; }
 .seg-btn.is-on { background: var(--violet-2); color: #fff; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 6px; }
 .filters .seg-btn { border: 1px solid var(--border); }
+.filter-hint { margin: 2px 2px 8px; color: var(--dim); font-size: 13px; }
 .check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; }
 .check input { accent-color: var(--violet); width: 18px; height: 18px; }
 

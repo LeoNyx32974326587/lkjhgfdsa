@@ -150,6 +150,48 @@
     return Math.max(0, Math.min(1, r));
   }
 
+  // Pure rhyme: from the last stressed vowel on everything sounds the same ("Nacht" – "Macht").
+  // A weak final syllable (-e, -en, -er) counts together with the vowel before it.
+  function isPure(q, c) {
+    var qn = q.v.length, cn = c.v.length;
+    if (!qn || !cn) return false;
+    var k = FULL_VOWELS.indexOf(q.v[qn - 1]) < 0 && qn > 1 ? 2 : 1;
+    if (cn < k) return false;
+    for (var j = 1; j <= k; j++) {
+      if (q.v[qn - j] !== c.v[cn - j] || q.cons[qn - j + 1] !== c.cons[cn - j + 1]) return false;
+    }
+    return true;
+  }
+
+  // Vowel rhyme (assonance): the last vowels match, the consonants may differ,
+  // e.g. "Leben" ~ "Regen", "Lebensgefahr" ~ "Wegen der Bar". 0..1
+  function vowelScore(q, c) {
+    var qn = q.v.length, cn = c.v.length;
+    if (!qn || !cn) return 0;
+    var k = Math.min(qn, 4), sum = 0, total = 0;
+    for (var j = 0; j < k; j++) {
+      var qa = qn - 1 - j, ca = cn - 1 - j;
+      var w = WEIGHTS[j], s = ca >= 0 ? vsim(q.v[qa], c.v[ca]) : 0;
+      if (s && q.long[qa] !== c.long[ca] && FULL_VOWELS.indexOf(q.v[qa]) >= 0) s *= 0.85;
+      // the last two vowels (or the only one) have to be the same sound
+      if (j < 2 && s < 0.75) return 0;
+      total += w;
+      sum += w * s;
+    }
+    // a similar final consonant sounds a bit closer
+    return Math.max(0, 0.92 * sum / total + 0.08 * csim(q.cons[qn], c.cons[cn]) - 0.04 * Math.abs(cn - qn));
+  }
+
+  // Alliteration: same sound at the start, e.g. "Stadt" ~ "Sterne", "Stress". 0..1
+  function startScore(q, c) {
+    if (!q.v.length || !c.v.length) return 0;
+    var a = q.cons[0], b = c.cons[0], s;
+    if (a === b) s = a ? 0.75 : 0.6;
+    else if (a && b && a[0] === b[0]) s = 0.6;
+    else return 0;
+    return s + 0.25 * vsim(q.v[0], c.v[0]);
+  }
+
   var ONSETS = ['schl', 'schm', 'schn', 'schr', 'schw', 'str', 'spr', 'spl', 'sch', 'pfl', 'pfr',
     'kl', 'kn', 'kr', 'gl', 'gn', 'gr', 'bl', 'br', 'dr', 'fl', 'fr', 'pl', 'pr', 'tr', 'zw',
     'st', 'sp', 'ch', 'ph', 'pf', 'qu', 'th'];
@@ -259,10 +301,32 @@
 
   // q: { t, lower, stem, ending } ; opts: { limit, exclude, penalty }
   Index.prototype.scan = function (q, opts) {
-    var hits = [], group = [], end = this.lang === 'de' ? q.ending : '';
+    var mode = opts.mode || 'rhyme';
+    var hits = [], group = [], end = this.lang === 'de' && mode === 'rhyme' ? q.ending : '';
     for (var i = 0; i < this.words.length; i++) {
       var w = this.lower[i];
       if (w === q.lower || stemOf(w) === q.stem) continue;
+      if (mode !== 'rhyme') {
+        // short filler words ("das", "ja") would fill the list
+        if (w.length < 4) continue;
+        if (opts.exclude && opts.exclude.has(q.lower + '|' + w)) continue;
+        var t = this.t[i], m;
+        if (mode === 'vowel') {
+          // only what the normal search doesn't already find
+          m = vowelScore(q.t, t);
+          if (m < 0.6 || score(q.t, t) >= 0.8) continue;
+        } else {
+          // words built on the query ("Handy" for "Hand") are no alliteration
+          if (w.indexOf(q.stem) === 0 || q.lower.indexOf(stemOf(w)) === 0) continue;
+          m = startScore(q.t, t);
+          if (m < 0.6) continue;
+        }
+        // there are many of these: common words matter more here
+        var pen = opts.penalty || 0, shown = Math.min(1, m) - pen;
+        if (i < this.ranked) m += 0.06 * (1 - i / this.ranked);
+        hits.push([m - pen, i, shown]);
+        continue;
+      }
       if (end && w.length > end.length && w.slice(-end.length) === end) {
         if (group.length < 400) group.push(this.words[i]);
         continue;
@@ -340,7 +404,8 @@
     return out;
   }
 
-  // opts: { langs: ['de', 'en'], primary, limit, exclude: Set }
+  // opts: { langs: ['de', 'en'], primary, limit, exclude: Set,
+  //         mode: 'rhyme' (default) | 'vowel' (assonance) | 'start' (alliteration) }
   Engine.prototype.search = function (query, opts) {
     opts = opts || {};
     var primary = opts.primary || 'de', limit = opts.limit || 80, self = this;
@@ -349,8 +414,8 @@
     (opts.langs || [primary]).forEach(function (lang) {
       var idx = self.indexes[lang];
       if (!idx || !idx.ready) return;
-      var r = idx.scan(q, { exclude: opts.exclude, penalty: lang === primary ? 0 : 0.03 });
-      r.hits.forEach(function (h) { hits.push([h[0], h[1], idx]); });
+      var r = idx.scan(q, { exclude: opts.exclude, mode: opts.mode, penalty: lang === primary ? 0 : 0.03 });
+      r.hits.forEach(function (h) { hits.push([h[0], h[1], idx, h[2]]); });
       group = group.concat(r.group);
     });
     hits.sort(function (a, b) { return b[0] - a[0] || a[1] - b[1]; });
@@ -365,18 +430,21 @@
       var e2 = (idx.lang === 'de' && ending(word, idx.t[i])) || stem;
       perEnd[e2] = (perEnd[e2] || 0) + 1;
       if (perEnd[e2] > 2) continue;
-      var sc = Math.min(1, hits[h][0]);
+      // [sort key, word, index, score to show if it differs from the sort key]
+      var sc = Math.min(1, hits[h][3] !== undefined ? hits[h][3] : hits[h][0]);
       perLang[idx.lang] = (perLang[idx.lang] || 0) + 1;
       all.push({
         word: word,
         lang: idx.lang,
         score: sc,
-        kind: Math.min(q.t.v.length, idx.t[i].v.length) >= 2 && sc >= 0.7 ? 'multi' : 'end'
+        kind: opts.mode && opts.mode !== 'rhyme' ? opts.mode
+          : Math.min(q.t.v.length, idx.t[i].v.length) >= 2 && sc >= 0.7 ? 'multi' : 'end',
+        pure: (!opts.mode || opts.mode === 'rhyme') && isPure(q.t, idx.t[i])
       });
     }
     var out = mix(all, limit);
     group.sort(function (a, b) { return a.length - b.length; });
-    return { query: q.text, lang: q.lang, ending: q.ending, endings: group, results: out };
+    return { query: q.text, mode: opts.mode || 'rhyme', lang: q.lang, ending: q.ending, endings: group, results: out };
   };
 
   // how well `word` rhymes on `target` (both may be phrases), 0..1
@@ -384,7 +452,7 @@
     return score(this.queryOf(target, primary, langs).t, this.queryOf(word, primary, langs).t);
   };
 
-  var api = { transcribe: transcribe, fromArpa: fromArpa, fromCode: fromCode, score: score, ending: ending, Index: Index, Engine: Engine };
+  var api = { transcribe: transcribe, fromArpa: fromArpa, fromCode: fromCode, score: score, vowelScore: vowelScore, startScore: startScore, ending: ending, Index: Index, Engine: Engine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RaimRhyme = api;
 })(this);

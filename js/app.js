@@ -104,8 +104,8 @@
     var l = current ? current.langs.filter(function (x) { return x !== 'other'; }) : [];
     return l.length ? l : ['de'];
   }
-  function searchRhymes(q, limit) {
-    return engine.search(q, { langs: rhymeLangs(), primary: current.lang, limit: limit, exclude: blockedSet() });
+  function searchRhymes(q, limit, mode) {
+    return engine.search(q, { langs: rhymeLangs(), primary: current.lang, limit: limit, exclude: blockedSet(), mode: mode });
   }
 
   // ---------- projects ----------
@@ -1355,11 +1355,26 @@
   var filter = 'all', lastResult = null, searchTimer = null, shown = 30;
   var GROUP_COLORS = ['#5ee7ff', '#ff7ad9', '#ffd166', '#8fff9f', '#ff9b6b', '#b59bff'];
 
+  // rhyme types: the first four sort the normal search, vowel rhymes and alliteration search anew
+  var FILTER_HINT = {
+    all: 'Alle Reime nach Klang, die besten zuerst.',
+    pure: 'Reine Reime: ab dem betonten Vokal klingt alles gleich (Nacht – Macht).',
+    slant: 'Unreine Reime: klingen ähnlich, aber nicht ganz gleich (Nacht – Knast).',
+    multi: 'Doppel- und Mehrsilbenreime: zwei oder mehr Silben reimen (Leben – geben).',
+    vowel: 'Vokalreime (Assonanz): gleiche Vokale, andere Konsonanten (Leben – Regen, Lebensgefahr – Gesellenjahr).',
+    start: 'Alliteration: gleicher Anfangslaut (Stadt – Stark – Stand).'
+  };
+  function filterMode() { return filter === 'vowel' || filter === 'start' ? filter : 'rhyme'; }
+  function renderFilterHint() { $('filterHint').textContent = FILTER_HINT[filter]; }
+  renderFilterHint();
   document.querySelectorAll('[data-filter]').forEach(function (b) {
     b.addEventListener('click', function () {
       filter = b.dataset.filter;
       document.querySelectorAll('[data-filter]').forEach(function (x) { x.classList.toggle('is-on', x === b); });
-      renderResults();
+      renderFilterHint();
+      shown = 30;
+      if (lastResult && lastResult.mode !== filterMode()) runSearch(false);
+      else renderResults();
     });
   });
 
@@ -1451,7 +1466,7 @@
     var p = current;
     whenReady(function () {
       if ($('searchInput').value.trim() !== q || current !== p) return;
-      lastResult = searchRhymes(q, 120);
+      lastResult = searchRhymes(q, 120, filterMode());
       shown = 30;
       if (record) { remember(q); renderRhymeBlocks(); }
       renderResults();
@@ -1625,7 +1640,7 @@
     var r = lastResult;
     var card = el('div', 'result-card');
 
-    if (r.endings.length) {
+    if (r.endings.length && r.mode === 'rhyme') {
       var g = el('div', 'group');
       var head = el('button', 'group-head');
       head.type = 'button';
@@ -1640,7 +1655,9 @@
       card.append(g);
     }
 
-    var list = r.results.filter(function (h) { return filter === 'all' || h.kind === 'multi'; });
+    var list = r.results.filter(function (h) {
+      return filter === 'multi' ? h.kind === 'multi' : filter === 'pure' ? h.pure : filter === 'slant' ? !h.pure : true;
+    });
     var ul = el('ul', 'results');
     list.slice(0, shown).forEach(function (h) {
       var li = el('li');
@@ -1649,6 +1666,7 @@
       var w = el('span', 'word', h.word);
       var tags = [];
       if (h.kind === 'multi') tags.push('mehrsilbig');
+      if (r.mode === 'rhyme' && !h.pure && filter !== 'slant') tags.push('unrein');
       if (h.lang !== current.lang) tags.push(langName(h.lang).toLowerCase());
       if (tags.length) w.append(el('span', 'tag', tags.join(' · ')));
       var star = el('button', 'star', '★');
@@ -1677,7 +1695,9 @@
       more.addEventListener('click', function () { shown += 30; renderResults(); });
       card.append(more);
     }
-    if (!list.length) card.append(el('p', 'empty', 'Keine passenden Reime gefunden.'));
+    if (!list.length) card.append(el('p', 'empty', filter === 'multi'
+      ? 'Keine Mehrsilbenreime gefunden – probier ein längeres Wort oder eine Wortgruppe (z. B. „Rechnung bezahle“).'
+      : 'Keine passenden Reime gefunden.'));
     out.append(card);
   }
 
