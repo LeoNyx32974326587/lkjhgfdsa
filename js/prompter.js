@@ -109,7 +109,8 @@
     if (!e) return;
     e.classList.add('is-now');
     var box = $('prompterText');
-    box.scrollTo({ top: e.offsetTop - box.clientHeight * 0.32, behavior: 'smooth' });
+    // keep the current line in the middle of the screen
+    box.scrollTo({ top: e.offsetTop + e.offsetHeight / 2 - box.clientHeight / 2, behavior: 'smooth' });
   }
 
   function count(text) {
