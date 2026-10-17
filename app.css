@@ -639,3 +639,22 @@ body.prompter-open { overflow: hidden; }
 .login-msg--error { color: #ffb4b4; }
 .login-msg--ok { color: #8ff0c0; }
 .login-note { text-align: center; color: var(--dim); font-size: 14px; margin: 16px 0 0; }
+
+/* ---------- profile ---------- */
+.topbar-right { display: inline-flex; align-items: center; gap: 6px; }
+.topbar-right .icon-btn { margin-right: 0; }
+.avatar {
+  display: grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; cursor: pointer; padding: 0;
+  border: 1.5px solid rgba(160, 140, 255, .55); background: linear-gradient(135deg, #6d55ff, #3a1fc9);
+  color: #fff; font-weight: 700; letter-spacing: .02em; background-size: cover; background-position: center;
+}
+.avatar svg { width: 55%; height: 55%; }
+.avatar--small { width: 36px; height: 36px; font-size: 14px; }
+.avatar--small:hover { box-shadow: 0 0 0 3px rgba(123, 92, 255, .35); }
+.avatar--big { width: 96px; height: 96px; font-size: 34px; }
+.avatar.has-pic { color: transparent; }
+.profile-pic { display: flex; align-items: center; gap: 18px; margin: 4px 0 18px; }
+.profile-pic-actions { display: grid; gap: 10px; justify-items: start; }
+.btn--small { padding: 8px 16px; font-size: 14px; }
+#profileForm { display: grid; gap: 14px; }
+#profileForm .row { margin-top: 4px; }

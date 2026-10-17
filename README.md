@@ -8,7 +8,9 @@ Dein Notizbuch für Rap und Songs: Web-App für Texte, Reime, Beats und Lizenzen
 
 ## Accounts
 
-Mit eingerichteten Accounts (Supabase) muss man sich anmelden, bevor die App aufgeht: „App öffnen“ führt dann zuerst auf `login.html` (Anmelden, Registrieren, Passwort vergessen). Projekte, Beats und Lizenzen werden mit dem Account synchronisiert und sind auf jedem Gerät da; offline wird weitergearbeitet und später hochgeladen. Projekte aus der Zeit ohne Account bietet Barbook nach der ersten Anmeldung zur Übernahme an. Abmelden geht in den Einstellungen.
+Mit eingerichteten Accounts (Supabase) muss man sich anmelden, bevor die App aufgeht: „App öffnen“ führt dann zuerst auf `login.html` (Anmelden, Registrieren, Passwort vergessen). Projekte, Beats und Lizenzen werden mit dem Account synchronisiert und sind auf jedem Gerät da; offline wird weitergearbeitet und später hochgeladen. Projekte aus der Zeit ohne Account bietet Barbook nach der ersten Anmeldung zur Übernahme an.
+
+**Profil:** Oben rechts auf der Projektseite sitzt ein Kreis mit deinem Profilbild (ohne Bild: deine Initialen). Ein Klick öffnet das Profil: Bild wählen oder entfernen (wird quadratisch zugeschnitten), Name, Künstlername und Abmelden. Name und Künstlername werden im Account gespeichert, das Bild im Cloud-Speicher – auf jedem Gerät gleich.
 
 Einrichten: Schritt für Schritt in [`SUPABASE.md`](SUPABASE.md) (Supabase-Projekt anlegen, `supabase/setup.sql` ausführen, zwei Werte in `js/config.js` eintragen). Solange `js/config.js` leer ist, läuft Barbook ohne Account nur im Browser.
 

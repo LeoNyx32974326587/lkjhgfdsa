@@ -1941,19 +1941,138 @@
   }
 
   function renderAccount() {
-    $('accountCard').hidden = !RaimCloud.configured;
-    $('accountEmail').textContent = account ? account.email : '';
     $('backupText').textContent = RaimCloud.configured
       ? 'Deine Projekte liegen in deinem Account und auf diesem Gerät. Zusätzlich kannst du alles als Datei sichern.'
       : 'Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.';
   }
+
+  // ---------- profile ----------
+  // Name and artist name live in the account (without accounts: in this browser), the picture as a
+  // small square JPEG in the bucket. A copy stays here so the circle shows right away.
+  var profile = { name: '', artist: '', avatar: 0, pic: '' };
+  var draftPic;   // while the dialog is open: undefined = unchanged, '' = removed, data URL = new
+  function profileKey() { return 'barbook.profile' + (account ? '.' + account.id : ''); }
+  function loadProfile() {
+    try {
+      var x = JSON.parse(localStorage.getItem(profileKey()) || 'null');
+      if (x) profile = x;
+    } catch (e) { /* private mode */ }
+    renderProfile();
+    if (!account || !RaimCloud.online()) return;
+    RaimCloud.getProfile().then(function (r) {
+      var changed = r.avatar !== profile.avatar;
+      profile.name = r.name;
+      profile.artist = r.artist;
+      profile.avatar = r.avatar;
+      if (!changed) return;
+      if (!r.avatar) { profile.pic = ''; return; }
+      return RaimCloud.downloadAvatar().then(blobToDataUrl).then(function (url) { profile.pic = url; });
+    }).then(function () { storeProfile(); renderProfile(); }, function () { /* keep the copy */ });
+  }
+  function storeProfile() {
+    try { localStorage.setItem(profileKey(), JSON.stringify(profile)); } catch (e) { /* private mode */ }
+  }
+  // "Leon Lauterbach" -> "LL"
+  function initials() {
+    var words = (profile.artist || profile.name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length && account) words = [account.email];
+    return words.slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
+  }
+  function paintAvatar(node, pic) {
+    node.classList.toggle('has-pic', !!pic);
+    node.style.backgroundImage = pic ? 'url("' + pic + '")' : '';
+    node.textContent = pic ? '' : initials();
+    if (!pic && !node.textContent) {
+      node.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>';
+    }
+  }
+  function renderProfile() {
+    paintAvatar($('openProfile'), profile.pic);
+    $('openProfile').title = profile.artist || profile.name || 'Profil';
+  }
+  function renderDraftPic() {
+    var pic = draftPic === undefined ? profile.pic : draftPic;
+    paintAvatar($('profileAvatar'), pic);
+    $('avatarRemove').hidden = !pic;
+  }
+  function profileMsg(text) { $('profileMsg').textContent = text; $('profileMsg').hidden = !text; }
+
+  $('openProfile').addEventListener('click', function () {
+    var f = $('profileForm');
+    f.elements.name.value = profile.name;
+    f.elements.artist.value = profile.artist;
+    draftPic = undefined;
+    renderDraftPic();
+    $('profileEmail').textContent = account ? 'Angemeldet als ' + account.email
+      : 'Ohne Account – dein Profil bleibt in diesem Browser.';
+    $('logout').hidden = !account;
+    profileMsg('');
+    $('profileDlg').showModal();
+  });
+  $('closeProfile').addEventListener('click', function () { $('profileDlg').close(); });
+
+  // any photo -> 256 × 256 JPEG cut from the middle
+  function squarePicture(file) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var s = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas');
+        c.width = c.height = 256;
+        c.getContext('2d').drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, 256, 256);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+  $('avatarInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    squarePicture(file).then(function (url) { draftPic = url; renderDraftPic(); profileMsg(''); },
+      function () { profileMsg('Dieses Bild lässt sich nicht öffnen – nimm bitte ein JPG oder PNG.'); });
+  });
+  $('avatarRemove').addEventListener('click', function () { draftPic = ''; renderDraftPic(); });
+
+  $('profileForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, name = f.elements.name.value.trim(), artist = f.elements.artist.value.trim();
+    var pic = draftPic === undefined ? profile.pic : draftPic, version = profile.avatar;
+    var job = Promise.resolve();
+    if (account) {
+      if (!RaimCloud.online()) { profileMsg('Offline – das Profil lässt sich gerade nicht speichern.'); return; }
+      if (draftPic === '') {
+        version = 0;
+        job = RaimCloud.removeAvatar().catch(function () { /* already gone */ });
+      } else if (draftPic) {
+        version = Date.now();
+        job = fetch(draftPic).then(function (r) { return r.blob(); }).then(RaimCloud.uploadAvatar);
+      }
+      job = job.then(function () { return RaimCloud.saveProfile({ name: name, artist: artist, avatar: version }); });
+    }
+    $('profileSave').disabled = true;
+    profileMsg('Speichere …');
+    job.then(function () {
+      profile = { name: name, artist: artist, avatar: version, pic: pic };
+      storeProfile();
+      renderProfile();
+      $('profileDlg').close();
+      toast('Profil gespeichert.');
+    }, function (err) {
+      profileMsg(RaimCloud.message(err));
+    }).then(function () { $('profileSave').disabled = false; });
+  });
+
   $('logout').addEventListener('click', function () {
+    $('profileDlg').close();
     if (current) closeProject();
     RaimCloud.signOut().catch(function () {}).then(function () { location.replace('login.html'); });
   });
 
   startAccount().then(takeOverLegacy).then(function () {
     renderAccount();
+    loadProfile();
     return RaimDB.projects();
   }).then(function (list) {
     projects = list.map(normalize);

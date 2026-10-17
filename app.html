@@ -26,10 +26,13 @@
   <div id="home">
     <header class="topbar">
       <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
-      <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
-      <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
-      </button>
+      <span class="topbar-right">
+        <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
+        <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
+        </button>
+        <button class="avatar avatar--small" id="openProfile" type="button" aria-label="Profil"></button>
+      </span>
     </header>
     <main>
       <div class="view-head">
@@ -416,13 +419,6 @@
       </div>
       <p class="key-result" id="keyResult" role="status" hidden></p>
     </div>
-    <div class="card" id="accountCard" hidden>
-      <h2>Account</h2>
-      <p>Angemeldet als <strong id="accountEmail"></strong>. Deine Projekte, Beats und Lizenzen werden mit deinem Account synchronisiert und sind auf jedem Gerät da, auf dem du dich anmeldest.</p>
-      <div class="row">
-        <button class="btn" id="logout" type="button">Abmelden</button>
-      </div>
-    </div>
     <div class="card">
       <h2>Sicherung</h2>
       <p id="backupText">Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.</p>
@@ -432,6 +428,37 @@
       </div>
       <p class="hint" id="storageInfo"></p>
     </div>
+  </dialog>
+
+  <dialog id="profileDlg" class="sheet">
+    <form id="profileForm" novalidate autocomplete="off">
+      <div class="sheet-head">
+        <h2>Profil</h2>
+        <button class="icon-btn" type="button" id="closeProfile" aria-label="Schließen">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="profile-pic">
+        <input type="file" id="avatarInput" accept="image/*" hidden>
+        <label class="avatar avatar--big" id="profileAvatar" for="avatarInput" title="Bild ändern"></label>
+        <div class="profile-pic-actions">
+          <label class="btn btn--small" for="avatarInput">Bild wählen</label>
+          <button class="link-btn" type="button" id="avatarRemove" hidden>Bild entfernen</button>
+        </div>
+      </div>
+      <label class="field">Name
+        <input name="name" maxlength="80" placeholder="z. B. Leon Lauterbach" autocomplete="name">
+      </label>
+      <label class="field">Künstlername
+        <input name="artist" maxlength="80" placeholder="Dein Name als Artist">
+      </label>
+      <p class="hint" id="profileEmail"></p>
+      <p class="hint" id="profileMsg" role="status" hidden></p>
+      <div class="row">
+        <button class="btn btn--primary" type="submit" id="profileSave">Speichern</button>
+        <button class="btn" type="button" id="logout">Abmelden</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="infoDlg" class="sheet">

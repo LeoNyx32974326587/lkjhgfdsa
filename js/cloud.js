@@ -78,6 +78,27 @@
     },
     onAuth: function (fn) { if (sb) sb.auth.onAuthStateChange(fn); },
 
+    // ---------- profile: name and artist name in the account, picture in the bucket ----------
+    // -> { name, artist, avatar: version or 0 }, fresh from the server
+    getProfile: function () {
+      return sb.auth.getUser().then(ok).then(function (data) {
+        var m = (data.user && data.user.user_metadata) || {};
+        return { name: m.name || '', artist: m.artist || '', avatar: m.avatar || 0 };
+      });
+    },
+    saveProfile: function (fields) {
+      return sb.auth.updateUser({ data: fields }).then(ok);
+    },
+    uploadAvatar: function (blob) {
+      return sb.storage.from('files').upload(uid + '/avatar.jpg', blob, { upsert: true, contentType: 'image/jpeg' }).then(ok);
+    },
+    downloadAvatar: function () {
+      return sb.storage.from('files').download(uid + '/avatar.jpg').then(ok);
+    },
+    removeAvatar: function () {
+      return sb.storage.from('files').remove([uid + '/avatar.jpg']).then(ok);
+    },
+
     // ---------- data ----------
     listProjects: function () {
       return sb.from('projects').select('id,data,updated').then(ok);
