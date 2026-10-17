@@ -374,21 +374,17 @@
         head.append(toggle, tools);
         card.append(head);
       }
-      var src = RaimSong.repeatSource(sections, i);
-      if (src && !collapsed.has(i)) card.append(el('div', 'sec-repeat', src.body));
+      // repeated text shows only while this section is empty; typing replaces it
+      card.append(el('div', 'sec-repeat'));
       var ta = el('textarea', 'sec-text');
       ta.value = s.body;
       ta.spellcheck = false;
-      ta.placeholder = s.name === null ? 'Schreib deine erste Zeile …'
-        : src || (s.name.toLowerCase() === 'hook' && i > 0 && !s.body) ? 'Leer lassen, um den ' + s.name + ' von oben zu wiederholen'
-        : 'Text für ' + s.name + ' …';
       ta.addEventListener('input', function () {
         s.body = ta.value;
         autosize(ta);
         syncText();
         updateChips();
-        var meta = card.querySelector('.sec-meta');
-        if (meta) meta.textContent = sectionMeta(i);
+        refreshRepeats();
       });
       // typing a "[Name]" line splits the section into cards
       ta.addEventListener('blur', function () {
@@ -400,16 +396,35 @@
       box.append(card);
       if (!collapsed.has(i)) autosize(ta);
     });
+    refreshRepeats();
     if (activeIdx >= sections.length) activeIdx = sections.length - 1;
     activeTA = box.querySelectorAll('.sec-text')[activeIdx] || null;
     if (focusIndex !== undefined && focusIndex >= 0) {
       var f = box.querySelectorAll('.sec-text')[focusIndex];
       if (f) f.focus();
     }
-    var hasHook = sections.some(function (s) { return (s.name || '').toLowerCase() === 'hook' && s.body.trim(); });
-    $('addRepeat').hidden = !hasHook;
     $('collapseAll').hidden = !sections.some(function (s) { return s.name !== null; });
     $('collapseAll').textContent = collapsed.size ? 'Alle ausklappen' : 'Alle einklappen';
+  }
+
+  // repeat previews, placeholders, line counts and "wiederholen" buttons follow every edit
+  function refreshRepeats() {
+    $('sections').querySelectorAll('.sec').forEach(function (card, i) {
+      var s = sections[i], cand = RaimSong.repeatCandidate(sections, i);
+      var preview = card.querySelector('.sec-repeat'), ta = card.querySelector('.sec-text');
+      var repeating = !!cand && !s.body.trim();
+      preview.textContent = repeating ? cand.body : '';
+      preview.hidden = !repeating || collapsed.has(i);
+      ta.placeholder = s.name === null ? 'Schreib deine erste Zeile …'
+        : cand ? 'Leer lassen = ' + s.name + ' von oben wiederholen. Oder eigenen Text schreiben.'
+        : 'Text für ' + s.name + ' …';
+      var meta = card.querySelector('.sec-meta');
+      if (meta) meta.textContent = sectionMeta(i);
+    });
+    document.querySelectorAll('[data-add^="repeat:"]').forEach(function (b) {
+      var name = b.dataset.add.slice(7).toLowerCase();
+      b.hidden = !sections.some(function (s) { return (s.name || '').toLowerCase() === name && s.body.trim(); });
+    });
   }
 
   function loadSectionsFromText() {
@@ -424,8 +439,7 @@
   function activeIndex() { return Math.min(activeIdx, sections.length - 1); }
 
   function addSection(kind) {
-    var name = kind;
-    if (kind === 'repeat') name = 'Hook';
+    var repeat = kind.indexOf('repeat:') === 0, name = repeat ? kind.slice(7) : kind;
     if (kind === 'Part') {
       var parts = sections.filter(function (s) { return /^part\b/i.test(s.name || ''); }).length;
       name = 'Part ' + (parts + 1);
@@ -442,7 +456,7 @@
     activeIdx = at;
     collapsed = new Set();
     syncText();
-    renderSections(kind === 'repeat' ? -1 : at);
+    renderSections(repeat ? -1 : at);
   }
   document.querySelectorAll('[data-add]').forEach(function (b) {
     b.addEventListener('click', function () { addSection(b.dataset.add); });

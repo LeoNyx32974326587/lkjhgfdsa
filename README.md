@@ -18,7 +18,7 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat d
 
 - **Text**
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
-  - **Hook wiederholen**: ein leerer Abschnitt mit gleichem Namen wiederholt den Hook von oben (im Teleprompter und PDF ausgeschrieben).
+  - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
   - Sprache des Songs: **Deutsch** oder **English**.
   - Unten Reime auf dein letztes Wort (rosa = andere Sprache) und deine gemerkten Wörter.
   - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).

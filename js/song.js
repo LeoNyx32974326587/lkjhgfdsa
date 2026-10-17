@@ -34,14 +34,19 @@
 
   function key(name) { return (name || '').toLowerCase().trim(); }
 
-  // section whose text an empty section repeats, or null
-  function repeatSource(sections, i) {
+  // earlier section with the same name and its own text, or null
+  function repeatCandidate(sections, i) {
     var s = sections[i];
-    if (s.name === null || s.body.trim()) return null;
+    if (s.name === null) return null;
     for (var j = i - 1; j >= 0; j--) {
       if (key(sections[j].name) === key(s.name) && sections[j].body.trim()) return sections[j];
     }
     return null;
+  }
+
+  // section whose text an empty section repeats, or null; own text always wins
+  function repeatSource(sections, i) {
+    return sections[i].body.trim() ? null : repeatCandidate(sections, i);
   }
 
   // sections with repeats filled in, for reading, recording and export
@@ -57,5 +62,5 @@
     return (text || '').split('\n').filter(function (l) { return l.trim() && !isHeader(l); });
   }
 
-  root.RaimSong = { parse: parse, serialize: serialize, expand: expand, repeatSource: repeatSource, lines: lines, isHeader: isHeader };
+  root.RaimSong = { parse: parse, serialize: serialize, expand: expand, repeatSource: repeatSource, repeatCandidate: repeatCandidate, lines: lines, isHeader: isHeader };
 })(this);
