@@ -117,7 +117,7 @@
       b.append(top);
       var first = RaimSong.lines(p.text)[0];
       b.append(el('p', 'project-line', first || 'Noch kein Text'));
-      var meta = [];
+      var meta = songFacts(p);
       if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
       else if (p.youtube) meta.push('♪ YouTube-Beat');
       if (p.license.producer) meta.push(p.license.producer);
@@ -136,14 +136,7 @@
     $('trashCount').textContent = '(' + trashed + ')';
   }
 
-  function createProject() {
-    var p = RaimDB.newProject('');
-    projects.push(p);
-    saveNow(p).then(function () {
-      openProject(p);
-      $('projectTitle').focus();
-    });
-  }
+  function createProject() { openInfo(null); }
   $('newProject').addEventListener('click', createProject);
   document.querySelector('[data-new-project]').addEventListener('click', createProject);
 
@@ -154,7 +147,7 @@
     $('projectTitle').value = p.title;
     loadSections();
     promptPick = null;
-    renderLang();
+    renderSongInfo();
     hideAi();
     updateStats();
     fillLicense();
@@ -290,6 +283,7 @@
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
     if (name === 'beat') RaimBeats.redraw();
+    if (name === 'text') renderSongInfo();
     if (name === 'prompter') { renderPromptPick(); RaimBeats.refreshPrompter(); }
     if (name === 'rhymes') renderRhymeBlocks();
   }
@@ -562,10 +556,12 @@
       doc.text(pdfSafe('Songtext · ' + (p.lang === 'en' ? 'Englisch' : 'Deutsch') + ' · Stand ' + new Date().toLocaleDateString('de-DE')), M, 26);
       y = 46;
 
-      // only tempo and key: no beat, producer or license in the PDF
-      var l = p.license, info = [];
-      if (p.bpm || l.bpm) info.push(['BPM', p.bpm || l.bpm]);
-      if (l.key) info.push(['Tonart', l.key]);
+      // song facts only: no beat, producer or license in the PDF
+      var info = [];
+      if (p.genre) info.push(['Genre', p.genre]);
+      if (songBpm(p)) info.push(['BPM', songBpm(p)]);
+      if (songKey(p)) info.push(['Tonart', songKey(p)]);
+      if (p.topic) info.push(['Thema', p.topic]);
       if (info.length) {
         doc.setFontSize(10);
         info.forEach(function (row) {
@@ -627,16 +623,174 @@
   }
   $('exportPdf').addEventListener('click', exportPdf);
 
-  // ---------- song language ----------
-  function renderLang() {
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.lang === current.lang); });
+  // ---------- song infos (asked when a project is created, editable from the text tab) ----------
+  function songBpm(p) { return p.bpm || p.license.bpm || ''; }
+  function songKey(p) { return p.key && p.key !== 'unbekannt' ? p.key : p.license.key || ''; }
+  // ["Trap", "140 BPM", "A-Moll"]
+  function songFacts(p) {
+    var out = [];
+    if (p.genre) out.push(p.genre);
+    if (songBpm(p)) out.push(songBpm(p) + ' BPM');
+    if (songKey(p)) out.push(songKey(p));
+    return out;
   }
-  document.querySelectorAll('[data-lang]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      current.lang = b.dataset.lang;
-      scheduleSave();
-      renderLang();
+  // one line for the AI prompt
+  function songInfoForAi(p) {
+    var parts = songFacts(p).slice();
+    if (p.topic) parts.push('Thema: ' + p.topic);
+    return parts.join(', ');
+  }
+
+  function renderSongInfo() {
+    var facts = songFacts(current);
+    facts.push(current.lang === 'en' ? 'English' : 'Deutsch');
+    $('songInfoText').textContent = facts.join(' · ');
+  }
+  $('songInfo').addEventListener('click', function () { openInfo(current); });
+
+  // key options: all 24 keys plus "unknown"
+  (function () {
+    var sel = $('infoForm').elements.key;
+    sel.append(new Option('– wählen –', ''));
+    RaimAnalyze.KEYS.forEach(function (k) { sel.append(new Option(k, k)); });
+    sel.append(new Option('Weiß ich nicht', 'unbekannt'));
+  })();
+
+  var infoProject = null, infoBeat = null, infoAuto = {}, infoSeq = 0;
+
+  // p = null: new project; otherwise edit that project's infos
+  function openInfo(p) {
+    infoProject = p;
+    infoBeat = null;
+    infoAuto = {};
+    var f = $('infoForm');
+    f.reset();
+    $('infoTitle').textContent = p ? 'Song-Infos' : 'Neues Projekt';
+    $('infoIntro').hidden = !!p;
+    $('infoBeatField').hidden = !!p;
+    $('infoSubmit').textContent = p ? 'Speichern' : 'Projekt anlegen';
+    $('infoBeatName').textContent = 'Beat hochladen (MP3, WAV, M4A …)';
+    $('infoAnalyze').hidden = true;
+    $('infoError').hidden = true;
+    if (p) {
+      f.elements.title.value = p.title;
+      f.elements.bpm.value = songBpm(p);
+      setKeyValue(p.key || p.license.key || '');
+      f.elements.genre.value = p.genre;
+      f.elements.lang.value = p.lang;
+      f.elements.topic.value = p.topic || '';
+    }
+    $('infoDlg').showModal();
+    if (!p) f.elements.title.focus();
+  }
+
+  function setKeyValue(k) {
+    var sel = $('infoForm').elements.key;
+    if (k && ![].some.call(sel.options, function (o) { return o.value === k; })) sel.append(new Option(k, k));
+    sel.value = k;
+  }
+
+  function closeInfo() { infoSeq++; $('infoDlg').close(); }
+  $('infoClose').addEventListener('click', closeInfo);
+  $('infoCancel').addEventListener('click', closeInfo);
+  $('infoNoBeat').addEventListener('change', function (e) {
+    $('infoDrop').classList.toggle('is-off', e.target.checked);
+  });
+
+  // beat chosen: read BPM and key from the file name, otherwise from the audio
+  function takeInfoBeat(file) {
+    if (!file) return;
+    if (!/^audio\//.test(file.type) && !/\.(mp3|wav|m4a|aac|ogg|flac|aiff?)$/i.test(file.name)) { toast('Bitte eine Audiodatei wählen.'); return; }
+    infoBeat = file;
+    $('infoNoBeat').checked = false;
+    $('infoDrop').classList.remove('is-off');
+    $('infoBeatName').textContent = file.name;
+    var f = $('infoForm'), seq = ++infoSeq;
+    if (!f.elements.title.value.trim() || infoAuto.title) {
+      f.elements.title.value = file.name.replace(/\.\w+$/, '').replace(/[_]+/g, ' ')
+        .replace(/\s*[-–(\[]?\s*\d{2,3}\s*bpm.*$/i, '').replace(/\s*[-–]\s*$/, '').trim();
+      infoAuto.title = true;
+    }
+    var fromName = RaimLicenseReader.fromText('', file.name);
+    var setBpm = function (v) { if (v && (!f.elements.bpm.value || infoAuto.bpm)) { f.elements.bpm.value = v; infoAuto.bpm = true; } };
+    var setKey = function (v) { if (v && (!f.elements.key.value || infoAuto.key)) { setKeyValue(v); infoAuto.key = true; } };
+    setBpm(fromName.bpm);
+    setKey(fromName.key);
+    if (fromName.bpm && fromName.key) { $('infoAnalyze').textContent = 'BPM und Tonart aus dem Dateinamen übernommen.'; $('infoAnalyze').hidden = false; return; }
+    $('infoAnalyze').textContent = 'Analysiere Beat (BPM und Tonart) …';
+    $('infoAnalyze').hidden = false;
+    var AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    file.arrayBuffer().then(function (buf) {
+      return new AC(1, 44100, 44100).decodeAudioData(buf);
+    }).then(function (audio) {
+      // let the message paint before the heavy analysis
+      return new Promise(function (r) { setTimeout(function () { r(audio); }, 30); });
+    }).then(function (audio) {
+      if (seq !== infoSeq) return;
+      if (!fromName.bpm) setBpm(String(RaimAnalyze.bpm(audio)));
+      if (!fromName.key) setKey(RaimAnalyze.key(audio));
+      $('infoAnalyze').textContent = 'BPM und Tonart aus dem Beat erkannt – bitte kurz prüfen.';
+    }).catch(function () {
+      if (seq !== infoSeq) return;
+      $('infoAnalyze').textContent = 'Der Beat konnte nicht analysiert werden. Trag BPM und Tonart bitte selbst ein.';
     });
+  }
+  $('infoBeat').addEventListener('change', function (e) { takeInfoBeat(e.target.files[0]); e.target.value = ''; });
+  var infoDrop = $('infoDrop');
+  infoDrop.addEventListener('dragover', function (e) { e.preventDefault(); infoDrop.classList.add('is-over'); });
+  infoDrop.addEventListener('dragleave', function () { infoDrop.classList.remove('is-over'); });
+  infoDrop.addEventListener('drop', function (e) { e.preventDefault(); infoDrop.classList.remove('is-over'); takeInfoBeat(e.dataTransfer.files[0]); });
+  ['bpm', 'key', 'title'].forEach(function (n) {
+    $('infoForm').elements[n].addEventListener('input', function () { infoAuto[n] = false; });
+  });
+  // the "please fill in" note goes away as soon as something changes
+  $('infoForm').addEventListener('input', function () { $('infoError').hidden = true; });
+  $('infoForm').addEventListener('change', function () { $('infoError').hidden = true; });
+
+  $('infoForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = $('infoForm'), v = {};
+    ['title', 'bpm', 'key', 'genre', 'lang', 'topic'].forEach(function (n) { v[n] = f.elements[n].value.trim(); });
+    var bpm = parseFloat(v.bpm.replace(',', '.')), missing = [];
+    if (!infoProject && !infoBeat && !$('infoNoBeat').checked) missing.push('Beat hochladen (oder „Ohne Beat-Datei“ ankreuzen)');
+    if (!(bpm >= 40 && bpm <= 250)) missing.push('BPM (40–250)');
+    if (!v.key) missing.push('Tonart');
+    if (!v.genre) missing.push('Genre');
+    if (missing.length) {
+      $('infoError').textContent = 'Bitte noch eintragen: ' + missing.join(', ') + '.';
+      $('infoError').hidden = false;
+      return;
+    }
+    v.bpm = String(Math.round(bpm * 100) / 100);
+    var p = infoProject || RaimDB.newProject('');
+    p.title = v.title;
+    p.bpm = v.bpm;
+    p.key = v.key;
+    p.genre = v.genre;
+    p.lang = v.lang;
+    p.topic = v.topic;
+    p.updated = Date.now();
+    var beat = infoBeat;
+    $('infoSubmit').disabled = true;
+    (beat ? RaimDB.putFile(p.id, beat) : Promise.resolve(null)).then(function (fileId) {
+      if (fileId) p.beat = { fileId: fileId, name: beat.name };
+      return saveNow(p);
+    }).then(function () {
+      $('infoDlg').close();
+      if (infoProject) {
+        if (current === p) {
+          $('projectTitle').value = p.title;
+          $('bpmInput').value = p.bpm;
+          $('bpmInput').dispatchEvent(new Event('input'));
+          renderSongInfo();
+        }
+        toast('Song-Infos gespeichert.');
+      } else {
+        projects.push(p);
+        openProject(p);
+      }
+    }).catch(function () { toast('Projekt konnte nicht gespeichert werden – Speicher voll?'); })
+      .then(function () { $('infoSubmit').disabled = false; });
   });
 
   // change the active card's text and keep everything in sync
@@ -745,7 +899,7 @@
       if (!ok) return;
       var p = current, req = again && aiReq ? aiReq : null;
       if (!req) {
-        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), lang: p.lang, apiKey: key };
+        req = { kind: aiKind, lineCount: parseInt($('aiLen').value, 10), lang: p.lang, info: songInfoForAi(p), apiKey: key };
         if (req.kind === 'continue') {
           var around = songAroundCaret(), lines = RaimSong.lines(around.before);
           var lastWords = lines.length ? lines[lines.length - 1].match(WORD_RE) : null;
@@ -1045,6 +1199,7 @@
     }
     step.then(function (file) {
       LICENSE_FIELDS.forEach(function (k) { l[k] = values[k]; });
+      if (values.key && !p.key) p.key = values.key;
       if (values.bpm && !p.bpm) {
         p.bpm = values.bpm;
         if (current === p) { $('bpmInput').value = values.bpm; $('bpmInput').dispatchEvent(new Event('input')); }

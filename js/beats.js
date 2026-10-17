@@ -88,8 +88,10 @@
     }).then(function (buf) {
       if (openId !== id) return;
       decoded = buf;
-      // no BPM yet: take it from the beat right away
-      if (!bpm()) setBpm(detectBpm(buf), 'auto');
+      // no BPM or key yet: take them from the beat right away
+      if (!bpm()) setBpm(RaimAnalyze.bpm(buf), 'auto');
+      var p = hooks.project();
+      if (p && !p.key) { p.key = RaimAnalyze.key(buf); hooks.save(); }
       peaks = computePeaks(buf, 160);
       draw();
     }).catch(function () {
@@ -280,44 +282,6 @@
     $('withBeatLabel').hidden = !audio.src;
     $('recStart').hidden = !withBeat();
     $('bpmDetect').hidden = !audio.src;
-  }
-
-  // ---------- BPM detection: autocorrelation of the onset envelope ----------
-  function detectBpm(buf) {
-    var sr = buf.sampleRate, hop = 512, data = buf.getChannelData(0);
-    var n = Math.min(data.length, sr * 60), frames = Math.floor(n / hop), env = new Float32Array(frames), prev = 0;
-    for (var f = 0; f < frames; f++) {
-      var e = 0;
-      for (var i = f * hop, end = i + hop; i < end; i++) e += data[i] * data[i];
-      e = Math.log(1e-9 + e);
-      env[f] = Math.max(0, e - prev);
-      prev = e;
-    }
-    var fps = sr / hop;
-    function strength(b) {
-      var lag = fps * 60 / b, l0 = Math.floor(lag), frac = lag - l0, sum = 0;
-      // compare with one, two and four beats later so small tempo errors add up and show
-      [1, 2, 4].forEach(function (m) {
-        var L = lag * m, i0 = Math.floor(L), fr = L - i0;
-        for (var k = 0; k + i0 + 1 < frames; k++) sum += env[k] * (env[k + i0] * (1 - fr) + env[k + i0 + 1] * fr);
-      });
-      return sum;
-    }
-    var best = 0, bestBpm = 0, b;
-    for (b = 60; b <= 180; b += 0.5) {
-      // slight preference for the usual rap range
-      var v = strength(b) * (b >= 75 && b <= 160 ? 1.05 : 1);
-      if (v > best) { best = v; bestBpm = b; }
-    }
-    var fine = bestBpm;
-    best = 0;
-    for (b = bestBpm - 1; b <= bestBpm + 1; b += 0.05) {
-      var w = strength(b);
-      if (w > best) { best = w; fine = b; }
-    }
-    // very slow results are almost always the half-time reading of a faster beat
-    if (fine < 70) fine *= 2;
-    return Math.round(fine);
   }
 
   // voice shifted earlier by offsetMs, laid over the beat recorded in the same pass
@@ -584,7 +548,7 @@
     });
     $('bpmDetect').addEventListener('click', function () {
       if (!decoded) { toast('Lade zuerst einen Beat hoch.'); return; }
-      setBpm(detectBpm(decoded), 'auto');
+      setBpm(RaimAnalyze.bpm(decoded), 'auto');
     });
     try {
       var savedCount = localStorage.getItem('raim.countIn');

@@ -45,6 +45,10 @@
       title: title || '',
       text: '',
       lang: 'de',          // song language: 'de' or 'en'
+      genre: '',
+      bpm: '',
+      key: '',             // e.g. "A-Moll"
+      topic: '',           // what the song is about, for the AI
       created: Date.now(),
       updated: Date.now(),
       beat: null,          // { fileId, name }

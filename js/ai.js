@@ -52,10 +52,12 @@
   }
 
   // opts: { apiKey, kind: 'continue'|'Intro'|'Hook'|'Part'|'Bridge'|'Outro', before, after, lineCount,
-  //         rhymeWord, rhymeHints: string[], lang: 'de'|'en' }
+  //         rhymeWord, rhymeHints: string[], lang: 'de'|'en', info: 'Trap, 140 BPM, A-Moll, Thema: …' }
   // continue: before/after are the song around the caret; otherwise before is the whole song
   function suggest(opts) {
     var lang = opts.lang === 'en' ? ' auf Englisch.' : ' auf Deutsch.', content, ask;
+    // genre, tempo, key and topic shape style, flow and syllables per line
+    var info = opts.info ? 'Song-Infos: ' + opts.info + '. Richte Stil, Wortwahl und Flow (Silben pro Takt) danach aus.\n\n' : '';
     if (opts.kind === 'continue') {
       var before = clip(opts.before), after = (opts.after || '').split('\n').filter(function (l) { return l.trim(); }).slice(0, 20).join('\n');
       ask = 'Schreib genau ' + opts.lineCount + ' neue Zeilen' + lang + ' Sie kommen an die Stelle ⟨HIER⟩ und schließen direkt an die Zeile davor an.';
@@ -65,14 +67,14 @@
       } else {
         ask += ' Reimschema frei, passend zum Song.';
       }
-      content = before || after
+      content = info + (before || after
         ? '<song>\n' + before + '\n⟨HIER⟩' + (after ? '\n' + after : '') + '\n</song>\n\n' + ask
-        : 'Der Song ist noch leer.\n\n' + ask;
+        : 'Der Song ist noch leer.\n\n' + ask);
     } else {
       ask = 'Schreib ' + KINDS[opts.kind] + '. Genau ' + opts.lineCount + ' Zeilen' + lang +
         ' Lies dafür den ganzen Song: Thema, Geschichte, Sprache, Slang und Flow sollen dazu passen.';
       var song = clip(opts.before);
-      content = (song ? '<song>\n' + song + '\n</song>\n\n' : 'Der Song ist noch leer – schreib zu einem freien Thema.\n\n') + ask;
+      content = info + (song ? '<song>\n' + song + '\n</song>\n\n' : (opts.info ? 'Der Song ist noch leer – schreib passend zu den Song-Infos.\n\n' : 'Der Song ist noch leer – schreib zu einem freien Thema.\n\n')) + ask;
     }
 
     return loadSdk().then(function (Anthropic) {

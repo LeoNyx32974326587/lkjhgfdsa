@@ -588,3 +588,23 @@ body.prompter-open { overflow: hidden; }
 .ai-setup-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: #e0d8ff; }
 .ai-setup .row { margin-top: 0; }
 .ai-lines .ai-kind { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--cyan); }
+
+/* song infos */
+.song-info {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 500;
+  border: 1px solid rgba(94, 231, 255, .35); background: rgba(94, 231, 255, .08); color: #dff8ff;
+}
+.song-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-info svg { width: 15px; height: 15px; flex: none; color: var(--cyan); }
+.song-info:hover { background: rgba(94, 231, 255, .16); }
+#infoDlg form { display: grid; gap: 14px; }
+#infoDlg .hint { margin: -6px 0 0; }
+.drop--sm { padding: 14px; font-size: 15px; }
+.drop.is-off { opacity: .4; }
+#infoBeatField { gap: 8px; }
+#infoBeatField .check { margin-top: 2px; }
+#infoAnalyze { margin: 0; color: #c9bdff; }
+.form-error { margin: 0; font-size: 14px; color: #ffb4c0; }
+#infoBeatField .check { display: flex; justify-self: start; align-items: center; gap: 8px; width: auto; }
+#infoBeatField .check input { width: 18px; height: 18px; flex: none; }

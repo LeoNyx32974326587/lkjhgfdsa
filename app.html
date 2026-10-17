@@ -71,10 +71,10 @@
       <!-- ---------- Text ---------- -->
       <section class="view" data-view="text">
         <div class="text-tools">
-          <div class="seg" role="group" aria-label="Sprache des Songs">
-            <button type="button" class="seg-btn" data-lang="de">Deutsch</button>
-            <button type="button" class="seg-btn" data-lang="en">English</button>
-          </div>
+          <button type="button" class="song-info" id="songInfo" aria-label="Song-Infos bearbeiten">
+            <span id="songInfoText"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
+          </button>
           <span class="text-tools-right">
             <button type="button" class="tool-btn" id="collapseAll">Alle einklappen</button>
             <button type="button" class="tool-btn" id="exportPdf">
@@ -407,6 +407,57 @@
     </div>
   </dialog>
 
+  <dialog id="infoDlg" class="sheet">
+    <form id="infoForm" novalidate autocomplete="off">
+      <div class="sheet-head">
+        <h2 id="infoTitle">Neues Projekt</h2>
+        <button class="icon-btn" type="button" id="infoClose" aria-label="Schließen">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="infoIntro">Ein paar Grundinfos zum Song. Sie stehen später im PDF, steuern den Teleprompter und helfen der KI.</p>
+      <label class="field">Projektname
+        <input name="title" placeholder="z. B. Festivalgagen">
+      </label>
+      <div class="field" id="infoBeatField">Beat *
+        <label class="drop drop--sm" id="infoDrop">
+          <input type="file" id="infoBeat" accept="audio/*" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>
+          <span id="infoBeatName">Beat hochladen (MP3, WAV, M4A …)</span>
+        </label>
+        <label class="check"><input type="checkbox" id="infoNoBeat"> Ohne Beat-Datei (z. B. Beat nur in FL Studio)</label>
+        <p class="hint" id="infoAnalyze" hidden></p>
+      </div>
+      <div class="grid2">
+        <label class="field">BPM *
+          <input name="bpm" inputmode="decimal" placeholder="z. B. 140">
+        </label>
+        <label class="field">Tonart *
+          <select name="key"></select>
+        </label>
+        <label class="field">Genre *
+          <select name="genre">
+            <option value="">– wählen –</option>
+            <option>Deutschrap / Hip-Hop</option><option>Trap</option><option>Drill</option><option>Boom Bap</option>
+            <option>Cloud Rap</option><option>Emo Rap</option><option>R&amp;B</option><option>Pop</option>
+            <option>Afro / Dancehall</option><option>Latin / Reggaeton</option><option>Rock / Punk</option><option>Andere</option>
+          </select>
+        </label>
+        <label class="field">Sprache
+          <select name="lang"><option value="de">Deutsch</option><option value="en">English</option></select>
+        </label>
+      </div>
+      <label class="field">Worum geht's? (optional, hilft der KI)
+        <input name="topic" placeholder="z. B. Aufstieg aus dem Nichts, Herzschmerz, Party">
+      </label>
+      <p class="form-error" id="infoError" role="alert" hidden></p>
+      <div class="row">
+        <button class="btn btn--primary" type="submit" id="infoSubmit">Projekt anlegen</button>
+        <button class="btn" type="button" id="infoCancel">Abbrechen</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="confirmDlg">
     <form method="dialog">
       <h2 id="confirmTitle"></h2>
@@ -464,6 +515,7 @@
   <script src="js/license-reader.js"></script>
   <script src="js/wav.js"></script>
   <script src="js/prompter.js"></script>
+  <script src="js/analyze.js"></script>
   <script src="js/beats.js"></script>
   <script src="js/app.js"></script>
 </body>

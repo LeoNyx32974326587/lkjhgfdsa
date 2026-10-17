@@ -16,10 +16,11 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat vier Bereiche: Text, Beat, Prompter und Reime.
 
+**Neues Projekt:** Vor dem Öffnen fragt RAIM die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genre** (Pflicht), Sprache und optional das Thema. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos stehen im Text-Bereich oben (antippen zum Ändern), auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
+
 - **Text**
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
   - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
-  - Sprache des Songs: **Deutsch** oder **English**.
   - **KI-Ideen** (Claude von Anthropic, eigener API-Schlüssel): erst „Wofür?“ wählen – **Weiterschreiben** (Claude liest den ganzen Song und schreibt an der Cursorstelle weiter, auf Wunsch auf dein Reimende) oder ein neues **Intro, Hook, Part, Bridge oder Outro**, das zum ganzen Song passt und als eigener Abschnitt eingefügt wird. Länge 2–16 Zeilen; es werden bis zu 80 Zeilen des Songs gesendet.
   - **PDF**: Songtext mit BPM und Tonart als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
@@ -51,6 +52,7 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kanns
 - `js/prompter.js`: Teleprompter
 - `js/ai.js`: KI-Ideen und Lizenz-Auslesen über die Claude API
 - `js/license-reader.js`: Lizenz-PDFs ohne KI auslesen
+- `js/analyze.js`: BPM- und Tonart-Erkennung
 - `js/beats.js`: Beat-Player, Loop, Tempo, Teleprompter-Steuerung, YouTube, frühere Aufnahmen
 - `js/wav.js`: WAV-Lesen und -Schreiben für frühere Aufnahmen
 - `js/db.js`: Projekte und Dateien (IndexedDB)
