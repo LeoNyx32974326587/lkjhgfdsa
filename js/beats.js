@@ -41,7 +41,7 @@
     $('loopBtn').setAttribute('aria-pressed', 'false');
     $('tempo').value = 1; audio.playbackRate = 1; $('tempoOut').textContent = '100 %';
     $('deck').hidden = true;
-    $('beatName').textContent = 'Beat hochladen (MP3, WAV, M4A …)';
+    $('beatName').textContent = canChange() ? 'Beat hochladen (MP3, WAV, M4A …)' : 'Noch kein Beat';
     setSource(project.youtube && !project.beat ? 'yt' : 'file');
     $('ytUrl').value = project.youtube || '';
     $('ytFrame').hidden = $('ytControls').hidden = true;
@@ -80,7 +80,7 @@
     beatUrl = URL.createObjectURL(blob);
     audio.src = beatUrl;
     updatePrompterCard();
-    $('beatName').textContent = name + ' – ersetzen';
+    $('beatName').textContent = name + (canChange() ? ' – ersetzen' : '');
     $('deck').hidden = false;
     var id = openId;
     blob.arrayBuffer().then(function (buf) {
@@ -434,6 +434,9 @@
     }, function () { toast('YouTube konnte nicht geladen werden.'); });
     return true;
   }
+
+  // a featured friend may not be allowed to change the beat
+  function canChange() { return !hooks.may || hooks.may('beat'); }
 
   function setSource(src) {
     document.querySelectorAll('[data-source]').forEach(function (x) { x.classList.toggle('is-on', x.dataset.source === src); });

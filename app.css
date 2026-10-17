@@ -696,3 +696,23 @@ body.prompter-open { overflow: hidden; }
 @media (max-width: 440px) {
   .topbar-right .dict-status { display: none; }
 }
+
+/* ---------- feature rights ---------- */
+.rights { display: grid; gap: 10px; }
+.rights:empty { display: none; }
+.rights-row { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--border); background: rgba(10, 8, 30, .45); }
+.rights-row strong { display: block; font-size: 14px; color: var(--text); margin-bottom: 8px; font-weight: 500; }
+.rights-checks { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.rights-note {
+  margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; font-size: 14px;
+  color: #ffc9ef; background: rgba(255, 122, 217, .1); border: 1px solid rgba(255, 122, 217, .3);
+}
+/* what a featured friend may not change */
+.lock-text #addSection, .lock-text .sec-tools, .lock-text .ai-bar, .lock-text #aiSetup { display: none !important; }
+.lock-beat #drop { pointer-events: none; }
+.lock-beat #drop input, .lock-beat #ytForm { display: none !important; }
+.lock-license #licenseAdd, .lock-license #licenseEdit, .lock-license #licenseForm { display: none !important; }
+.lock-status #projectStatus .seg-btn:not(.is-on) { opacity: .45; }
+.lock-status #projectStatus .seg-btn { cursor: default; }
+.rights-checks .check { white-space: nowrap; flex: none; font-size: 14px; color: var(--text); gap: 6px; }
+.rights-checks .check input { width: 18px; height: 18px; flex: none; margin: 0; }

@@ -154,6 +154,7 @@
   }
   document.querySelectorAll('[data-status]').forEach(function (b) {
     b.addEventListener('click', function () {
+      if (!may('status')) return;
       current.status = b.dataset.status;
       renderStatus();
       scheduleSave();
@@ -210,8 +211,27 @@
   $('newProject').addEventListener('click', createProject);
   document.querySelector('[data-new-project]').addEventListener('click', createProject);
 
+  // ---------- what a featured friend may change ----------
+  // Own projects: everything. A friend's: only what the owner ticked (the database enforces it too).
+  function may(what) { return !current || !current._owner || !!(current._rights && current._rights[what]); }
+  function applyRights() {
+    var root = $('project');
+    ['text', 'beat', 'license', 'info', 'status'].forEach(function (k) { root.classList.toggle('lock-' + k, !may(k)); });
+    $('projectTitle').readOnly = !may('info');
+    $('bpmInput').readOnly = !may('info');
+    document.querySelectorAll('#projectStatus .seg-btn').forEach(function (b) { b.disabled = !may('status'); });
+    var note = $('rightsNote');
+    note.hidden = !current._owner;
+    if (current._owner) {
+      var allowed = rightsText(current._rights);
+      note.textContent = 'Feature bei ' + ownerName(current) + ': ' +
+        (allowed ? 'Du darfst ' + allowed + ' ändern, alles andere nur ansehen.' : 'Du darfst den Song ansehen, aber nichts ändern.');
+    }
+  }
+
   function openProject(p) {
     current = p;
+    applyRights();
     $('home').hidden = true;
     $('project').hidden = false;
     $('projectTitle').value = p.title;
@@ -451,6 +471,7 @@
       card.append(el('div', 'sec-repeat'));
       var ta = el('textarea', 'sec-text');
       ta.value = s.body;
+      ta.readOnly = !may('text');
       ta.spellcheck = false;
       ta.addEventListener('input', function () {
         s.body = ta.value;
@@ -777,7 +798,7 @@
   var infoProject = null, infoBeat = null, infoAuto = {}, infoSeq = 0, infoGenres = [], infoLangs = [];
 
   // multi-select chips for genres and languages
-  function renderPicks(boxId, options, picked) {
+  function renderPicks(boxId, options, picked, onChange) {
     var box = $(boxId);
     box.textContent = '';
     options.forEach(function (o) {
@@ -789,7 +810,8 @@
         var i = picked.indexOf(value);
         if (i >= 0) picked.splice(i, 1); else picked.push(value);
         $('infoError').hidden = true;
-        renderPicks(boxId, options, picked);
+        renderPicks(boxId, options, picked, onChange);
+        if (onChange) onChange();
       });
       box.append(c);
     });
@@ -820,6 +842,11 @@
     renderPicks('infoGenres', GENRES, infoGenres);
     renderPicks('infoLangs', LANGS, infoLangs);
     renderInfoFeatures(p);
+    var locked = !!(p && p._owner && !(p._rights && p._rights.info));
+    [].forEach.call(f.elements, function (x) { if (x.id !== 'infoCancel' && x.id !== 'infoClose') x.disabled = locked; });
+    $('infoSubmit').hidden = locked;
+    $('infoCancel').textContent = locked ? 'Schließen' : 'Abbrechen';
+    $('infoTitle').textContent = locked ? 'Song-Infos (nur ansehen)' : $('infoTitle').textContent;
     $('infoDlg').showModal();
     if (!p) f.elements.title.focus();
   }
@@ -1228,6 +1255,7 @@
   $('licenseBar').addEventListener('click', function () { setLicenseOpen($('licenseDetails').hidden); });
 
   function editLicense() {
+    if (!may('license')) return;
     var f = $('licenseForm'), l = current.license;
     readSeq++;
     licenseStatus('');
@@ -1877,6 +1905,7 @@
     project: function () { return current; },
     save: function () { scheduleSave(); },
     changed: function () { if (current) renderLicenseWarnings(); },
+    may: function (what) { return may(what); },
     // lyrics for the teleprompter: section names and lines, repeats filled in
     lyrics: function () {
       var out = [];
@@ -2239,29 +2268,73 @@
     (p ? p.features : []).forEach(function (f) {
       if (!options.some(function (o) { return o[0] === f.id; })) options.push([f.id, f.name]);
     });
-    renderPicks('infoFeatures', options, infoFeatures);
-    note.textContent = options.length ? 'Ausgewählte Freunde haben den Song in ihrer Projektliste und können Text, Beat und Lizenz bearbeiten.'
+    infoRights = {};
+    (p ? p.features : []).forEach(function (f) { infoRights[f.id] = Object.assign({}, f.rights || {}); });
+    renderPicks('infoFeatures', options, infoFeatures, renderInfoRights);
+    renderInfoRights();
+    note.textContent = options.length ? 'Ausgewählte Freunde haben den Song in ihrer Projektliste. Ansehen dürfen sie alles – ändern nur, wo du einen Haken setzt.'
       : 'Noch keine Freunde – über den Freunde-Knopf oben rechts kannst du welche hinzufügen.';
   }
-  // -> { add: [ids], remove: [ids] } or null when nothing changed
+  // one row of checkboxes per featured friend: what they may change
+  var RIGHTS = [['text', 'Text'], ['beat', 'Beat'], ['license', 'Lizenz'], ['info', 'Song-Infos'], ['status', 'Status']];
+  var infoRights = {};
+  function rightsOf(id) { return infoRights[id] || (infoRights[id] = {}); }
+  function renderInfoRights() {
+    var box = $('infoRights');
+    box.textContent = '';
+    infoFeatures.forEach(function (id) {
+      var x = personById(id), old = infoProject && infoProject.features.find(function (f) { return f.id === id; });
+      var row = el('div', 'rights-row'), r = rightsOf(id);
+      row.append(el('strong', '', (personName(x) || (old && old.name) || 'Freund') + ' darf ändern:'));
+      var checks = el('div', 'rights-checks');
+      RIGHTS.forEach(function (k) {
+        var label = el('label', 'check'), cb = el('input');
+        cb.type = 'checkbox';
+        cb.checked = !!r[k[0]];
+        cb.addEventListener('change', function () { r[k[0]] = cb.checked; });
+        label.append(cb, document.createTextNode(' ' + k[1]));
+        checks.append(label);
+      });
+      row.append(checks);
+      box.append(row);
+    });
+  }
+  function rightsText(r) {
+    var on = RIGHTS.filter(function (k) { return r && r[k[0]]; }).map(function (k) { return k[1]; });
+    return on.length > 1 ? on.slice(0, -1).join(', ') + ' und ' + on[on.length - 1] : on.join('');
+  }
+  function cleanRights(r) {
+    var out = {};
+    RIGHTS.forEach(function (k) { out[k[0]] = !!(r && r[k[0]]); });
+    return out;
+  }
+
+  // -> { add: [ids], remove: [ids], update: [ids] } or null when nothing changed
   function applyFeatures(p) {
     if (!account || p._owner) return null;
     var before = p.features.map(function (f) { return f.id; });
     var add = infoFeatures.filter(function (id) { return before.indexOf(id) < 0; });
     var remove = before.filter(function (id) { return infoFeatures.indexOf(id) < 0; });
-    if (!add.length && !remove.length) return null;
+    var update = infoFeatures.filter(function (id) {
+      var old = p.features.find(function (f) { return f.id === id; });
+      return old && JSON.stringify(cleanRights(old.rights)) !== JSON.stringify(cleanRights(rightsOf(id)));
+    });
+    if (!add.length && !remove.length && !update.length) return null;
     p.features = infoFeatures.map(function (id) {
       var x = personById(id), old = p.features.find(function (f) { return f.id === id; });
-      return { id: id, name: personName(x) || (old && old.name) || '' };
+      return { id: id, name: personName(x) || (old && old.name) || '', rights: cleanRights(rightsOf(id)) };
     });
     p.ownerName = profile.artist || profile.name || account.email;
-    return { add: add, remove: remove };
+    return { add: add, remove: remove, update: update };
   }
   // the project row has to exist in the cloud before friends can be added to it
   function syncFeatures(p, change) {
     if (!RaimCloud.online()) { toast('Offline – Features werden erst mit Internet übernommen.'); return; }
     RaimCloud.saveProject(p).then(function () {
-      return Promise.all(change.add.map(function (id) { return RaimCloud.addMember(p.id, id); })
+      var rights = {};
+      p.features.forEach(function (f) { rights[f.id] = f.rights; });
+      return Promise.all(change.add.map(function (id) { return RaimCloud.addMember(p.id, id, rights[id]); })
+        .concat(change.update.map(function (id) { return RaimCloud.setRights(p.id, id, rights[id]); }))
         .concat(change.remove.map(function (id) { return RaimCloud.removeMember(p.id, id); })));
     }).then(function () {
       if (change.add.length) toast('feat. ' + featureNames(p) + ' – der Song ist jetzt auch bei ' + (change.add.length > 1 ? 'deinen Freunden' : 'deinem Freund') + '.');

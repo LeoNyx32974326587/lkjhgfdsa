@@ -43,6 +43,7 @@
     if (/email not confirmed/i.test(m)) return 'Bitte bestätige zuerst deine E-Mail – der Link liegt in deinem Postfach.';
     if (/password.*(at least|characters|weak)/i.test(m)) return 'Das Passwort ist zu kurz oder zu einfach (mindestens 8 Zeichen).';
     if (/invalid.*email|email.*invalid|unable to validate email/i.test(m)) return 'Bitte gib eine gültige E-Mail-Adresse ein.';
+    if (/error sending .*email|smtp/i.test(m)) return 'Die E-Mail konnte nicht verschickt werden – der Mail-Versand in Supabase (SMTP Settings) ist nicht richtig eingerichtet. Der Account ist noch nicht angelegt.';
     if (/rate limit|too many|security purposes/i.test(m)) return 'Zu viele Versuche – warte kurz und probier es dann noch mal.';
     if (/failed to fetch|network|load failed/i.test(m)) return 'Keine Verbindung zum Server. Bist du online?';
     if (/schema cache|does not exist|could not find the (table|function)|column .* of relation/i.test(m)) {
@@ -142,12 +143,20 @@
     },
 
     // ---------- features: friends on a project ----------
-    members: function (projectId) {
-      return sb.from('project_members').select('member').eq('owner', uid).eq('project_id', projectId).then(ok)
-        .then(function (rows) { return rows.map(function (r) { return r.member; }); });
+    // rights: what the friend may change, e.g. { text: true, beat: false, license: false, info: false, status: false }
+    addMember: function (projectId, member, rights) {
+      return sb.from('project_members').insert({ owner: uid, project_id: projectId, member: member, rights: rights || {} }).then(ok);
     },
-    addMember: function (projectId, member) {
-      return sb.from('project_members').insert({ owner: uid, project_id: projectId, member: member }).then(ok);
+    setRights: function (projectId, member, rights) {
+      return sb.from('project_members').update({ rights: rights }).eq('owner', uid).eq('project_id', projectId).eq('member', member).then(ok);
+    },
+    // projects friends featured me on -> { 'owner/projectId': rights }
+    myRights: function () {
+      return sb.from('project_members').select('owner,project_id,rights').eq('member', uid).then(ok).then(function (rows) {
+        var out = {};
+        rows.forEach(function (r) { out[r.owner + '/' + r.project_id] = r.rights || {}; });
+        return out;
+      });
     },
     removeMember: function (projectId, member) {
       return sb.from('project_members').delete().eq('owner', uid).eq('project_id', projectId).eq('member', member).then(ok);

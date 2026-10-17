@@ -88,11 +88,17 @@
   function uploadFile(rec) {
     return localProject(rec.project).then(function (p) { return cloud.putFile(rec, p && p._owner); });
   }
-  // a project from the cloud: remember whose it is when it is a friend's (they featured us)
-  function fromRemote(r) {
+  // a project from the cloud: remember whose it is when it is a friend's (they featured us),
+  // and what we may change in it
+  function fromRemote(r, rights) {
     var p = r.data;
-    if (r.user_id && r.user_id !== user) p._owner = r.user_id;
-    else delete p._owner;
+    if (r.user_id && r.user_id !== user) {
+      p._owner = r.user_id;
+      p._rights = (rights && rights[r.user_id + '/' + r.id]) || {};
+    } else {
+      delete p._owner;
+      delete p._rights;
+    }
     p._cloud = true;
     return p;
   }
@@ -112,16 +118,21 @@
         return uploadFile(rec).then(function () { setPending(function (y) { drop(y.files, id); }); }, function () {});
       });
     }))).then(function () {
-      return Promise.all([cloud.listProjects(), run('projects', 'readonly', function (s) { return s.getAll(); })]);
+      return Promise.all([cloud.listProjects(), run('projects', 'readonly', function (s) { return s.getAll(); }),
+        cloud.myRights().catch(function () { return {}; })]);
     }).then(function (both) {
-      var remote = {}, local = {}, jobs = [], stats = { down: 0, up: 0, removed: 0 };
+      var remote = {}, local = {}, jobs = [], stats = { down: 0, up: 0, removed: 0 }, rights = both[2];
       both[0].forEach(function (r) { remote[r.id] = r; });
       both[1].forEach(function (p) { local[p.id] = p; });
       Object.keys(remote).forEach(function (id) {
         var r = remote[id], l = local[id];
         if (!l || r.updated > (l.updated || 0)) {
-          jobs.push(putLocal('projects', fromRemote(r)));
+          jobs.push(putLocal('projects', fromRemote(r, rights)));
           stats.down++;
+        } else if (l._owner) {
+          // the owner may have changed what we are allowed to do
+          var now = rights[l._owner + '/' + id] || {};
+          if (JSON.stringify(now) !== JSON.stringify(l._rights || {})) { l._rights = now; jobs.push(putLocal('projects', l)); }
         }
       });
       Object.keys(local).forEach(function (id) {
@@ -200,9 +211,15 @@
     // fetch one project fresh before opening it (a featured friend may have changed it); -> newest version
     refreshProject: function (p) {
       if (!cloud || !cloud.online() || !p._cloud) return Promise.resolve(p);
-      return cloud.getProject(p._owner, p.id).then(function (r) {
-        if (!r || r.updated <= (p.updated || 0)) return p;
-        var fresh = fromRemote(r);
+      return Promise.all([cloud.getProject(p._owner, p.id), p._owner ? cloud.myRights() : null]).then(function (res) {
+        var r = res[0], rights = res[1];
+        if (!r) return p;
+        if (r.updated <= (p.updated || 0)) {
+          if (!rights) return p;
+          p._rights = rights[p._owner + '/' + p.id] || {};
+          return putLocal('projects', p).then(function () { return p; });
+        }
+        var fresh = fromRemote(r, rights);
         return putLocal('projects', fresh).then(function () { return fresh; });
       }, function () { return p; });
     },
