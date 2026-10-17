@@ -372,11 +372,15 @@
 
   // ---------- project tabs ----------
   function showTab(name) {
+    var wasText = !document.querySelector('.view[data-view="text"]').hidden && document.querySelector('.tab.is-on[data-tab="text"]');
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
     if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
     if (name === 'beat') RaimBeats.redraw();
-    if (name === 'text') renderSongInfo();
+    if (name === 'text') {
+      renderSongInfo();
+      if (!wasText) { collapseAll(); renderSections(); }
+    }
     if (name === 'prompter') { renderPromptPick(); RaimBeats.refreshPrompter(); }
     if (name === 'rhymes') renderRhymeBlocks();
   }
@@ -390,10 +394,16 @@
   var WORD_RE = /[A-Za-zÄÖÜäöüß']+/g;
   var sections = [], collapsed = new Set(), activeTA = null, activeIdx = 0;
 
+  // the text tab opens with every section folded; a tap on one opens it
+  function collapseAll(except) {
+    collapsed = new Set();
+    sections.forEach(function (s, i) { if (s.name !== null && i !== except) collapsed.add(i); });
+  }
+
   function loadSections() {
     sections = parseSections(current.text);
-    collapsed = new Set();
-    activeIdx = 0;
+    collapseAll();
+    activeIdx = sections.length - 1;   // nothing tapped yet: new sections go to the end
     renderSections();
   }
 
@@ -540,7 +550,7 @@
     var at = activeIndex() + 1;
     sections.splice(at, 0, { name: name, body: '' });
     activeIdx = at;
-    collapsed = new Set();
+    collapseAll(at);
     syncText();
     renderSections(repeat ? -1 : at);
   }
@@ -552,7 +562,7 @@
     var s = sections.splice(i, 1)[0];
     sections.splice(i + d, 0, s);
     activeIdx = i + d;
-    collapsed = new Set();
+    collapseAll(i + d);
     syncText();
     renderSections();
   }
@@ -561,7 +571,7 @@
     var s = sections[i];
     var go = function () {
       sections.splice(i, 1);
-      collapsed = new Set();
+      collapseAll();
       activeIdx = Math.max(0, i - 1);
       syncText();
       renderSections();
@@ -1147,7 +1157,7 @@
       var at = Math.min(req.at + 1, sections.length);
       sections.splice(at, 0, { name: name, body: lines.join('\n') });
       activeIdx = at;
-      collapsed = new Set();
+      collapseAll(at);
       syncText();
       renderSections(at);
       return;
