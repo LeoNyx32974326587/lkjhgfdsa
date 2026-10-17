@@ -274,8 +274,6 @@
       if (current === p) renderRelease();
     });
   });
-  // the same export menu as in the text area: PDF, lyrics for the distributor, lyrics with sections
-  $('releaseExport').addEventListener('click', function () { $('exportBtn').click(); });
   $('releaseHead').addEventListener('click', function () { releaseOpen = !releaseOpen; renderRelease(); });
   $('releaseDate').addEventListener('change', function (e) {
     if (!current || !may('status')) return;

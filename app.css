@@ -924,9 +924,6 @@ body.prompter-open { overflow: hidden; }
 .share-updated { margin: 28px 0 0; color: var(--dim); font-size: 13px; }
 .share-foot { margin: 36px 0 0; padding-top: 16px; border-top: 1px solid var(--border); color: var(--dim); font-size: 14px; }
 .share-foot a { color: var(--muted); }
-.release-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.release-tools .hint { margin: 0; font-size: 13px; }
-.release-tools .btn svg { width: 16px; height: 16px; }
 .release-master { display: grid; gap: 8px; }
 .release-label { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: #7dffb4; }
 .release-master .license-add { margin: 0; }
