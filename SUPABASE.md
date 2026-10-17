@@ -41,6 +41,15 @@ Supabase schickt nach dem Registrieren eine Bestätigungs-Mail. Der Link darin f
 
 Tipp: Der eingebaute Mail-Versand von Supabase schafft nur wenige Mails pro Stunde. Für viele Nutzer unter **Authentication → Emails → SMTP Settings** einen eigenen Mail-Anbieter eintragen.
 
+## 5. E-Mails mit Barbook-Namen (optional)
+
+Ohne Anpassung schickt Supabase englische Standard-Mails ohne den Namen Barbook. Unter **Authentication → Emails → Templates**:
+
+- **Confirm signup**: Betreff `Bestätige deine E-Mail für Barbook`, Inhalt aus `supabase/email-templates/confirm-signup.html` (unter „Source“ einfügen)
+- **Reset Password**: Betreff `Neues Passwort für Barbook`, Inhalt aus `supabase/email-templates/reset-password.html`
+
+Jeweils **Save** drücken. Der Absender bleibt beim eingebauten Mail-Versand „Supabase Auth“; einen eigenen Absender (z. B. „Barbook“) gibt es nur mit eigenem Mail-Anbieter unter **SMTP Settings**.
+
 ## Wie die Daten laufen
 
 - Jede Änderung wird sofort auf dem Gerät gespeichert und im Hintergrund hochgeladen. Offline geht alles weiter; hochgeladen wird beim nächsten Öffnen mit Internet.
