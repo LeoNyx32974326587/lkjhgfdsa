@@ -2680,6 +2680,7 @@
     $('profileEmail').textContent = account ? 'Angemeldet als ' + account.email
       : 'Ohne Account – dein Profil bleibt in diesem Browser.';
     $('logout').hidden = !account;
+    $('deleteAccount').hidden = !account;
     profileMsg('');
     $('profileDlg').showModal();
   });
@@ -2736,6 +2737,40 @@
     }, function (err) {
       profileMsg(RaimCloud.message(err));
     }).then(function () { $('profileSave').disabled = false; });
+  });
+
+  // ---------- deleting the account ----------
+  $('deleteAccount').addEventListener('click', function () {
+    $('profileDlg').close();
+    $('deleteForm').reset();
+    $('deleteError').hidden = true;
+    $('deleteDlg').showModal();
+    $('deleteForm').elements.password.focus();
+  });
+  $('deleteCancel').addEventListener('click', function () { $('deleteDlg').close(); });
+  $('deleteForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pw = e.target.elements.password.value, err = $('deleteError'), btn = $('deleteGo');
+    var fail = function (text) { err.textContent = text; err.hidden = false; btn.disabled = false; btn.textContent = 'Endgültig löschen'; };
+    if (!pw) { fail('Bitte gib dein Passwort ein.'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Lösche …';
+    err.hidden = true;
+    RaimCloud.checkPassword(account.email, pw).then(function () {
+      return RaimCloud.deleteAccount().catch(function (e2) { throw { deleting: true, error: e2 }; });
+    }).then(function () {
+      if (current) { current = null; }
+      return RaimDB.forgetAccount();
+    }).then(function () {
+      return RaimCloud.signOut().catch(function () {
+        try { localStorage.removeItem('barbook-auth'); } catch (e3) { /* private mode */ }
+      });
+    }).then(function () {
+      location.replace('login.html?deleted=1');
+    }, function (x) {
+      if (x && x.deleting) fail('Löschen hat nicht geklappt: ' + RaimCloud.message(x.error));
+      else fail(/invalid login credentials/i.test((x && x.message) || '') ? 'Das Passwort stimmt nicht.' : RaimCloud.message(x));
+    });
   });
 
   $('logout').addEventListener('click', function () {

@@ -263,6 +263,21 @@
     },
     sync: sync,
     legacy: legacy,
+    // after deleting the account: this device's copy goes too
+    forgetAccount: function () {
+      var name = DB_NAME, who = user;
+      return (dbPromise || Promise.resolve(null)).then(function (db) { if (db) db.close(); }, function () {}).then(function () {
+        dbPromise = null;
+        try {
+          localStorage.removeItem('barbook.pending.' + who);
+          Object.keys(localStorage).forEach(function (k) { if (/^barbook\.version\./.test(k)) localStorage.removeItem(k); });
+        } catch (e) { /* private mode */ }
+        return new Promise(function (resolve) {
+          var req = indexedDB.deleteDatabase(name);
+          req.onsuccess = req.onerror = req.onblocked = function () { resolve(); };
+        });
+      });
+    },
     bars: function () { return run('bars', 'readonly', function (s) { return s.getAll(); }); },
     saveBar: function (b) { return putLocal('bars', b).then(function () { pushBar(b); }); },
     deleteBar: function (id) {

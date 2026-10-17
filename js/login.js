@@ -41,6 +41,11 @@
   function showReset() { form.hidden = true; $('resetForm').hidden = false; }
 
   RaimCloud.currentUser().then(function (u) {
+    if (/[?&]deleted=1/.test(location.search) && !u) {
+      form.hidden = false;
+      say($('authMsg'), 'Dein Account und alle Daten wurden gelöscht. Schade, dass du gehst!', 'ok');
+      return;
+    }
     if (recovering) showReset();
     else if (u) location.replace('app.html');
     else form.hidden = false;

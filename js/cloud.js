@@ -192,6 +192,34 @@
       return sb.from('bars').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // ---------- deleting the account ----------
+    // the password is asked again before anything goes
+    checkPassword: function (email, password) {
+      return sb.auth.signInWithPassword({ email: email, password: password }).then(ok);
+    },
+    // stored files first (own folder and what friends uploaded to own songs), then the user with all rows
+    deleteAccount: function () {
+      function listAll(offset, acc) {
+        return sb.storage.from('files').list(uid, { limit: 1000, offset: offset }).then(ok).then(function (items) {
+          acc = acc.concat(items.map(function (i) { return uid + '/' + i.name; }));
+          return items.length === 1000 ? listAll(offset + 1000, acc) : acc;
+        });
+      }
+      return Promise.all([
+        listAll(0, []),
+        sb.from('files').select('path').eq('project_owner', uid).then(ok)
+      ]).then(function (r) {
+        var paths = r[0].concat(r[1].map(function (x) { return x.path; })).filter(function (p, i, all) { return all.indexOf(p) === i; });
+        var chunks = [];
+        for (var i = 0; i < paths.length; i += 100) chunks.push(paths.slice(i, i + 100));
+        return chunks.reduce(function (done, c) {
+          return done.then(function () { return sb.storage.from('files').remove(c).then(ok); });
+        }, Promise.resolve());
+      }).then(function () {
+        return sb.rpc('delete_my_account').then(ok);
+      });
+    },
+
     // ---------- read links (anyone with the link reads the text, no account needed) ----------
     shareLink: function (projectId) {
       return sb.from('share_links').select('token').eq('owner', uid).eq('project_id', projectId).then(ok)

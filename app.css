@@ -1002,3 +1002,4 @@ body.prompter-open { overflow: hidden; }
 .app-legal a { color: var(--dim); text-decoration: none; }
 .app-legal a:hover { color: var(--muted); }
 .login-note a { color: var(--muted); }
+.profile-delete { justify-self: center; margin: 6px auto 0; display: block; }

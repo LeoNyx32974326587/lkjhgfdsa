@@ -694,6 +694,23 @@
         <button class="btn btn--primary" type="submit" id="profileSave">Speichern</button>
         <button class="btn" type="button" id="logout">Abmelden</button>
       </div>
+      <button class="link-btn link-btn--danger profile-delete" type="button" id="deleteAccount" hidden>Account löschen</button>
+    </form>
+  </dialog>
+
+  <dialog id="deleteDlg">
+    <form id="deleteForm" novalidate>
+      <h2>Account löschen?</h2>
+      <p>Das löscht <strong>endgültig und auf allen Geräten</strong>: alle Projekte und Ideen mit Texten, Beats, Lizenzen, Aufnahmen und fertigen Songs, deine Bars, Freundschaften, Leselinks und dein Profil. Songs, zu denen dich Freunde eingeladen haben, bleiben bei ihnen erhalten. Das lässt sich nicht rückgängig machen.</p>
+      <p class="hint">Tipp: Exportiere vorher alles unter Einstellungen → Sicherung.</p>
+      <label class="field">Zur Bestätigung dein Passwort
+        <input name="password" type="password" autocomplete="current-password">
+      </label>
+      <p class="form-error" id="deleteError" role="alert" hidden></p>
+      <div class="row">
+        <button class="btn btn--danger" type="submit" id="deleteGo">Endgültig löschen</button>
+        <button class="btn" type="button" id="deleteCancel">Abbrechen</button>
+      </div>
     </form>
   </dialog>
 

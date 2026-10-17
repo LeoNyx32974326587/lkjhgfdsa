@@ -118,7 +118,7 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
       <p>Du kannst dich außerdem bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der Behörde deines Wohnorts.</p>
 
       <h2>10. Account löschen</h2>
-      <p>Schreib eine E-Mail von der Adresse deines Accounts an <span data-legal="email"></span>. Wir löschen den Account mit allen Projekten, Dateien, Bars, Freundschaften und Leselinks und bestätigen dir das.</p>
+      <p>Du kannst deinen Account jederzeit selbst löschen: in der App oben rechts auf dein Profilbild → „Account löschen“ und mit deinem Passwort bestätigen. Dabei werden sofort alle Projekte, Ideen, Dateien, Bars, Freundschaften, Leselinks und dein Profil gelöscht – in der Cloud und auf dem Gerät. Klappt das nicht, schreib eine E-Mail von der Adresse deines Accounts an <span data-legal="email"></span>.</p>
 
       <p class="legal-updated">Stand: <span data-legal="updated"></span></p>''' % {'addr': ADDR}
 
@@ -185,7 +185,7 @@ support = '''      <p class="legal-lead">Hier findest du Antworten auf die häuf
 ''' + '\n'.join([
     faq('Die Bestätigungs-Mail kommt nicht an.', '<p>Schau im Spam-Ordner nach und warte ein paar Minuten. Kommt nichts, registriere dich nicht neu, sondern schreib uns – wir prüfen den Mail-Versand.</p>'),
     faq('Ich habe mein Passwort vergessen.', '<p>Tippe auf der Anmeldeseite auf „Passwort vergessen?“. Du bekommst eine Mail mit einem Link, über den du ein neues Passwort setzt.</p>'),
-    faq('Wie lösche ich meinen Account?', '<p>Schreib uns eine E-Mail von der Adresse deines Accounts. Wir löschen alles und bestätigen es dir. Mehr dazu in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>'),
+    faq('Wie lösche ich meinen Account?', '<p>In der App oben rechts auf dein Profilbild → „Account löschen“ und mit deinem Passwort bestätigen. Das löscht alles endgültig – exportiere vorher unter Einstellungen → Sicherung, was du behalten willst. Mehr dazu in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>'),
 ]) + '''
 
       <h2>Songs und Daten</h2>

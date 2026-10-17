@@ -249,6 +249,18 @@ $$;
 revoke execute on function public.shared_project(text) from public;
 grant execute on function public.shared_project(text) to anon, authenticated;
 
+-- "Account löschen": removes the signed-in user; every table above goes along (on delete cascade).
+-- The app deletes the stored files first, the database cannot remove those itself.
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+revoke execute on function public.delete_my_account() from anon, public;
+grant execute on function public.delete_my_account() to authenticated;
+
 -- ---------- rules: everyone only sees what is theirs or shared with them ----------
 
 alter table public.projects enable row level security;
