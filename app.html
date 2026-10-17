@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>RAIM – App</title>
+  <meta name="theme-color" content="#07060f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>RAIM</span></a>
+    <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
+  </header>
+
+  <main>
+    <!-- ================= Schreibblock ================= -->
+    <section class="view" id="view-write" data-view="write">
+      <div id="songList">
+        <div class="view-head">
+          <h1>Songs</h1>
+          <button class="btn btn--primary" id="newSong" type="button">+ Neuer Song</button>
+        </div>
+        <ul class="songs" id="songs"></ul>
+        <p class="empty" id="songsEmpty">Noch keine Songs. Leg los mit „Neuer Song“.</p>
+      </div>
+
+      <div id="editor" hidden>
+        <div class="editor-head">
+          <button class="icon-btn" id="backToList" type="button" aria-label="Zurück">
+            <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+          </button>
+          <input class="title-input" id="songTitle" placeholder="Titel" autocomplete="off">
+          <button class="icon-btn" id="deleteSong" type="button" aria-label="Song löschen">
+            <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
+          </button>
+        </div>
+
+        <div class="paper">
+          <textarea id="songText" spellcheck="false" placeholder="Schreib deine erste Zeile …"></textarea>
+          <div class="chips" id="rhymeChips" aria-live="polite"></div>
+        </div>
+
+        <div class="ai-bar">
+          <div class="seg" role="group" aria-label="Anzahl Zeilen">
+            <button type="button" class="seg-btn is-on" data-lines="2">2 Zeilen</button>
+            <button type="button" class="seg-btn" data-lines="4">4 Zeilen</button>
+          </div>
+          <label class="check"><input type="checkbox" id="aiRhymeEnd" checked> auf mein Reimende</label>
+          <button class="btn btn--ai" id="aiGo" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6Z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8Z"/></svg>
+            KI-Idee
+          </button>
+        </div>
+
+        <div class="ai-result" id="aiResult" hidden>
+          <div class="ai-lines" id="aiLines"></div>
+          <div class="ai-actions">
+            <button type="button" class="accept" id="aiAccept"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>Übernehmen</button>
+            <button type="button" id="aiRetry" aria-label="Neu generieren"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg></button>
+            <button type="button" id="aiDiscard" aria-label="Verwerfen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          </div>
+        </div>
+        <p class="ai-msg" id="aiMsg" hidden></p>
+      </div>
+    </section>
+
+    <!-- ================= Reimsuche ================= -->
+    <section class="view" id="view-search" data-view="search" hidden>
+      <h1>Reimsuche</h1>
+      <form class="search" id="searchForm" autocomplete="off">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="searchInput" type="search" placeholder="Wort oder Wortgruppe" enterkeyhint="search">
+      </form>
+      <div class="filters" id="filters">
+        <button type="button" class="seg-btn is-on" data-filter="all">Alle</button>
+        <button type="button" class="seg-btn" data-filter="multi">Doppel- &amp; Mehrsilbenreime</button>
+      </div>
+      <div id="searchOut"></div>
+    </section>
+
+    <!-- ================= Beats ================= -->
+    <section class="view" id="view-beats" data-view="beats" hidden>
+      <h1>Beats</h1>
+      <div class="seg seg--wide" role="tablist">
+        <button type="button" class="seg-btn is-on" data-source="file">Eigener Beat</button>
+        <button type="button" class="seg-btn" data-source="yt">YouTube-Beat</button>
+      </div>
+
+      <div id="beatFile">
+        <label class="drop" id="drop">
+          <input type="file" id="beatInput" accept="audio/*" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>
+          <span id="beatName">Beat auswählen (MP3, WAV, M4A …)</span>
+        </label>
+
+        <div class="deck" id="deck" hidden>
+          <div class="wave-wrap">
+            <canvas id="waveCanvas" height="180"></canvas>
+          </div>
+          <div class="time"><span id="tCur">0:00</span><span id="tLoop"></span><span id="tDur">0:00</span></div>
+          <div class="deck-controls">
+            <button type="button" class="round" id="playBtn" aria-label="Abspielen">
+              <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
+              <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+            </button>
+            <button type="button" class="pill-btn" id="loopBtn" aria-pressed="false">Loop</button>
+            <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
+            <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
+          </div>
+          <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen.</p>
+        </div>
+
+        <h2 class="sub" id="takesHead" hidden>Aufnahmen</h2>
+        <ul class="takes" id="takes"></ul>
+      </div>
+
+      <div id="beatYt" hidden>
+        <form class="search" id="ytForm" autocomplete="off">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+          <input id="ytUrl" type="url" placeholder="YouTube-Link einfügen" enterkeyhint="go">
+        </form>
+        <div class="yt-frame" id="ytFrame" hidden><div id="ytPlayer"></div></div>
+        <div class="deck-controls" id="ytControls" hidden>
+          <button type="button" class="pill-btn" id="ytA">A setzen</button>
+          <button type="button" class="pill-btn" id="ytB">B setzen</button>
+          <button type="button" class="pill-btn" id="ytLoop" aria-pressed="false">Loop</button>
+          <label class="tempo">Tempo
+            <select id="ytRate"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option></select>
+          </label>
+        </div>
+        <p class="hint" id="ytInfo"></p>
+      </div>
+    </section>
+
+    <!-- ================= Einstellungen ================= -->
+    <section class="view" id="view-settings" data-view="settings" hidden>
+      <h1>Einstellungen</h1>
+      <div class="card">
+        <h2>KI-Ideen</h2>
+        <p>KI-Ideen nutzen Claude von Anthropic. Trag deinen eigenen API-Schlüssel ein (console.anthropic.com). Er bleibt nur in diesem Browser gespeichert.</p>
+        <label class="field">API-Schlüssel
+          <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+        </label>
+        <div class="row">
+          <button class="btn btn--primary" id="saveKey" type="button">Speichern</button>
+          <button class="btn" id="revokeConsent" type="button">Zustimmung widerrufen</button>
+        </div>
+        <p class="ok" id="keySaved" hidden>Gespeichert.</p>
+      </div>
+      <div class="card">
+        <h2>„Passt nicht“-Liste</h2>
+        <p><span id="blockedCount">0</span> Reime ausgeblendet.</p>
+        <button class="btn" id="clearBlocked" type="button">Liste leeren</button>
+      </div>
+      <div class="card">
+        <h2>Daten</h2>
+        <p>Deine Songs werden nur lokal in diesem Browser gespeichert. Sichere sie als Datei:</p>
+        <div class="row">
+          <button class="btn" id="exportSongs" type="button">Songs exportieren</button>
+          <label class="btn">Songs importieren<input type="file" id="importSongs" accept="application/json" hidden></label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Bereiche">
+    <button type="button" class="tab is-on" data-tab="write">
+      <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>Schreiben
+    </button>
+    <button type="button" class="tab" data-tab="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Reime
+    </button>
+    <button type="button" class="tab" data-tab="beats">
+      <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4"/></svg>Beats
+    </button>
+    <button type="button" class="tab" data-tab="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>Mehr
+    </button>
+  </nav>
+
+  <dialog id="consentDlg">
+    <form method="dialog">
+      <h2>KI-Ideen aktivieren?</h2>
+      <p>Für eine KI-Idee werden bis zu 24 Zeilen deines Songs an Claude von Anthropic geschickt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von RAIM gespeichert.</p>
+      <label class="check"><input type="checkbox" id="ageOk"> Ich bin mindestens 18 Jahre alt.</label>
+      <div class="row">
+        <button class="btn" value="no">Abbrechen</button>
+        <button class="btn btn--primary" value="yes" id="consentYes" disabled>Zustimmen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="js/words.js"></script>
+  <script src="js/rhyme.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/beats.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
