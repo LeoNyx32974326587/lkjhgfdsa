@@ -6,6 +6,12 @@ Dein Notizbuch für Rap und Songs: Web-App für Texte, Reime, Beats und Lizenzen
 
 `index.html` (Startseite) oder direkt `app.html` (App) per Doppelklick öffnen.
 
+## Online stellen und aufs Handy holen
+
+Barbook ist eine installierbare Web-App: online geöffnet lässt sie sich auf dem Handy zum Homescreen hinzufügen (iPhone: Safari → Teilen → „Zum Home-Bildschirm“; Android: Chrome → Menü → „App installieren“) und startet dann wie eine App, auch offline (Texte, Reimsuche, Teleprompter; Synchronisieren, KI und Freunde brauchen Internet).
+
+Kostenlos über **GitHub Pages**: im Repository auf GitHub **Settings → Pages**, bei **Source** „Deploy from a branch“, Branch auswählen (z. B. `claude/nachbau-anfrage-8u6njo`), Ordner `/ (root)` → **Save**. Nach ein, zwei Minuten läuft Barbook unter `https://<name>.github.io/<repository>/` (die Startseite; die App unter `…/app.html`). Danach in Supabase unter **Authentication → URL Configuration** die **Site URL** auf `https://<name>.github.io/<repository>/app.html` setzen und bei **Redirect URLs** `https://<name>.github.io/<repository>/**` eintragen – dann führen Bestätigungs- und „Passwort vergessen“-Mails zurück in die App.
+
 ## Accounts
 
 Mit eingerichteten Accounts (Supabase) muss man sich anmelden, bevor die App aufgeht: „App öffnen“ führt dann zuerst auf `login.html` (Anmelden, Registrieren, Passwort vergessen). Projekte, Beats und Lizenzen werden mit dem Account synchronisiert und sind auf jedem Gerät da; offline wird weitergearbeitet und später hochgeladen. Projekte aus der Zeit ohne Account bietet Barbook nach der ersten Anmeldung zur Übernahme an.

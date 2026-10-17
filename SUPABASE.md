@@ -38,7 +38,7 @@ Ab jetzt geht „App öffnen“ zuerst auf die Anmeldeseite.
 
 Supabase schickt nach dem Registrieren eine Bestätigungs-Mail. Der Link darin führt zur **Site URL** deines Projekts:
 
-- **Wenn Barbook online ist** (z. B. GitHub Pages, Netlify): unter **Authentication → URL Configuration** die **Site URL** auf deine Adresse setzen (z. B. `https://deinname.github.io/barbook/app.html`) und unter **Redirect URLs** `https://deinname.github.io/barbook/*` eintragen. Dann funktionieren auch die „Passwort vergessen“-Links.
+- **Wenn Barbook online ist** (z. B. GitHub Pages, siehe README): unter **Authentication → URL Configuration** die **Site URL** auf deine Adresse setzen (z. B. `https://deinname.github.io/barbook/app.html`) und unter **Redirect URLs** `https://deinname.github.io/barbook/**` eintragen. Dann funktionieren auch die „Passwort vergessen“-Links.
 - **Wenn du Barbook nur als Datei öffnest:** Der Bestätigungs-Link bestätigt die E-Mail trotzdem – danach einfach in Barbook anmelden. Alternativ unter **Authentication → Sign In / Providers → Email** „Confirm email“ ausschalten, dann ist man nach dem Registrieren sofort drin. „Passwort vergessen“ braucht eine Online-Adresse.
 
 Tipp: Der eingebaute Mail-Versand von Supabase schafft nur wenige Mails pro Stunde. Für viele Nutzer unter **Authentication → Emails → SMTP Settings** einen eigenen Mail-Anbieter eintragen.
