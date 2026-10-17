@@ -2,6 +2,6 @@
 // Project Settings → API: "Project URL" and the publishable key (sb_publishable_…, formerly "anon"). See SUPABASE.md.
 // Empty values: no accounts, projects stay only in this browser.
 window.BARBOOK_CONFIG = {
-  supabaseUrl: '',
+  supabaseUrl: 'https://pfveinhwrptajnqclhtw.supabase.co',
   supabaseAnonKey: 'sb_publishable_2qQeTCKeBZ-TUI7AJShxAw_0AsO15lH'
 };
