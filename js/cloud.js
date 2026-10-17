@@ -207,14 +207,17 @@
     // ---------- chat between friends ----------
     // the newest messages with one friend, oldest first
     chat: function (otherId) {
-      return sb.from('chat_messages').select('id,sender,recipient,body,created,read_at')
+      return sb.from('chat_messages').select('id,sender,recipient,body,created,read_at,attachment')
         .in('sender', [uid, otherId]).in('recipient', [uid, otherId])
         .order('id', { ascending: false }).limit(300).then(ok)
         .then(function (rows) { return rows.sort(function (a, b) { return a.id - b.id; }); });
     },
-    sendChat: function (otherId, body) {
-      return sb.from('chat_messages').insert({ sender: uid, recipient: otherId, body: body })
-        .select('id,sender,recipient,body,created,read_at').then(ok).then(function (rows) { return rows[0]; });
+    // attachment (optional): a copy of a song or bar, see setup.sql
+    sendChat: function (otherId, body, attachment) {
+      var row = { sender: uid, recipient: otherId, body: body };
+      if (attachment) row.attachment = attachment;
+      return sb.from('chat_messages').insert(row)
+        .select('id,sender,recipient,body,created,read_at,attachment').then(ok).then(function (rows) { return rows[0]; });
     },
     markChatRead: function (otherId) {
       return sb.rpc('chat_mark_read', { other: otherId }).then(ok);

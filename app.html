@@ -170,6 +170,9 @@
       <ol class="chat-list" id="chatList"></ol>
     </main>
     <form class="chat-bar" id="chatForm" autocomplete="off">
+      <button type="button" class="chat-attach" id="chatAttach" title="Song oder Bar schicken" aria-label="Song oder Bar schicken">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
       <button type="button" class="mic-btn mic-btn--big" id="chatMic" title="Einsprechen statt tippen" aria-label="Einsprechen statt tippen" aria-pressed="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
       </button>
@@ -608,6 +611,36 @@
       <div class="chips chips--wrap bar-tags" id="barPickTags"></div>
     </div>
     <ul class="bar-list bar-list--pick" id="barPickList"></ul>
+  </dialog>
+
+  <dialog id="attachDlg" class="sheet">
+    <div class="sheet-head">
+      <h2>Schicken</h2>
+      <button class="icon-btn" type="button" id="closeAttach" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="seg seg--wide" role="tablist">
+      <button type="button" class="seg-btn is-on" data-attach="songs" role="tab">Songs &amp; Ideen</button>
+      <button type="button" class="seg-btn" data-attach="bars" role="tab">Bars</button>
+    </div>
+    <input type="search" id="attachSearch" class="attach-search" placeholder="Suchen" enterkeyhint="search">
+    <ul class="attach-list" id="attachList"></ul>
+    <p class="hint">Dein Freund bekommt eine Kopie des aktuellen Texts – spätere Änderungen sieht er nicht.</p>
+  </dialog>
+
+  <dialog id="sharedDlg" class="sheet">
+    <div class="sheet-head">
+      <h2 id="sharedTitle"></h2>
+      <button class="icon-btn" type="button" id="closeShared" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="shared-meta" id="sharedMeta"></p>
+    <div class="share-text shared-text" id="sharedText"></div>
+    <div class="row">
+      <button class="btn btn--primary" type="button" id="sharedKeep"></button>
+    </div>
   </dialog>
 
   <dialog id="exportDlg" class="sheet">

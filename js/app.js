@@ -2867,8 +2867,9 @@
     chatRows.forEach(function (m) {
       var d = new Date(m.created), day = d.toDateString();
       if (day !== lastDay) { ol.append(el('li', 'chat-day', dayLabel(d))); lastDay = day; }
-      var mine = m.sender === me, li = el('li', 'chat-msg ' + (mine ? 'is-mine' : 'is-theirs') + (m.failed ? ' is-failed' : ''));
-      li.append(el('p', 'chat-text', m.body));
+      var mine = m.sender === me, li = el('li', 'chat-msg ' + (mine ? 'is-mine' : 'is-theirs') + (m.failed ? ' is-failed' : '') + (m.attachment ? ' has-card' : ''));
+      if (m.attachment) li.append(attachmentCard(m.attachment, mine));
+      else li.append(el('p', 'chat-text', m.body));
       var meta = el('span', 'chat-meta', d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       if (mine) {
         var tick = el('span', 'chat-tick' + (m.read_at ? ' is-read' : ''), m.failed ? '!' : m.pending ? '🕓' : m.read_at ? '✓✓' : '✓');
@@ -2896,13 +2897,17 @@
     var x = chatWith, body = $('chatInput').value.trim();
     if (!x || !body) return;
     RaimDictate.stop();
-    var temp = { id: 'tmp' + Date.now(), sender: account.id, recipient: x.id, body: body, created: new Date().toISOString(), read_at: null, pending: true };
-    chatRows.push(temp);
     $('chatInput').value = '';
     sizeChatInput();
+    sendChatMessage(x, body, null);
+  });
+  // shows the message right away, marks it when the server has it (or could not take it)
+  function sendChatMessage(x, body, attachment) {
+    var temp = { id: 'tmp' + Date.now(), sender: account.id, recipient: x.id, body: body, attachment: attachment, created: new Date().toISOString(), read_at: null, pending: true };
+    chatRows.push(temp);
     renderChat();
     window.scrollTo(0, document.documentElement.scrollHeight);
-    RaimCloud.sendChat(x.id, body).then(function (row) {
+    RaimCloud.sendChat(x.id, body, attachment).then(function (row) {
       chatRows = chatRows.filter(function (m) { return m !== temp && m.id !== row.id; }).concat([row]).sort(function (a, b) { return (a.pending ? 1e15 : a.id) - (b.pending ? 1e15 : b.id); });
       if (chatWith === x) renderChat();
     }, function (err) {
@@ -2910,6 +2915,120 @@
       temp.failed = true;
       if (chatWith === x) renderChat();
       toast(/row-level security/i.test(err.message || '') ? 'Nachricht nicht gesendet – ihr seid keine Freunde mehr.' : RaimCloud.message(err));
+    });
+  }
+
+  // ---------- sending a song or bar in the chat ----------
+  var attachTab = 'songs';
+  function attachmentOf(p) {
+    return { type: 'song', title: p.title || 'Ohne Titel', text: p.text || '', bpm: songBpm(p), key: p.key || '', genres: p.genres || [], idea: isIdea(p) };
+  }
+  function renderAttach() {
+    document.querySelectorAll('[data-attach]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.attach === attachTab); });
+    var q = $('attachSearch').value.trim().toLowerCase(), ul = $('attachList');
+    ul.textContent = '';
+    var items = attachTab === 'songs'
+      ? activeProjects().slice().sort(function (a, b) { return b.updated - a.updated; }).map(function (p) {
+        return { label: p.title || 'Ohne Titel', sub: (isIdea(p) ? 'Idee · ' : '') + RaimSong.lines(p.text).length + ' Zeilen', find: (p.title + ' ' + p.text).toLowerCase(),
+          send: function () { return { body: '🎵 ' + (p.title || 'Ohne Titel'), attachment: attachmentOf(p) }; } };
+      })
+      : bars.map(function (b) {
+        return { label: barText(b.text) || b.text, sub: b.tags.map(function (t) { return '#' + t; }).join(' '), find: b.text.toLowerCase(),
+          send: function () { return { body: '✍️ ' + barText(b.text).slice(0, 120), attachment: { type: 'bar', text: b.text } }; } };
+      });
+    items = items.filter(function (it) { return !q || it.find.indexOf(q) >= 0; });
+    if (!items.length) ul.append(el('li', 'empty', attachTab === 'songs' ? 'Keine Songs gefunden.' : 'Keine Bars gefunden.'));
+    items.slice(0, 60).forEach(function (it) {
+      var b = el('button', 'attach-item');
+      b.type = 'button';
+      b.append(el('strong', '', it.label), el('span', '', it.sub));
+      b.addEventListener('click', function () {
+        var x = chatWith, out = it.send();
+        $('attachDlg').close();
+        if (x) sendChatMessage(x, out.body, out.attachment);
+      });
+      var li = el('li');
+      li.append(b);
+      ul.append(li);
+    });
+  }
+  $('chatAttach').addEventListener('click', function () {
+    $('attachSearch').value = '';
+    loadBars().then(renderAttach);
+    renderAttach();
+    $('attachDlg').showModal();
+  });
+  document.querySelectorAll('[data-attach]').forEach(function (b) {
+    b.addEventListener('click', function () { attachTab = b.dataset.attach; renderAttach(); });
+  });
+  $('attachSearch').addEventListener('input', renderAttach);
+  $('closeAttach').addEventListener('click', function () { $('attachDlg').close(); });
+
+  // the card inside a chat bubble
+  function attachmentCard(a, mine) {
+    var card = el('button', 'chat-card');
+    card.type = 'button';
+    if (a.type === 'bar') {
+      card.append(el('span', 'chat-card-kind', 'Bar'), el('span', 'chat-card-text', barText(a.text) || a.text));
+    } else {
+      var facts = [RaimSong.lines(a.text).length + ' Zeilen'];
+      if (a.bpm) facts.push(a.bpm + ' BPM');
+      if (a.key) facts.push(keyName(a.key));
+      card.append(el('span', 'chat-card-kind', a.idea ? 'Song-Idee' : 'Song'), el('strong', '', a.title), el('span', 'chat-card-sub', facts.join(' · ')));
+    }
+    card.append(el('span', 'chat-card-open', mine ? 'Ansehen' : 'Öffnen'));
+    card.addEventListener('click', function () { openShared(a, mine); });
+    return card;
+  }
+  var sharedItem = null;
+  function openShared(a, mine) {
+    sharedItem = a;
+    var box = $('sharedText');
+    box.textContent = '';
+    if (a.type === 'bar') {
+      $('sharedTitle').textContent = 'Bar';
+      $('sharedMeta').textContent = barTags(a.text).map(function (t) { return '#' + t; }).join(' ');
+      box.append(el('p', 'shared-bar', barText(a.text) || a.text));
+      $('sharedKeep').textContent = 'In meine Bars';
+    } else {
+      $('sharedTitle').textContent = a.title;
+      var facts = [];
+      if (a.bpm) facts.push(a.bpm + ' BPM');
+      if (a.key) facts.push(keyName(a.key));
+      (a.genres || []).forEach(function (g) { facts.push(g); });
+      $('sharedMeta').textContent = facts.join(' · ');
+      RaimSong.expand(RaimSong.parse(a.text)).forEach(function (sec) {
+        if (sec.name === null && !sec.body.trim()) return;
+        var part = el('section', 'share-sec');
+        if (sec.name !== null) part.append(el('h2', '', sec.name + (sec.repeated ? ' (Wiederholung)' : '')));
+        sec.body.split('\n').forEach(function (l) { part.append(l.trim() ? el('p', '', l) : el('p', 'is-gap')); });
+        box.append(part);
+      });
+      if (!box.children.length) box.append(el('p', 'empty', 'Der Song hat noch keinen Text.'));
+      $('sharedKeep').textContent = 'Als Idee übernehmen';
+    }
+    $('sharedMeta').hidden = !$('sharedMeta').textContent;
+    $('sharedKeep').hidden = !!mine;
+    $('sharedDlg').showModal();
+  }
+  $('closeShared').addEventListener('click', function () { $('sharedDlg').close(); });
+  $('sharedKeep').addEventListener('click', function () {
+    var a = sharedItem, from = chatWith ? personName(chatWith) : '';
+    if (!a) return;
+    $('sharedDlg').close();
+    if (a.type === 'bar') {
+      addBar(a.text).then(function () { toast('Bar in deine Sammlung übernommen.'); });
+      return;
+    }
+    var p = RaimDB.newProject(a.title + (from ? ' (von ' + from + ')' : ''));
+    p.kind = 'idea';
+    p.text = a.text;
+    p.bpm = a.bpm || '';
+    p.key = a.key || '';
+    p.genres = (a.genres || []).slice();
+    saveNow(p).then(function () {
+      projects.push(p);
+      toast('Als Idee gespeichert – unter „Ideen“ auf der Startseite.');
     });
   });
   $('chatMic').hidden = !RaimDictate.supported();
@@ -2925,7 +3044,8 @@
       unreadChat[other] = (unreadChat[other] || 0) + 1;
       renderFriends();
       var who = personById(other);
-      toast((who ? personName(who) : 'Neue Nachricht') + ': ' + (row.body.length > 80 ? row.body.slice(0, 80) + '…' : row.body));
+      var text = row.attachment ? (row.attachment.type === 'bar' ? 'hat dir eine Bar geschickt' : 'hat dir einen Song geschickt: ' + row.attachment.title) : row.body;
+      toast((who ? personName(who) : 'Neue Nachricht') + ': ' + (text.length > 80 ? text.slice(0, 80) + '…' : text));
     }
   }
 

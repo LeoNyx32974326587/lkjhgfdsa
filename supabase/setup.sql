@@ -137,6 +137,10 @@ create table if not exists public.chat_messages (
   created timestamptz not null default now(),
   read_at timestamptz
 );
+-- a song or bar sent along: a copy of it at the time of sending ({ type: 'song' | 'bar', title, text, … })
+alter table public.chat_messages add column if not exists attachment jsonb;
+alter table public.chat_messages drop constraint if exists chat_messages_attachment_size;
+alter table public.chat_messages add constraint chat_messages_attachment_size check (attachment is null or octet_length(attachment::text) < 200000);
 create index if not exists chat_messages_pair on public.chat_messages (least(sender, recipient), greatest(sender, recipient), id desc);
 create index if not exists chat_messages_unread on public.chat_messages (recipient) where read_at is null;
 

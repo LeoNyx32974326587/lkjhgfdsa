@@ -76,7 +76,7 @@ Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und we
 
 Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB); ohne Account nur im Browser.
 
-**Chat:** In der Freundesliste steht neben „Entfernen“ der Knopf **Chat** (mit Zahl für ungelesene). Darin schreibt ihr euch wie im Messenger: eigene Nachrichten rechts, die des Freundes links, Tagestrenner, Uhrzeit, ✓ gesendet / ✓✓ gelesen, Mikrofon zum Einsprechen. Nachrichten kommen live an; ungelesene zählen in die rote Zahl am Freunde-Symbol und werden kurz eingeblendet. Schreiben können sich nur Freunde.
+**Chat:** In der Freundesliste steht neben „Entfernen“ der Knopf **Chat** (mit Zahl für ungelesene). Darin schreibt ihr euch wie im Messenger: eigene Nachrichten rechts, die des Freundes links, Tagestrenner, Uhrzeit, ✓ gesendet / ✓✓ gelesen, Mikrofon zum Einsprechen. Nachrichten kommen live an; ungelesene zählen in die rote Zahl am Freunde-Symbol und werden kurz eingeblendet. Schreiben können sich nur Freunde. Über **+** im Chat schickst du einen Song, eine Idee oder eine Bar als Karte (eine Kopie des aktuellen Texts); dein Freund kann den Song lesen und **als Idee übernehmen** oder die Bar **in seine Sammlung** legen.
 
 **Nachrichten:** Im Freunde-Bereich stehen Nachrichten, z. B. wenn dich jemand als Freund entfernt, deine Anfrage annimmt oder ablehnt, bei deinem Song einsteigt, ihn verlässt, eine Einladung ablehnt oder dich aus einem Song nimmt. Die rote Zahl am Freunde-Symbol zählt neue Nachrichten, Anfragen und Einladungen; sie springt live hoch, ohne Neuladen (Supabase Realtime), und neue Nachrichten werden kurz eingeblendet.
 
