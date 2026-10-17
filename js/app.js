@@ -11,7 +11,7 @@
   }
 
   // file name without characters browsers or file systems reject
-  function fileName(t) { return t.replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').replace(/\s+/g, ' ').trim() || 'RAIM'; }
+  function fileName(t) { return t.replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').replace(/\s+/g, ' ').trim() || 'Barbook'; }
 
   var toastTimer = null;
   function toast(msg) {
@@ -676,7 +676,7 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(150, 145, 175);
-        doc.text('Erstellt mit RAIM', M, 290);
+        doc.text('Erstellt mit Barbook', M, 290);
         doc.text('Seite ' + i + ' von ' + pages, W - M, 290, { align: 'right' });
       }
       var a = el('a');
@@ -1262,14 +1262,14 @@
     r.hidden = !text;
   }
 
-  // with an API key Claude reads the file (also photos), otherwise RAIM reads PDFs itself
+  // with an API key Claude reads the file (also photos), otherwise Barbook reads PDFs itself
   function licenseEngine() {
     if (!Store.apiKey()) return Promise.resolve('local');
     var choice = null;
     try { choice = localStorage.getItem('raim.licenseAi'); } catch (e) { /* private mode */ }
     if (choice) return Promise.resolve(choice === 'yes' ? 'claude' : 'local');
     return confirmDialog('Lizenz mit Claude auslesen?',
-      'Die Lizenzdatei wird an Claude von Anthropic geschickt, um Produzent, Lizenzart, BPM, Tonart, Datum und Bedingungen herauszulesen. Ohne Claude liest RAIM nur PDFs selbst aus – das ist ungenauer.',
+      'Die Lizenzdatei wird an Claude von Anthropic geschickt, um Produzent, Lizenzart, BPM, Tonart, Datum und Bedingungen herauszulesen. Ohne Claude liest Barbook nur PDFs selbst aus – das ist ungenauer.',
       'Mit Claude auslesen').then(function (ok) {
       try { localStorage.setItem('raim.licenseAi', ok ? 'yes' : 'no'); } catch (e) { /* private mode */ }
       return ok ? 'claude' : 'local';
@@ -1283,7 +1283,7 @@
     licenseEngine().then(function (engine) {
       if (seq !== readSeq) return null;
       if (engine === 'local' && isImage) {
-        licenseStatus('Fotos kann RAIM nur mit API-Schlüssel (Claude) auslesen. Trag die Angaben bitte selbst ein.', 'warn');
+        licenseStatus('Fotos kann Barbook nur mit API-Schlüssel (Claude) auslesen. Trag die Angaben bitte selbst ein.', 'warn');
         return null;
       }
       var job = engine === 'claude' ? RaimAI.readLicense(Store.apiKey(), file) : RaimLicenseReader.read(file);
@@ -1827,10 +1827,10 @@
         });
       }));
     })).then(function () {
-      var blob = new Blob([JSON.stringify({ app: 'raim', version: 1, projects: projects, files: files })], { type: 'application/json' });
+      var blob = new Blob([JSON.stringify({ app: 'barbook', version: 1, projects: projects, files: files })], { type: 'application/json' });
       var a = el('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'RAIM-Sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.download = 'Barbook-Sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
       document.body.append(a);
       a.click();
       a.remove();
@@ -1845,7 +1845,7 @@
     if (!f) return;
     f.text().then(function (txt) {
       var data = JSON.parse(txt);
-      if (!data || data.app !== 'raim' || !Array.isArray(data.projects)) throw new Error('format');
+      if (!data || (data.app !== 'barbook' && data.app !== 'raim') || !Array.isArray(data.projects)) throw new Error('format');
       var have = new Set(projects.map(function (p) { return p.id; }));
       var incoming = data.projects.filter(function (p) { return p && p.id && !have.has(p.id); });
       var ids = new Set(incoming.map(function (p) { return p.id; }));
@@ -1863,7 +1863,7 @@
         renderProjects();
         toast(incoming.length + (incoming.length === 1 ? ' Projekt' : ' Projekte') + ' importiert.');
       });
-    }).catch(function () { toast('Diese Datei ist keine RAIM-Sicherung.'); });
+    }).catch(function () { toast('Diese Datei ist keine Barbook-Sicherung.'); });
   });
 
   // ---------- start ----------
@@ -1896,7 +1896,66 @@
     })).then(function () { Store.clearLegacySongs(); });
   }
 
-  RaimDB.projects().then(function (list) {
+  // ---------- account ----------
+  // With accounts set up (js/config.js) the app only opens after login; projects are synced.
+  var account = null;
+  function startAccount() {
+    if (!RaimCloud.configured) return Promise.resolve();
+    return RaimCloud.currentUser().then(function (u) {
+      if (!u) { location.replace('login.html'); throw new Error('login'); }
+      account = u;
+      RaimCloud.setUser(u.id);
+      RaimDB.useAccount(u.id, RaimCloud.online() ? RaimCloud : null);
+      RaimCloud.onAuth(function (event) { if (event === 'SIGNED_OUT') location.replace('login.html'); });
+      return RaimDB.sync().then(function (r) {
+        if (r.offline) toast('Offline – Änderungen werden hochgeladen, sobald du wieder online bist.');
+      }, function () {
+        toast('Synchronisieren hat nicht geklappt – du arbeitest mit der Kopie auf diesem Gerät.');
+      });
+    });
+  }
+
+  // projects from before accounts: offer once per device to move them into the account
+  function takeOverLegacy() {
+    if (!account) return Promise.resolve();
+    var done = null;
+    try { done = localStorage.getItem('barbook.legacyDone'); } catch (e) { /* private mode */ }
+    if (done) return Promise.resolve();
+    function markDone() { try { localStorage.setItem('barbook.legacyDone', account.id); } catch (e) { /* private mode */ } }
+    return RaimDB.legacy().then(function (old) {
+      var list = old.projects.filter(function (p) { return !p.deletedAt; });
+      if (!list.length) { markDone(); return; }
+      return confirmDialog('Projekte übernehmen?',
+        (list.length === 1 ? 'Auf diesem Gerät liegt 1 Projekt aus der Zeit ohne Account. Soll es'
+          : 'Auf diesem Gerät liegen ' + list.length + ' Projekte aus der Zeit ohne Account. Sollen sie') +
+        ' in deinen Account (' + account.email + ') übernommen werden?', 'Übernehmen')
+        .then(function (yes) {
+          markDone();
+          if (!yes) return;
+          var ids = new Set(list.map(function (p) { return p.id; }));
+          return Promise.all(old.files.filter(function (f) { return ids.has(f.project); }).map(RaimDB.putFileRecord))
+            .then(function () { return Promise.all(list.map(RaimDB.saveProject)); })
+            .then(function () { toast(list.length + (list.length === 1 ? ' Projekt' : ' Projekte') + ' übernommen.'); });
+        });
+    }).catch(function () { /* nothing to take over */ });
+  }
+
+  function renderAccount() {
+    $('accountCard').hidden = !RaimCloud.configured;
+    $('accountEmail').textContent = account ? account.email : '';
+    $('backupText').textContent = RaimCloud.configured
+      ? 'Deine Projekte liegen in deinem Account und auf diesem Gerät. Zusätzlich kannst du alles als Datei sichern.'
+      : 'Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.';
+  }
+  $('logout').addEventListener('click', function () {
+    if (current) closeProject();
+    RaimCloud.signOut().catch(function () {}).then(function () { location.replace('login.html'); });
+  });
+
+  startAccount().then(takeOverLegacy).then(function () {
+    renderAccount();
+    return RaimDB.projects();
+  }).then(function (list) {
     projects = list.map(normalize);
     var expired = projects.filter(function (p) { return p.deletedAt && Date.now() - p.deletedAt > TRASH_DAYS * DAY; });
     return Promise.all([migrate(), expired.length ? purgeProjects(expired) : null]);
@@ -1906,7 +1965,8 @@
     try { openId = sessionStorage.getItem('raim.project'); } catch (e) { /* private mode */ }
     var p = projects.find(function (x) { return x.id === openId && !x.deletedAt; });
     if (p) openProject(p);
-  }).catch(function () {
+  }).catch(function (err) {
+    if (err && err.message === 'login') return;
     toast('Speicher nicht verfügbar – ist der private Modus aktiv?');
     renderProjects();
   });

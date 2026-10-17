@@ -23,7 +23,10 @@
       <path d="M40 318 C140 288 168 156 258 176 S378 318 480 156"/>
       <path d="M40 306 C140 276 166 142 256 162 S376 306 480 142"/>
     </g>
-    <text x="256" y="292" text-anchor="middle" font-family="Michroma, 'Arial Black', sans-serif" font-size="104" font-weight="700" fill="#fff" letter-spacing="-4">RAIM</text>
+    <g font-family="Michroma, 'Arial Black', sans-serif" font-weight="700" fill="#fff" text-anchor="middle">
+      <text x="256" y="238" font-size="96" letter-spacing="-2">BAR</text>
+      <text x="256" y="338" font-size="96" letter-spacing="-2">BOOK</text>
+    </g>
     <rect x="3" y="3" width="506" height="506" rx="110" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="6"/>
   </g>
 </svg>

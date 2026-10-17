@@ -3,19 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>RAIM – Projekte</title>
+  <title>Barbook – Projekte</title>
   <meta name="theme-color" content="#07060f">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app.css">
+  <!-- accounts: leave for the login page before anything else loads -->
+  <script src="js/config.js"></script>
+  <script>
+    (function () {
+      var c = window.BARBOOK_CONFIG || {}, s = null;
+      try { s = localStorage.getItem('barbook-auth'); } catch (e) { /* private mode */ }
+      if (c.supabaseUrl && c.supabaseAnonKey && !s) location.replace('login.html');
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
 <body>
   <!-- ================= Projektliste ================= -->
   <div id="home">
     <header class="topbar">
-      <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>RAIM</span></a>
+      <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
       <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
       <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
@@ -406,9 +416,16 @@
       </div>
       <p class="key-result" id="keyResult" role="status" hidden></p>
     </div>
+    <div class="card" id="accountCard" hidden>
+      <h2>Account</h2>
+      <p>Angemeldet als <strong id="accountEmail"></strong>. Deine Projekte, Beats und Lizenzen werden mit deinem Account synchronisiert und sind auf jedem Gerät da, auf dem du dich anmeldest.</p>
+      <div class="row">
+        <button class="btn" id="logout" type="button">Abmelden</button>
+      </div>
+    </div>
     <div class="card">
       <h2>Sicherung</h2>
-      <p>Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.</p>
+      <p id="backupText">Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.</p>
       <div class="row">
         <button class="btn" id="exportAll" type="button">Alles exportieren</button>
         <label class="btn">Importieren<input type="file" id="importAll" accept="application/json,.json" hidden></label>
@@ -484,7 +501,7 @@
   <dialog id="consentDlg">
     <form method="dialog">
       <h2>KI-Ideen aktivieren?</h2>
-      <p>Für eine KI-Idee wird dein Songtext (bis zu 80 Zeilen) an Claude von Anthropic geschickt, damit die Idee zum ganzen Song passt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von RAIM gespeichert.</p>
+      <p>Für eine KI-Idee wird dein Songtext (bis zu 80 Zeilen) an Claude von Anthropic geschickt, damit die Idee zum ganzen Song passt – direkt aus deinem Browser mit deinem API-Schlüssel. Nichts davon wird von Barbook gespeichert.</p>
       <label class="check"><input type="checkbox" id="ageOk"> Ich bin mindestens 18 Jahre alt.</label>
       <div class="row">
         <button class="btn" value="no">Abbrechen</button>
@@ -519,6 +536,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="js/words.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/rhyme.js"></script>
   <script src="js/song.js"></script>
   <script src="js/store.js"></script>

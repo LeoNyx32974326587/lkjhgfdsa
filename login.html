@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Barbook – Anmelden</title>
+  <meta name="theme-color" content="#07060f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="login-page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
+  </header>
+
+  <main class="login">
+    <div class="card login-card">
+      <img class="login-icon" src="assets/icon.svg" alt="" width="72" height="72">
+
+      <!-- accounts not set up yet -->
+      <div id="notConfigured" hidden>
+        <h1>Accounts sind noch nicht eingerichtet</h1>
+        <p class="hint">Damit man sich anmelden kann, muss Barbook mit Supabase verbunden werden – die Schritte stehen in <code>SUPABASE.md</code>. Bis dahin läuft die App ohne Account, nur in diesem Browser.</p>
+        <a class="btn btn--primary login-submit" href="app.html">Ohne Account öffnen</a>
+      </div>
+
+      <!-- sign in / sign up -->
+      <form id="authForm" novalidate hidden>
+        <div class="seg seg--wide" role="tablist">
+          <button type="button" class="seg-btn is-on" data-mode="in" role="tab">Anmelden</button>
+          <button type="button" class="seg-btn" data-mode="up" role="tab">Registrieren</button>
+        </div>
+        <h1 id="authTitle">Willkommen zurück</h1>
+        <label class="field">E-Mail
+          <input name="email" type="email" autocomplete="email" inputmode="email" required>
+        </label>
+        <label class="field">Passwort
+          <input name="password" type="password" autocomplete="current-password" minlength="8" required>
+        </label>
+        <label class="field" id="password2Field" hidden>Passwort wiederholen
+          <input name="password2" type="password" autocomplete="new-password" minlength="8">
+        </label>
+        <p class="login-msg" id="authMsg" role="status" hidden></p>
+        <button class="btn btn--primary login-submit" id="authSubmit" type="submit">Anmelden</button>
+        <button class="link-btn" id="forgot" type="button">Passwort vergessen?</button>
+      </form>
+
+      <!-- new password after the e-mail link -->
+      <form id="resetForm" novalidate hidden>
+        <h1>Neues Passwort</h1>
+        <label class="field">Neues Passwort
+          <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+        </label>
+        <p class="login-msg" id="resetMsg" role="status" hidden></p>
+        <button class="btn btn--primary login-submit" type="submit">Passwort speichern</button>
+      </form>
+    </div>
+    <p class="login-note">Mit einem Account sind deine Songs, Beats und Lizenzen auf jedem Gerät da.</p>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

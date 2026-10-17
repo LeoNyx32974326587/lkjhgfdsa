@@ -1,4 +1,4 @@
-// RAIM rhyme engine: approximates German pronunciation and scores rhymes by sound.
+// Barbook rhyme engine: approximates German pronunciation and scores rhymes by sound.
 (function (root) {
   'use strict';
 

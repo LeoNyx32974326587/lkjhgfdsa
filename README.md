@@ -1,4 +1,4 @@
-# RAIM – Reime, die klingen
+# Barbook
 
 Web-App für Rap- und Songtexte. Läuft komplett im Browser, ohne Installation und ohne Build.
 
@@ -16,7 +16,7 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat vier Bereiche: Text, Beat, Prompter und Reime.
 
-**Neues Projekt:** Vor dem Öffnen fragt RAIM die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genres** und **Sprachen** (Pflicht, jeweils mehrere möglich, z. B. Trap + Drill, Deutsch + Englisch; 18 Sprachen zur Auswahl) und optional das Thema. Die Schreibweise der Tonart ist wählbar: deutsch (Fis-Moll / A-Dur), englisch (F# Minor / A Major) oder kurz (F#m / A); sie gilt überall in der App. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos stehen in jedem Projekt-Bereich oben neben dem Status (antippen zum Ändern), auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
+**Neues Projekt:** Vor dem Öffnen fragt Barbook die Grundinfos ab: Name, Beat (oder „Ohne Beat-Datei“, z. B. wenn der Beat nur in FL Studio liegt), **BPM**, **Tonart**, **Genres** und **Sprachen** (Pflicht, jeweils mehrere möglich, z. B. Trap + Drill, Deutsch + Englisch; 18 Sprachen zur Auswahl) und optional das Thema. Die Schreibweise der Tonart ist wählbar: deutsch (Fis-Moll / A-Dur), englisch (F# Minor / A Major) oder kurz (F#m / A); sie gilt überall in der App. BPM und Tonart werden aus dem Dateinamen (z. B. „92bpm F#m“) oder per Analyse aus dem Beat erkannt. Die Infos stehen in jedem Projekt-Bereich oben neben dem Status (antippen zum Ändern), auf der Projektkarte, im PDF, steuern den Teleprompter und fließen in die KI-Ideen ein.
 
 - **Text**
   - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
@@ -25,7 +25,7 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat v
   - **PDF**: Songtext mit BPM und Tonart als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
-  - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann RAIM nicht mehr.
+  - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann Barbook nicht mehr.
   - **Lizenz** als schmale Leiste mit allen Angaben und Datei. Beim Hochladen der Lizenzdatei werden Produzent, Lizenzart, BPM, Tonart, Kaufdatum und Bedingungen automatisch ausgelesen: mit API-Schlüssel durch Claude (PDF und Fotos, nach einmaliger Zustimmung), sonst lokal aus PDFs (pdf.js, Mustererkennung). Dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Prompter**
   - Eigener Bereich für den **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.

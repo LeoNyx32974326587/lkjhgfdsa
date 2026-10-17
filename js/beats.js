@@ -327,7 +327,7 @@
       links.className = 'take-links';
       li.append(head, player, links);
       ul.append(li);
-      var base = (p.title || 'RAIM').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name.replace(/\.\w+$/, '');
+      var base = (p.title || 'Barbook').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name.replace(/\.\w+$/, '');
 
       function link(text, url, file) {
         var a = document.createElement('a');
@@ -341,7 +341,7 @@
           var url = URL.createObjectURL(f.blob);
           takeUrls.push(url);
           player.src = url;
-          links.append(link('Herunterladen', url, (p.title || 'RAIM').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name));
+          links.append(link('Herunterladen', url, (p.title || 'Barbook').replace(/[\\/:*?"<>|„“”‚‘’'«»]/g, '').trim() + ' - ' + t.name));
         });
         return;
       }

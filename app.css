@@ -624,3 +624,18 @@ body.prompter-open { overflow: hidden; }
 #infoGenres .chip, #infoLangs .chip { font-size: 14px; padding: 7px 12px; }
 #rhymeLangNote { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
 #rhymeLangNote .link-btn { font-size: 13px; }
+
+/* ---------- login page ---------- */
+.login-page { padding-bottom: 40px; }
+.login { max-width: 440px; padding-top: 28px; }
+.login-card { display: grid; gap: 14px; padding: 26px 22px; }
+.login-card form { display: grid; gap: 14px; }
+.login-card h1 { font-size: 26px; margin: 4px 0 0; letter-spacing: -.02em; }
+.login-icon { width: 72px; height: 72px; border-radius: 18px; justify-self: center; }
+.login-submit { width: 100%; justify-content: center; text-align: center; text-decoration: none; }
+.login-card .seg--wide { margin-bottom: 0; }
+.login-card .link-btn { justify-self: center; }
+.login-msg { margin: 0; font-size: 14px; color: var(--muted); }
+.login-msg--error { color: #ffb4b4; }
+.login-msg--ok { color: #8ff0c0; }
+.login-note { text-align: center; color: var(--dim); font-size: 14px; margin: 16px 0 0; }

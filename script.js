@@ -64,8 +64,8 @@
   ];
   const add = (attrs) => {
     const t = document.createElementNS(NS, 'text');
-    t.textContent = 'RAIM';
-    t.setAttribute('x', 500);
+    t.textContent = 'BARBOOK';
+    t.setAttribute('x', 900);
     t.setAttribute('y', 248);
     for (const k in attrs) t.setAttribute(k, attrs[k]);
     g.appendChild(t);
