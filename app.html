@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>RAIM – App</title>
+  <title>RAIM – Projekte</title>
   <meta name="theme-color" content="#07060f">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,37 +12,48 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>RAIM</span></a>
-    <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
-  </header>
-
-  <main>
-    <!-- ================= Schreibblock ================= -->
-    <section class="view" id="view-write" data-view="write">
-      <div id="songList">
-        <div class="view-head">
-          <h1>Songs</h1>
-          <button class="btn btn--primary" id="newSong" type="button">+ Neuer Song</button>
-        </div>
-        <ul class="songs" id="songs"></ul>
-        <p class="empty" id="songsEmpty">Noch keine Songs. Leg los mit „Neuer Song“.</p>
+  <!-- ================= Projektliste ================= -->
+  <div id="home">
+    <header class="topbar">
+      <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>RAIM</span></a>
+      <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
+      <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>
+      </button>
+    </header>
+    <main>
+      <div class="view-head">
+        <h1>Projekte</h1>
+        <button class="btn btn--primary" id="newProject" type="button">+ Neues Projekt</button>
       </div>
+      <ul class="projects" id="projects"></ul>
+      <div class="empty-state" id="projectsEmpty" hidden>
+        <img src="assets/icon.svg" alt="" width="96" height="96">
+        <p>Ein Projekt pro Song: Text, Beat mit Lizenz und deine Reime an einem Ort.</p>
+        <button class="btn btn--primary" type="button" data-new-project>Erstes Projekt anlegen</button>
+      </div>
+    </main>
+  </div>
 
-      <div id="editor" hidden>
-        <div class="editor-head">
-          <button class="icon-btn" id="backToList" type="button" aria-label="Zurück">
-            <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
-          </button>
-          <input class="title-input" id="songTitle" placeholder="Titel" autocomplete="off">
-          <button class="icon-btn" id="deleteSong" type="button" aria-label="Song löschen">
-            <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
-          </button>
-        </div>
+  <!-- ================= Projekt ================= -->
+  <div id="project" hidden>
+    <header class="topbar topbar--project">
+      <button class="icon-btn" id="backHome" type="button" aria-label="Zurück zu den Projekten">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <input class="title-input" id="projectTitle" placeholder="Projektname" autocomplete="off">
+      <button class="icon-btn" id="deleteProject" type="button" aria-label="Projekt löschen">
+        <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
+      </button>
+    </header>
 
+    <main>
+      <!-- ---------- Text ---------- -->
+      <section class="view" data-view="text">
         <div class="paper">
           <textarea id="songText" spellcheck="false" placeholder="Schreib deine erste Zeile …"></textarea>
           <div class="chips" id="rhymeChips" aria-live="polite"></div>
+          <div class="chips chips--saved" id="savedChips" hidden></div>
         </div>
 
         <div class="ai-bar">
@@ -66,122 +77,178 @@
           </div>
         </div>
         <p class="ai-msg" id="aiMsg" hidden></p>
-      </div>
-    </section>
+        <p class="hint" id="textStats"></p>
+      </section>
 
-    <!-- ================= Reimsuche ================= -->
-    <section class="view" id="view-search" data-view="search" hidden>
-      <h1>Reimsuche</h1>
-      <form class="search" id="searchForm" autocomplete="off">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input id="searchInput" type="search" placeholder="Wort oder Wortgruppe" enterkeyhint="search">
-      </form>
-      <div class="filters" id="filters">
-        <button type="button" class="seg-btn is-on" data-filter="all">Alle</button>
-        <button type="button" class="seg-btn" data-filter="multi">Doppel- &amp; Mehrsilbenreime</button>
-      </div>
-      <div id="searchOut"></div>
-    </section>
-
-    <!-- ================= Beats ================= -->
-    <section class="view" id="view-beats" data-view="beats" hidden>
-      <h1>Beats</h1>
-      <div class="seg seg--wide" role="tablist">
-        <button type="button" class="seg-btn is-on" data-source="file">Eigener Beat</button>
-        <button type="button" class="seg-btn" data-source="yt">YouTube-Beat</button>
-      </div>
-
-      <div id="beatFile">
-        <label class="drop" id="drop">
-          <input type="file" id="beatInput" accept="audio/*" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>
-          <span id="beatName">Beat auswählen (MP3, WAV, M4A …)</span>
-        </label>
-
-        <div class="deck" id="deck" hidden>
-          <div class="wave-wrap">
-            <canvas id="waveCanvas" height="180"></canvas>
-          </div>
-          <div class="time"><span id="tCur">0:00</span><span id="tLoop"></span><span id="tDur">0:00</span></div>
-          <div class="deck-controls">
-            <button type="button" class="round" id="playBtn" aria-label="Abspielen">
-              <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
-              <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
-            </button>
-            <button type="button" class="pill-btn" id="loopBtn" aria-pressed="false">Loop</button>
-            <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
-            <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
-          </div>
-          <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen.</p>
+      <!-- ---------- Beat ---------- -->
+      <section class="view" data-view="beat" hidden>
+        <div class="seg seg--wide" role="tablist">
+          <button type="button" class="seg-btn is-on" data-source="file">Beat-Datei</button>
+          <button type="button" class="seg-btn" data-source="yt">YouTube-Beat</button>
         </div>
+
+        <div id="beatFile">
+          <label class="drop" id="drop">
+            <input type="file" id="beatInput" accept="audio/*" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>
+            <span id="beatName">Beat hochladen (MP3, WAV, M4A …)</span>
+          </label>
+
+          <div class="deck" id="deck" hidden>
+            <div class="wave-wrap">
+              <canvas id="waveCanvas" height="180"></canvas>
+            </div>
+            <div class="time"><span id="tCur">0:00</span><span id="tLoop"></span><span id="tDur">0:00</span></div>
+            <div class="deck-controls">
+              <button type="button" class="round" id="playBtn" aria-label="Abspielen">
+                <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
+                <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+              </button>
+              <button type="button" class="pill-btn" id="loopBtn" aria-pressed="false">Loop</button>
+              <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
+              <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
+            </div>
+            <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen.</p>
+          </div>
+        </div>
+
+        <div id="beatYt" hidden>
+          <form class="search" id="ytForm" autocomplete="off">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+            <input id="ytUrl" type="url" placeholder="YouTube-Link einfügen" enterkeyhint="go">
+          </form>
+          <div class="yt-frame" id="ytFrame" hidden><div id="ytPlayer"></div></div>
+          <div class="deck-controls" id="ytControls" hidden>
+            <button type="button" class="pill-btn" id="ytA">A setzen</button>
+            <button type="button" class="pill-btn" id="ytB">B setzen</button>
+            <button type="button" class="pill-btn" id="ytLoop" aria-pressed="false">Loop</button>
+            <label class="tempo">Tempo
+              <select id="ytRate"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option></select>
+            </label>
+          </div>
+          <p class="hint" id="ytInfo"></p>
+        </div>
+
+        <h2 class="sub">Lizenz</h2>
+        <form class="card license" id="licenseForm" autocomplete="off">
+          <div class="grid2">
+            <label class="field">Produzent
+              <input name="producer" placeholder="z. B. prod. by …">
+            </label>
+            <label class="field">Lizenzart
+              <select name="type">
+                <option value="">– wählen –</option>
+                <option>Free (nur nicht-kommerziell)</option>
+                <option>Lease MP3</option>
+                <option>Lease WAV</option>
+                <option>Premium / Trackouts</option>
+                <option>Unlimited</option>
+                <option>Exklusiv</option>
+                <option>Eigener Beat</option>
+                <option>Andere</option>
+              </select>
+            </label>
+            <label class="field">BPM
+              <input name="bpm" inputmode="numeric" placeholder="z. B. 92">
+            </label>
+            <label class="field">Tonart
+              <input name="key" placeholder="z. B. A-Moll">
+            </label>
+            <label class="field">Gekauft am
+              <input name="date" type="date">
+            </label>
+          </div>
+          <label class="field">Notizen (Streams, Credits, Bedingungen …)
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+          <div class="license-file">
+            <label class="btn">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>
+              <span id="licenseFileLabel">Lizenz hochladen (PDF, Bild …)</span>
+              <input type="file" id="licenseInput" accept="application/pdf,image/*,.txt,.doc,.docx" hidden>
+            </label>
+            <span class="file-actions" id="licenseFileActions" hidden>
+              <a href="#" id="licenseOpen" target="_blank" rel="noopener">Öffnen</a> ·
+              <button type="button" id="licenseRemove">Entfernen</button>
+            </span>
+          </div>
+        </form>
 
         <h2 class="sub" id="takesHead" hidden>Aufnahmen</h2>
         <ul class="takes" id="takes"></ul>
-      </div>
+      </section>
 
-      <div id="beatYt" hidden>
-        <form class="search" id="ytForm" autocomplete="off">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
-          <input id="ytUrl" type="url" placeholder="YouTube-Link einfügen" enterkeyhint="go">
+      <!-- ---------- Reime ---------- -->
+      <section class="view" data-view="rhymes" hidden>
+        <form class="search" id="searchForm" autocomplete="off">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="searchInput" type="search" placeholder="Wort oder Wortgruppe" enterkeyhint="search">
         </form>
-        <div class="yt-frame" id="ytFrame" hidden><div id="ytPlayer"></div></div>
-        <div class="deck-controls" id="ytControls" hidden>
-          <button type="button" class="pill-btn" id="ytA">A setzen</button>
-          <button type="button" class="pill-btn" id="ytB">B setzen</button>
-          <button type="button" class="pill-btn" id="ytLoop" aria-pressed="false">Loop</button>
-          <label class="tempo">Tempo
-            <select id="ytRate"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option></select>
-          </label>
-        </div>
-        <p class="hint" id="ytInfo"></p>
-      </div>
-    </section>
 
-    <!-- ================= Einstellungen ================= -->
-    <section class="view" id="view-settings" data-view="settings" hidden>
-      <h1>Einstellungen</h1>
-      <div class="card">
-        <h2>KI-Ideen</h2>
-        <p>KI-Ideen nutzen Claude von Anthropic. Trag deinen eigenen API-Schlüssel ein (console.anthropic.com). Er bleibt nur in diesem Browser gespeichert.</p>
-        <label class="field">API-Schlüssel
-          <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
-        </label>
-        <div class="row">
-          <button class="btn btn--primary" id="saveKey" type="button">Speichern</button>
-          <button class="btn" id="revokeConsent" type="button">Zustimmung widerrufen</button>
+        <div class="block" id="endingsBlock" hidden>
+          <h3>Reimenden in deinem Text</h3>
+          <div class="chips chips--wrap" id="endingChips"></div>
         </div>
-        <p class="ok" id="keySaved" hidden>Gespeichert.</p>
-      </div>
-      <div class="card">
-        <h2>„Passt nicht“-Liste</h2>
-        <p><span id="blockedCount">0</span> Reime ausgeblendet.</p>
-        <button class="btn" id="clearBlocked" type="button">Liste leeren</button>
-      </div>
-      <div class="card">
-        <h2>Daten</h2>
-        <p>Deine Songs werden nur lokal in diesem Browser gespeichert. Sichere sie als Datei:</p>
-        <div class="row">
-          <button class="btn" id="exportSongs" type="button">Songs exportieren</button>
-          <label class="btn">Songs importieren<input type="file" id="importSongs" accept="application/json" hidden></label>
+        <div class="block" id="savedBlock" hidden>
+          <h3>Gemerkt für dieses Projekt</h3>
+          <div class="chips chips--wrap" id="savedList"></div>
         </div>
-      </div>
-    </section>
-  </main>
+        <div class="block" id="historyBlock" hidden>
+          <h3>Zuletzt gesucht</h3>
+          <div class="chips chips--wrap" id="historyChips"></div>
+        </div>
 
-  <nav class="tabbar" aria-label="Bereiche">
-    <button type="button" class="tab is-on" data-tab="write">
-      <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>Schreiben
-    </button>
-    <button type="button" class="tab" data-tab="search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Reime
-    </button>
-    <button type="button" class="tab" data-tab="beats">
-      <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4"/></svg>Beats
-    </button>
-    <button type="button" class="tab" data-tab="settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10 2.1 2.1M4.9 19.1 7 17m10-10 2.1-2.1"/></svg>Mehr
-    </button>
-  </nav>
+        <div class="filters" id="filters" hidden>
+          <button type="button" class="seg-btn is-on" data-filter="all">Alle</button>
+          <button type="button" class="seg-btn" data-filter="multi">Doppel- &amp; Mehrsilbenreime</button>
+        </div>
+        <div id="searchOut"></div>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Projektbereiche">
+      <button type="button" class="tab is-on" data-tab="text">
+        <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>Text
+      </button>
+      <button type="button" class="tab" data-tab="beat">
+        <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4"/></svg>Beat
+      </button>
+      <button type="button" class="tab" data-tab="rhymes">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Reime
+      </button>
+    </nav>
+  </div>
+
+  <!-- ================= Einstellungen ================= -->
+  <dialog id="settingsDlg" class="sheet">
+    <div class="sheet-head">
+      <h2>Einstellungen</h2>
+      <button class="icon-btn" type="button" id="closeSettings" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="card">
+      <h2>KI-Ideen</h2>
+      <p>KI-Ideen nutzen Claude von Anthropic. Trag deinen eigenen API-Schlüssel ein (console.anthropic.com). Er bleibt nur in diesem Browser gespeichert.</p>
+      <label class="field">API-Schlüssel
+        <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+      </label>
+      <div class="row">
+        <button class="btn btn--primary" id="saveKey" type="button">Speichern</button>
+        <button class="btn" id="revokeConsent" type="button">Zustimmung widerrufen</button>
+      </div>
+      <p class="ok" id="keySaved" hidden>Gespeichert.</p>
+    </div>
+    <div class="card">
+      <h2>Sicherung</h2>
+      <p>Projekte liegen nur in diesem Browser. Exportiere sie regelmäßig – inklusive Beats, Lizenzen und Aufnahmen.</p>
+      <div class="row">
+        <button class="btn" id="exportAll" type="button">Alles exportieren</button>
+        <label class="btn">Importieren<input type="file" id="importAll" accept="application/json,.json" hidden></label>
+      </div>
+      <p class="hint" id="storageInfo"></p>
+    </div>
+  </dialog>
 
   <dialog id="consentDlg">
     <form method="dialog">
@@ -200,6 +267,7 @@
   <script src="js/words.js"></script>
   <script src="js/rhyme.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/db.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/beats.js"></script>
   <script src="js/app.js"></script>

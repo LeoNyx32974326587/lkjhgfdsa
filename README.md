@@ -14,12 +14,13 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 
 ## Funktionen
 
-- **Schreiben**: Songs anlegen, Text schreiben. Unter dem Text erscheinen Reime auf dein letztes Wort. Antippen fügt sie ein.
-- **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song, auf Wunsch auf dein Reimende. Nutzt Claude von Anthropic mit deinem eigenen API-Schlüssel (unter „Mehr“ eintragen). Erst nach Zustimmung (ab 18) werden bis zu 24 Zeilen gesendet.
-- **Reimsuche**: Reime nach Klang statt nach Buchstaben, Doppel- und Mehrsilbenreime zuerst, dazu Endungsreime (z. B. „–dienst“). „Passt nicht“ oder nach links wischen blendet einen Reim aus.
-- **Beats**: Eigene Audiodatei abspielen, Loop-Bereich auf der Wellenform ziehen, Tempo ändern (ohne Tonhöhe zu verändern), dich zum Beat aufnehmen und den Take herunterladen. YouTube-Beats mit A/B-Loop und Tempo.
+Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat drei Bereiche:
 
-Songs, Einstellungen und die „Passt nicht“-Liste werden nur lokal im Browser gespeichert. Unter „Mehr“ kannst du Songs exportieren und importieren.
+- **Text**: Songtext schreiben. Unter dem Text erscheinen Reime auf dein letztes Wort, darunter deine gemerkten Wörter. Antippen fügt sie ein. Dazu **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song, auf Wunsch auf dein Reimende (Claude von Anthropic, eigener API-Schlüssel in den Einstellungen, Zustimmung ab 18, höchstens 24 Zeilen werden gesendet).
+- **Beat**: Beat-Datei hochladen (bleibt im Projekt gespeichert) oder YouTube-Link. Loop-Bereich auf der Wellenform ziehen, Tempo ändern, dich zum Beat aufnehmen. Aufnahmen bleiben im Projekt. Dazu die **Lizenz**: Produzent, Lizenzart, BPM, Tonart, Kaufdatum, Notizen und die Lizenzdatei (PDF, Bild …) zum Hochladen.
+- **Reime**: Reimsuche nach Klang, eigene für jedes Projekt. Oben stehen die Reimenden aus deinem Text, farbig markiert, wenn sie miteinander reimen; antippen sucht Reime darauf. Mit ★ merkst du dir Wörter fürs Projekt, mit ✕ („Passt nicht“) oder Wischen blendest du Reime in diesem Projekt aus. Die letzten Suchen werden pro Projekt gespeichert.
+
+Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen (Zahnrad) kannst du **alles exportieren**, inklusive Beats, Lizenzen und Aufnahmen, und wieder importieren. Mach das regelmäßig: Wenn du die Browserdaten löschst, sind die Projekte weg.
 
 ## Dateien
 
@@ -28,8 +29,10 @@ Songs, Einstellungen und die „Passt nicht“-Liste werden nur lokal im Browser
 - `js/rhyme.js`: Reim-Engine (deutsche Aussprache-Näherung und Bewertung)
 - `js/words.js`: Wortliste (239.279 Wörter)
 - `js/ai.js`: KI-Ideen über die Claude API
-- `js/beats.js`: Player, Loop, Tempo, Aufnahme, YouTube
-- `js/store.js`, `js/app.js`: Speicherung und Oberfläche
+- `js/beats.js`: Beat-Player, Loop, Tempo, Aufnahmen, YouTube
+- `js/db.js`: Projekte und Dateien (IndexedDB)
+- `js/store.js`: Einstellungen
+- `js/app.js`: Oberfläche
 
 ## Wortliste
 
