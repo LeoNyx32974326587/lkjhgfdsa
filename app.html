@@ -27,7 +27,7 @@
     <header class="topbar">
       <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
       <span class="topbar-right">
-        <span class="dict-status" id="dictStatus">Wörterbuch lädt …</span>
+        <span class="dict-status" id="dictStatus" hidden>Wörterbuch lädt …</span>
         <button class="icon-btn" id="openSettings" type="button" aria-label="Einstellungen">
           <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
@@ -88,6 +88,7 @@
         <button class="btn btn--small" id="copyCode" type="button">Kopieren</button>
         <p class="hint">Gib sie Freunden – mit ihr finden sie dich und schicken dir eine Anfrage.</p>
       </div>
+      <p class="form-error" id="friendsProblem" role="alert" hidden></p>
       <form class="friend-search" id="friendSearch" autocomplete="off">
         <input id="friendCode" placeholder="ID eines Freundes, z. B. K7M2QX" maxlength="12" autocapitalize="characters" spellcheck="false">
         <button class="btn btn--primary" type="submit">Suchen</button>

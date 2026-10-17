@@ -2116,6 +2116,7 @@
   var people = [];        // [{ id, code, name, artist, avatar, status: 'friend' | 'incoming' | 'outgoing' }]
   var invites = [];       // songs friends invited me to: [{ owner, project_id, title }]
   var ownFeatures = {};   // my songs -> [{ member, accepted, rights }]
+  var friendsProblem = '';
   var friendPics = {};    // id -> picture as data URL ('' while loading)
   function personName(x) { return x ? x.artist || x.name || '#' + x.code : ''; }
   function personById(id) { return people.find(function (x) { return x.id === id; }); }
@@ -2131,14 +2132,19 @@
 
   function loadFriends() {
     if (!account || !RaimCloud.online()) return Promise.resolve();
-    return Promise.all([RaimCloud.relations(), RaimCloud.invitations(), RaimCloud.myFeatures()]).then(function (r) {
-      people = r[0];
-      invites = r[1];
-      ownFeatures = r[2];
-      pruneFeatures();
+    // each part on its own: one failing (e.g. an outdated database) must not hide the others
+    var problem = null;
+    function part(job, fallback) { return job.catch(function (err) { problem = err; return fallback; }); }
+    return Promise.all([
+      part(RaimCloud.relations(), null), part(RaimCloud.invitations(), null), part(RaimCloud.myFeatures(), null)
+    ]).then(function (r) {
+      if (r[0]) people = r[0];
+      if (r[1]) invites = r[1];
+      if (r[2]) { ownFeatures = r[2]; pruneFeatures(); }
+      friendsProblem = problem ? RaimCloud.message(problem) : '';
       renderFriends();
       if (!current) renderProjects();
-    }, function () { /* keep the last lists */ });
+    });
   }
   var featuresLoaded = false;
   // friends who declined an invitation or left a song drop out of its feature list
@@ -2207,6 +2213,8 @@
     banner.textContent = invites.length === 1 ? 'Du hast eine Einladung zu einem Song – ansehen'
       : 'Du hast ' + invites.length + ' Einladungen zu Songs – ansehen';
     if ($('friends').hidden) return;
+    $('friendsProblem').textContent = friendsProblem;
+    $('friendsProblem').hidden = !friendsProblem;
     var invList = $('invitesList');
     invList.textContent = '';
     invites.forEach(function (inv) {
