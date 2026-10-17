@@ -2701,7 +2701,7 @@
     function part(job, fallback) { return job.catch(function (err) { problem = err; return fallback; }); }
     return Promise.all([
       part(RaimCloud.relations(), null), part(RaimCloud.invitations(), null), part(RaimCloud.myFeatures(), null),
-      RaimCloud.notifications().catch(function () { return null; })   // older database: no messages yet
+      part(RaimCloud.notifications(), null)   // an outdated database says so in the friends area
     ]).then(function (r) {
       if (r[0]) people = r[0];
       if (r[1]) invites = r[1];
