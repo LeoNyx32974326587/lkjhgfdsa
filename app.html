@@ -194,9 +194,9 @@
               Verlauf
             </button>
             <button type="button" class="tool-btn" id="collapseAll">Alle einklappen</button>
-            <button type="button" class="tool-btn" id="exportPdf">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M12 11v6m-3-3 3 3 3-3"/></svg>
-              PDF
+            <button type="button" class="tool-btn" id="exportBtn">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/></svg>
+              Export
             </button>
           </span>
         </div>
@@ -528,7 +528,31 @@
     </div>
   </dialog>
 
-  <dialog id="historyDlg" class="sheet">
+  <dialog id="exportDlg" class="sheet">
+    <div class="sheet-head">
+      <h2>Export</h2>
+      <button class="icon-btn" type="button" id="closeExport" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="export-list">
+      <button type="button" class="export-item" id="exportPdf">
+        <strong>PDF</strong>
+        <span>Songtext mit Titel, BPM, Tonart und Genre – zum Ausdrucken oder Weiterschicken.</span>
+      </button>
+      <button type="button" class="export-item" id="exportPlain">
+        <strong>Text kopieren</strong>
+        <span>Nur die Zeilen, Wiederholungen ausgeschrieben – so wollen ihn Spotify, Apple Music und Musixmatch.</span>
+      </button>
+      <button type="button" class="export-item" id="exportTagged">
+        <strong>Mit Abschnitten kopieren</strong>
+        <span>Mit [Intro], [Hook], [Part 1] … – so wie bei Genius.</span>
+      </button>
+    </div>
+    <p class="hint" id="exportNote" hidden></p>
+  </dialog>
+
+    <dialog id="historyDlg" class="sheet">
     <div class="sheet-head">
       <h2 id="historyTitle">Verlauf</h2>
       <button class="icon-btn" type="button" id="closeHistory" aria-label="Schließen">

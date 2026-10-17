@@ -1099,7 +1099,43 @@
       toast('PDF konnte nicht erstellt werden. Bist du online? (Der PDF-Baustein wird beim ersten Mal geladen.)');
     }).then(function () { $('exportPdf').disabled = false; });
   }
-  $('exportPdf').addEventListener('click', exportPdf);
+  $('exportPdf').addEventListener('click', function () { $('exportDlg').close(); exportPdf(); });
+
+  // ---------- lyrics as plain text for the platforms ----------
+  // plain: just the lines (repeats written out), one empty line between sections;
+  // tagged: the same with [Intro], [Hook] … above each section, as Genius wants it
+  function lyricsText(tagged) {
+    return RaimSong.expand(RaimSong.parse(current.text)).map(function (s) {
+      var body = s.body.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).join('\n');
+      if (!body) return '';
+      return tagged && s.name !== null ? '[' + s.name + ']\n' + body : body;
+    }).filter(Boolean).join('\n\n');
+  }
+  function copyLyrics(tagged) {
+    var text = lyricsText(tagged), note = $('exportNote');
+    if (!text) { note.textContent = 'Der Song hat noch keinen Text.'; note.hidden = false; return; }
+    var done = function () { $('exportDlg').close(); toast((tagged ? 'Text mit Abschnitten' : 'Text') + ' kopiert – ' + RaimSong.lines(text).length + ' Zeilen.'); };
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done, function () {
+      // no clipboard access (e.g. opened as a file): show the text to copy by hand
+      note.hidden = false;
+      note.textContent = 'Kopieren ging nicht automatisch – markier den Text unten und kopier ihn selbst.';
+      var ta = $('exportFallback') || el('textarea', 'export-fallback');
+      ta.id = 'exportFallback';
+      ta.value = text;
+      ta.readOnly = true;
+      note.after(ta);
+      ta.select();
+    });
+  }
+  $('exportBtn').addEventListener('click', function () {
+    $('exportNote').hidden = true;
+    var fb = $('exportFallback');
+    if (fb) fb.remove();
+    $('exportDlg').showModal();
+  });
+  $('closeExport').addEventListener('click', function () { $('exportDlg').close(); });
+  $('exportPlain').addEventListener('click', function () { copyLyrics(false); });
+  $('exportTagged').addEventListener('click', function () { copyLyrics(true); });
 
   // ---------- song infos (asked when a project is created, editable from the text tab) ----------
   var LANGS = [
