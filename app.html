@@ -147,7 +147,31 @@
         </div>
 
         <h2 class="sub">Lizenz</h2>
-        <form class="card license" id="licenseForm" autocomplete="off">
+        <button type="button" class="license-add" id="licenseAdd">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Lizenz hinzufügen
+        </button>
+
+        <div class="license-chip" id="licenseChip" hidden>
+          <button type="button" class="license-bar" id="licenseBar" aria-expanded="false" aria-controls="licenseDetails">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>
+            <span class="license-text">
+              <strong id="licenseTitle"></strong>
+              <span id="licenseSub"></span>
+            </span>
+            <svg class="clip" id="licenseClip" viewBox="0 0 24 24" aria-label="Lizenzdatei vorhanden"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="license-details" id="licenseDetails" hidden>
+            <dl id="licenseList"></dl>
+            <div class="row">
+              <a class="btn" id="licenseOpen" href="#" target="_blank" rel="noopener" hidden>Lizenzdatei öffnen</a>
+              <button type="button" class="btn" id="licenseEdit">Bearbeiten</button>
+            </div>
+          </div>
+        </div>
+
+        <form class="card license" id="licenseForm" autocomplete="off" hidden>
           <div class="grid2">
             <label class="field">Produzent
               <input name="producer" placeholder="z. B. prod. by …">
@@ -181,13 +205,18 @@
           <div class="license-file">
             <label class="btn">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7Z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>
-              <span id="licenseFileLabel">Lizenz hochladen (PDF, Bild …)</span>
+              <span id="licenseFileLabel">Lizenzdatei hochladen (PDF, Bild …)</span>
               <input type="file" id="licenseInput" accept="application/pdf,image/*,.txt,.doc,.docx" hidden>
             </label>
-            <span class="file-actions" id="licenseFileActions" hidden>
-              <a href="#" id="licenseOpen" target="_blank" rel="noopener">Öffnen</a> ·
-              <button type="button" id="licenseRemove">Entfernen</button>
-            </span>
+            <button type="button" class="link-btn" id="licenseRemove" hidden>Datei entfernen</button>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
+              Speichern
+            </button>
+            <button type="button" class="btn" id="licenseCancel">Abbrechen</button>
+            <button type="button" class="link-btn link-btn--danger" id="licenseDelete" hidden>Lizenz löschen</button>
           </div>
         </form>
 

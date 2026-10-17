@@ -406,3 +406,32 @@ dialog.sheet { width: min(560px, calc(100vw - 24px)); max-width: none; max-heigh
 .rec--sm { margin: 0; width: 44px; height: 44px; }
 .rec--sm span { width: 24px; height: 24px; }
 .mini-time { font-family: "Roboto Mono", monospace; font-size: 14px; min-width: 40px; }
+
+/* license: slim bar when saved, form only while editing */
+.license-add {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 14px; border-radius: 18px; cursor: pointer; font-weight: 500; color: var(--muted);
+  border: 1.5px dashed rgba(160, 140, 255, .45); background: rgba(40, 30, 90, .3);
+}
+.license-add:hover { color: var(--text); background: rgba(70, 50, 160, .4); }
+.license-add svg { width: 18px; height: 18px; }
+.license-chip { border-radius: 18px; border: 1px solid rgba(94, 231, 255, .3); background: rgba(28, 20, 70, .7); overflow: hidden; }
+.license-chip.is-open { border-color: rgba(94, 231, 255, .55); }
+.license-bar {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  border: 0; background: none; cursor: pointer; padding: 12px 16px;
+}
+.license-bar > svg { width: 20px; height: 20px; flex: none; color: var(--cyan); }
+.license-bar .clip { color: var(--muted); width: 18px; height: 18px; }
+.license-bar .chev { color: var(--muted); transition: transform .2s; }
+.license-chip.is-open .chev { transform: rotate(180deg); }
+.license-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; overflow: hidden; white-space: nowrap; }
+.license-text strong { font-size: 16px; flex: none; }
+.license-text span { color: var(--dim); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.license-details { padding: 0 16px 16px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.license-details dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 14px 0 4px; font-size: 15px; }
+.license-details dt { color: var(--dim); }
+.license-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.form-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+.link-btn--danger { color: #ff9cb0; margin-left: auto; }
+a.btn { color: var(--text); }

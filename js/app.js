@@ -371,52 +371,150 @@
   });
 
   // ---------- license ----------
-  var licenseUrl = null;
+  // Saved license shows as a slim bar that expands to the details; editing happens in a form
+  // whose changes (fields and file) only apply on "Speichern".
+  var LICENSE_FIELDS = ['producer', 'type', 'bpm', 'key', 'date', 'notes'];
+  var licenseUrl = null, licenseEditing = false, licenseDraft = null;
+
+  function hasLicense(l) {
+    return !!l.fileId || LICENSE_FIELDS.some(function (k) { return (l[k] || '').trim(); });
+  }
+
   function fillLicense() {
-    var f = $('licenseForm'), l = current.license;
-    ['producer', 'type', 'bpm', 'key', 'date', 'notes'].forEach(function (k) { f.elements[k].value = l[k] || ''; });
-    showLicenseFile();
+    licenseEditing = false;
+    renderLicense();
   }
-  function showLicenseFile() {
-    var l = current.license;
-    if (licenseUrl) { URL.revokeObjectURL(licenseUrl); licenseUrl = null; }
-    $('licenseFileLabel').textContent = l.fileId ? l.fileName : 'Lizenz hochladen (PDF, Bild …)';
-    $('licenseFileActions').hidden = !l.fileId;
-    if (!l.fileId) return;
-    var p = current;
-    RaimDB.getFile(l.fileId).then(function (rec) {
-      if (!rec || current !== p) return;
-      licenseUrl = URL.createObjectURL(rec.blob);
-      $('licenseOpen').href = licenseUrl;
+
+  function renderLicense() {
+    var l = current.license, has = hasLicense(l);
+    $('licenseForm').hidden = !licenseEditing;
+    $('licenseAdd').hidden = licenseEditing || has;
+    $('licenseChip').hidden = licenseEditing || !has;
+    if (licenseEditing || !has) return;
+
+    $('licenseTitle').textContent = l.type || 'Lizenz';
+    var sub = [];
+    if (l.producer) sub.push(l.producer);
+    if (l.bpm) sub.push(l.bpm + ' BPM');
+    if (l.key) sub.push(l.key);
+    $('licenseSub').textContent = sub.join(' · ');
+    $('licenseClip').style.display = l.fileId ? '' : 'none';
+    setLicenseOpen(false);
+
+    var dl = $('licenseList');
+    dl.textContent = '';
+    [['Lizenzart', l.type], ['Produzent', l.producer], ['BPM', l.bpm], ['Tonart', l.key],
+      ['Gekauft am', l.date ? new Date(l.date + 'T00:00').toLocaleDateString('de-DE') : ''],
+      ['Notizen', l.notes], ['Datei', l.fileName]].forEach(function (row) {
+      if (!row[1]) return;
+      dl.append(el('dt', '', row[0]), el('dd', '', row[1]));
     });
+
+    if (licenseUrl) { URL.revokeObjectURL(licenseUrl); licenseUrl = null; }
+    $('licenseOpen').hidden = true;
+    if (l.fileId) {
+      var p = current;
+      RaimDB.getFile(l.fileId).then(function (rec) {
+        if (!rec || current !== p) return;
+        licenseUrl = URL.createObjectURL(rec.blob);
+        $('licenseOpen').href = licenseUrl;
+        $('licenseOpen').hidden = false;
+      });
+    }
   }
-  $('licenseForm').addEventListener('input', function (e) {
-    if (!e.target.name) return;
-    current.license[e.target.name] = e.target.value;
-    scheduleSave();
-  });
-  $('licenseForm').addEventListener('submit', function (e) { e.preventDefault(); });
+
+  function setLicenseOpen(open) {
+    $('licenseDetails').hidden = !open;
+    $('licenseBar').setAttribute('aria-expanded', String(open));
+    $('licenseChip').classList.toggle('is-open', open);
+  }
+  $('licenseBar').addEventListener('click', function () { setLicenseOpen($('licenseDetails').hidden); });
+
+  function editLicense() {
+    var f = $('licenseForm'), l = current.license;
+    LICENSE_FIELDS.forEach(function (k) { f.elements[k].value = l[k] || ''; });
+    licenseDraft = { file: null, removeFile: false };
+    licenseEditing = true;
+    renderLicense();
+    showDraftFile();
+    $('licenseDelete').hidden = !hasLicense(l);
+    f.elements.producer.focus();
+  }
+  function showDraftFile() {
+    var l = current.license, d = licenseDraft;
+    var name = d.file ? d.file.name : d.removeFile ? '' : l.fileName;
+    $('licenseFileLabel').textContent = name || 'Lizenzdatei hochladen (PDF, Bild …)';
+    $('licenseRemove').hidden = !name;
+  }
+  $('licenseAdd').addEventListener('click', editLicense);
+  $('licenseEdit').addEventListener('click', editLicense);
+
   $('licenseInput').addEventListener('change', function (e) {
-    var file = e.target.files[0], p = current;
+    var file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    var old = p.license.fileId;
-    RaimDB.putFile(p.id, file).then(function (id) {
-      p.license.fileId = id;
-      p.license.fileName = file.name;
-      scheduleSave();
-      if (current === p) showLicenseFile();
-      toast('Lizenz gespeichert.');
-      return RaimDB.deleteFile(old);
-    }).catch(function () { toast('Lizenz konnte nicht gespeichert werden.'); });
+    licenseDraft.file = file;
+    licenseDraft.removeFile = false;
+    showDraftFile();
   });
   $('licenseRemove').addEventListener('click', function () {
-    if (!confirm('Lizenzdatei entfernen?')) return;
-    RaimDB.deleteFile(current.license.fileId);
-    current.license.fileId = null;
-    current.license.fileName = '';
-    scheduleSave();
-    showLicenseFile();
+    licenseDraft.file = null;
+    licenseDraft.removeFile = true;
+    showDraftFile();
+  });
+
+  $('licenseCancel').addEventListener('click', function () {
+    licenseEditing = false;
+    licenseDraft = null;
+    renderLicense();
+  });
+
+  $('licenseForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = current, l = p.license, f = $('licenseForm'), d = licenseDraft;
+    var values = {};
+    LICENSE_FIELDS.forEach(function (k) { values[k] = f.elements[k].value.trim(); });
+    var old = l.fileId, step;
+    if (d.file) {
+      step = RaimDB.putFile(p.id, d.file).then(function (id) {
+        return { fileId: id, fileName: d.file.name };
+      });
+    } else if (d.removeFile) {
+      step = Promise.resolve({ fileId: null, fileName: '' });
+    } else {
+      step = Promise.resolve(null);
+    }
+    step.then(function (file) {
+      LICENSE_FIELDS.forEach(function (k) { l[k] = values[k]; });
+      if (file) {
+        l.fileId = file.fileId;
+        l.fileName = file.fileName;
+        RaimDB.deleteFile(old);
+      }
+      p.updated = Date.now();
+      return saveNow(p);
+    }).then(function () {
+      if (current !== p) return;
+      licenseEditing = false;
+      licenseDraft = null;
+      renderLicense();
+      toast(hasLicense(l) ? 'Lizenz gespeichert.' : 'Lizenz entfernt.');
+    }).catch(function () { toast('Lizenz konnte nicht gespeichert werden – Speicher voll?'); });
+  });
+
+  $('licenseDelete').addEventListener('click', function () {
+    if (!confirm('Lizenz mit allen Angaben und der Datei löschen?')) return;
+    var p = current, l = p.license;
+    RaimDB.deleteFile(l.fileId);
+    LICENSE_FIELDS.forEach(function (k) { l[k] = ''; });
+    l.fileId = null;
+    l.fileName = '';
+    p.updated = Date.now();
+    saveNow(p);
+    licenseEditing = false;
+    licenseDraft = null;
+    renderLicense();
+    toast('Lizenz gelöscht.');
   });
 
   // ---------- Reime (per project) ----------
