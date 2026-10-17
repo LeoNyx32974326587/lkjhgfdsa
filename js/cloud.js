@@ -204,14 +204,39 @@
       return sb.from('notifications').delete().eq('user_id', uid).eq('id', id).then(ok);
     },
 
+    // ---------- chat between friends ----------
+    // the newest messages with one friend, oldest first
+    chat: function (otherId) {
+      return sb.from('chat_messages').select('id,sender,recipient,body,created,read_at')
+        .in('sender', [uid, otherId]).in('recipient', [uid, otherId])
+        .order('id', { ascending: false }).limit(300).then(ok)
+        .then(function (rows) { return rows.sort(function (a, b) { return a.id - b.id; }); });
+    },
+    sendChat: function (otherId, body) {
+      return sb.from('chat_messages').insert({ sender: uid, recipient: otherId, body: body })
+        .select('id,sender,recipient,body,created,read_at').then(ok).then(function (rows) { return rows[0]; });
+    },
+    markChatRead: function (otherId) {
+      return sb.rpc('chat_mark_read', { other: otherId }).then(ok);
+    },
+    // -> { senderId: number of unread messages }
+    unreadChats: function () {
+      return sb.from('chat_messages').select('sender').eq('recipient', uid).is('read_at', null).then(ok).then(function (rows) {
+        var out = {};
+        rows.forEach(function (r) { out[r.sender] = (out[r.sender] || 0) + 1; });
+        return out;
+      });
+    },
+
     // live updates: calls onChange as soon as a message, friend request or song invitation for me arrives
     // (Supabase Realtime; the tables are in the publication "supabase_realtime", see setup.sql)
     live: function (onChange) {
       if (!sb || !sb.channel || !uid) return;
       var ch = sb.channel('barbook-' + uid);
-      [['notifications', 'user_id'], ['friendships', 'addressee'], ['friendships', 'requester'], ['project_members', 'member'], ['project_members', 'owner']]
+      [['notifications', 'user_id'], ['friendships', 'addressee'], ['friendships', 'requester'], ['project_members', 'member'], ['project_members', 'owner'],
+        ['chat_messages', 'recipient'], ['chat_messages', 'sender']]
         .forEach(function (t) {
-          ch.on('postgres_changes', { event: '*', schema: 'public', table: t[0], filter: t[1] + '=eq.' + uid }, function () { onChange(t[0]); });
+          ch.on('postgres_changes', { event: '*', schema: 'public', table: t[0], filter: t[1] + '=eq.' + uid }, function (ev) { onChange(t[0], ev); });
         });
       ch.subscribe();
     },

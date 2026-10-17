@@ -156,6 +156,30 @@
     </main>
   </div>
 
+  <!-- ================= Chat with a friend ================= -->
+  <div id="chat" hidden>
+    <header class="topbar topbar--project chat-top">
+      <button class="icon-btn" id="closeChat" type="button" aria-label="Zurück zu den Freunden">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <span class="avatar avatar--small" id="chatAvatar" aria-hidden="true"></span>
+      <span class="chat-who"><strong id="chatName"></strong><span id="chatSub"></span></span>
+    </header>
+    <main class="chat-main">
+      <p class="chat-empty" id="chatEmpty" hidden>Noch keine Nachrichten. Schreib die erste!</p>
+      <ol class="chat-list" id="chatList"></ol>
+    </main>
+    <form class="chat-bar" id="chatForm" autocomplete="off">
+      <button type="button" class="mic-btn mic-btn--big" id="chatMic" title="Einsprechen statt tippen" aria-label="Einsprechen statt tippen" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <textarea id="chatInput" rows="1" placeholder="Nachricht" maxlength="4000" enterkeyhint="send" aria-label="Nachricht"></textarea>
+      <button class="chat-send" id="chatSend" type="submit" aria-label="Senden">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7-7-1Z"/></svg>
+      </button>
+    </form>
+  </div>
+
 
   <!-- ================= Beats & Lizenzen ================= -->
   <div id="library" hidden>

@@ -128,6 +128,18 @@ create table if not exists public.notifications (
 );
 create index if not exists notifications_user on public.notifications (user_id, created desc);
 
+-- Chat between friends
+create table if not exists public.chat_messages (
+  id bigint generated always as identity primary key,
+  sender uuid not null default auth.uid() references auth.users on delete cascade,
+  recipient uuid not null references auth.users on delete cascade,
+  body text not null check (length(btrim(body)) between 1 and 4000),
+  created timestamptz not null default now(),
+  read_at timestamptz
+);
+create index if not exists chat_messages_pair on public.chat_messages (least(sender, recipient), greatest(sender, recipient), id desc);
+create index if not exists chat_messages_unread on public.chat_messages (recipient) where read_at is null;
+
 -- AI requests per account and day (the Edge Function "claude" counts them; nobody reads this table directly)
 create table if not exists public.ai_usage (
   user_id uuid not null references auth.users on delete cascade,
@@ -312,6 +324,14 @@ drop trigger if exists notify_member on public.project_members;
 create trigger notify_member after update or delete on public.project_members
   for each row execute function public.notify_member();
 
+-- the chat partner has read everything up to now
+create or replace function public.chat_mark_read(other uuid) returns void
+language sql security definer set search_path = public as $$
+  update chat_messages set read_at = now() where recipient = auth.uid() and sender = other and read_at is null;
+$$;
+revoke execute on function public.chat_mark_read(uuid) from anon, public;
+grant execute on function public.chat_mark_read(uuid) to authenticated;
+
 -- keep the newest 100 saved states per song
 create or replace function public.trim_versions() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -398,6 +418,7 @@ alter table public.project_versions enable row level security;
 alter table public.bars enable row level security;
 alter table public.share_links enable row level security;
 alter table public.notifications enable row level security;
+alter table public.chat_messages enable row level security;
 alter table public.ai_usage enable row level security;   -- no policies: only ai_take() touches it
 
 drop policy if exists "own projects" on public.projects;
@@ -495,6 +516,12 @@ create policy "own messages read" on public.notifications for select to authenti
 create policy "own messages mark" on public.notifications for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own messages delete" on public.notifications for delete to authenticated using (auth.uid() = user_id);
 
+drop policy if exists "chat read" on public.chat_messages;
+drop policy if exists "chat write" on public.chat_messages;
+create policy "chat read" on public.chat_messages for select to authenticated using (auth.uid() in (sender, recipient));
+create policy "chat write" on public.chat_messages for insert to authenticated
+  with check (sender = auth.uid() and read_at is null and public.are_friends(sender, recipient));
+
 drop policy if exists "own bars" on public.bars;
 create policy "own bars" on public.bars for all to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -510,7 +537,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['notifications', 'friendships', 'project_members'] loop
+    foreach t in array array['notifications', 'friendships', 'project_members', 'chat_messages'] loop
       if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
         execute format('alter publication supabase_realtime add table public.%I', t);
       end if;

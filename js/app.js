@@ -2701,10 +2701,12 @@
     function part(job, fallback) { return job.catch(function (err) { problem = err; return fallback; }); }
     return Promise.all([
       part(RaimCloud.relations(), null), part(RaimCloud.invitations(), null), part(RaimCloud.myFeatures(), null),
-      part(RaimCloud.notifications(), null)   // an outdated database says so in the friends area
+      part(RaimCloud.notifications(), null),   // an outdated database says so in the friends area
+      part(RaimCloud.unreadChats(), null)
     ]).then(function (r) {
       if (r[0]) people = r[0];
       if (r[1]) invites = r[1];
+      if (r[4]) { unreadChat = r[4]; if (chatWith) unreadChat[chatWith.id] = 0; }
       if (r[3]) {
         // a message that just arrived pops up once, unless the friends area is open anyway
         var known = new Set(messages.map(function (m) { return m.id; }));
@@ -2795,13 +2797,137 @@
   // new messages and requests show up right away (live), with a check every minute as a safety net
   var liveTimer = null;
   function startLive() {
-    RaimCloud.live(function () {
+    RaimCloud.live(function (table, ev) {
+      if (table === 'chat_messages') { chatEvent(ev && (ev.new || ev.record)); return; }
       clearTimeout(liveTimer);
       liveTimer = setTimeout(loadFriends, 400);
     });
   }
   setInterval(function () { if (!document.hidden && account) loadFriends(); }, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && account) loadFriends(); });
+
+  // ---------- chat with a friend ----------
+  var chatWith = null, chatRows = [], unreadChat = {}, chatPoll = null;
+  function chatUnreadTotal() {
+    return Object.keys(unreadChat).reduce(function (n, k) { return n + (chatWith && chatWith.id === k ? 0 : unreadChat[k]); }, 0);
+  }
+  function openChat(x) {
+    chatWith = x;
+    chatRows = [];
+    $('friends').hidden = true;
+    $('chat').hidden = false;
+    document.body.classList.add('in-chat');
+    $('chatName').textContent = personName(x);
+    $('chatSub').textContent = '#' + x.code;
+    $('chatAvatar').dataset.person = x.id;
+    paintPerson($('chatAvatar'), x);
+    $('chatInput').value = '';
+    sizeChatInput();
+    renderChat();
+    loadChat();
+    clearInterval(chatPoll);
+    chatPoll = setInterval(function () { if (!document.hidden) loadChat(); }, 20000);   // safety net next to live updates
+    if (!matchMedia('(pointer: coarse)').matches) $('chatInput').focus();
+  }
+  function closeChat() {
+    RaimDictate.stop();
+    clearInterval(chatPoll);
+    chatWith = null;
+    document.body.classList.remove('in-chat');
+    $('chat').hidden = true;
+    $('friends').hidden = false;
+    renderFriends();
+    window.scrollTo(0, 0);
+  }
+  $('closeChat').addEventListener('click', closeChat);
+  function loadChat() {
+    var x = chatWith;
+    if (!x) return Promise.resolve();
+    return RaimCloud.chat(x.id).then(function (rows) {
+      if (chatWith !== x) return;
+      var pending = chatRows.filter(function (m) { return m.pending; });
+      chatRows = rows.concat(pending);
+      renderChat();
+      if (rows.some(function (m) { return m.sender === x.id && !m.read_at; })) RaimCloud.markChatRead(x.id).catch(function () {});
+      unreadChat[x.id] = 0;
+      renderFriends();
+    }, function (err) { toast(RaimCloud.message(err)); });
+  }
+  function dayLabel(d) {
+    var today = new Date(), y = new Date(); y.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Heute';
+    if (d.toDateString() === y.toDateString()) return 'Gestern';
+    return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long' });
+  }
+  function renderChat() {
+    var ol = $('chatList'), me = account && account.id, lastDay = '';
+    var atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
+    ol.textContent = '';
+    $('chatEmpty').hidden = chatRows.length > 0;
+    chatRows.forEach(function (m) {
+      var d = new Date(m.created), day = d.toDateString();
+      if (day !== lastDay) { ol.append(el('li', 'chat-day', dayLabel(d))); lastDay = day; }
+      var mine = m.sender === me, li = el('li', 'chat-msg ' + (mine ? 'is-mine' : 'is-theirs') + (m.failed ? ' is-failed' : ''));
+      li.append(el('p', 'chat-text', m.body));
+      var meta = el('span', 'chat-meta', d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+      if (mine) {
+        var tick = el('span', 'chat-tick' + (m.read_at ? ' is-read' : ''), m.failed ? '!' : m.pending ? '🕓' : m.read_at ? '✓✓' : '✓');
+        tick.title = m.failed ? 'Nicht gesendet' : m.pending ? 'Wird gesendet' : m.read_at ? 'Gelesen' : 'Gesendet';
+        meta.append(tick);
+      }
+      li.append(meta);
+      ol.append(li);
+    });
+    if (atBottom || !renderChat.done) window.scrollTo(0, document.documentElement.scrollHeight);
+    renderChat.done = true;
+  }
+  function sizeChatInput() {
+    var ta = $('chatInput');
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+  }
+  $('chatInput').addEventListener('input', sizeChatInput);
+  // Enter sends on a keyboard; Shift+Enter makes a new line (phones: the send button)
+  $('chatInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) { e.preventDefault(); $('chatForm').requestSubmit(); }
+  });
+  $('chatForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var x = chatWith, body = $('chatInput').value.trim();
+    if (!x || !body) return;
+    RaimDictate.stop();
+    var temp = { id: 'tmp' + Date.now(), sender: account.id, recipient: x.id, body: body, created: new Date().toISOString(), read_at: null, pending: true };
+    chatRows.push(temp);
+    $('chatInput').value = '';
+    sizeChatInput();
+    renderChat();
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    RaimCloud.sendChat(x.id, body).then(function (row) {
+      chatRows = chatRows.filter(function (m) { return m !== temp && m.id !== row.id; }).concat([row]).sort(function (a, b) { return (a.pending ? 1e15 : a.id) - (b.pending ? 1e15 : b.id); });
+      if (chatWith === x) renderChat();
+    }, function (err) {
+      temp.pending = false;
+      temp.failed = true;
+      if (chatWith === x) renderChat();
+      toast(/row-level security/i.test(err.message || '') ? 'Nachricht nicht gesendet – ihr seid keine Freunde mehr.' : RaimCloud.message(err));
+    });
+  });
+  $('chatMic').hidden = !RaimDictate.supported();
+  $('chatMic').addEventListener('click', function () { RaimDictate.start($('chatInput'), $('chatMic'), { lang: (navigator.language || 'de').slice(0, 2), onError: toast }); });
+  // a chat message came in live (or one of mine changed, e.g. read)
+  function chatEvent(row) {
+    var me = account && account.id;
+    if (!row) { loadFriends(); return; }
+    var other = row.sender === me ? row.recipient : row.sender;
+    if (chatWith && chatWith.id === other) { loadChat(); return; }
+    if (row.sender === me) return;
+    if (!row.read_at) {
+      unreadChat[other] = (unreadChat[other] || 0) + 1;
+      renderFriends();
+      var who = personById(other);
+      toast((who ? personName(who) : 'Neue Nachricht') + ': ' + (row.body.length > 80 ? row.body.slice(0, 80) + '…' : row.body));
+    }
+  }
 
   // a friend's circle: initials first, the picture once it is loaded
   function paintPerson(node, x) {
@@ -2825,9 +2951,10 @@
     var box = el('div', 'person-actions');
     actions.forEach(function (a) {
       if (typeof a === 'string') { box.append(el('span', 'person-state', a)); return; }
-      var b = el('button', 'btn' + (a.primary ? ' btn--primary' : ''), a.label);
+      var b = el('button', 'btn' + (a.primary ? ' btn--primary' : '') + (a.cls ? ' ' + a.cls : ''), a.label);
       b.type = 'button';
-      b.addEventListener('click', function () { b.disabled = true; a.run(); });
+      if (a.count) b.append(el('span', 'badge-count badge-count--inline', a.count > 99 ? '99+' : String(a.count)));
+      b.addEventListener('click', function () { if (!a.keep) b.disabled = true; a.run(); });
       box.append(b);
     });
     li.append(pic, info, box);
@@ -2886,7 +3013,7 @@
 
   function renderFriends() {
     var badge = $('friendsBadge'), incoming = people.filter(function (x) { return x.status === 'incoming'; });
-    var unread = messages.filter(function (m) { return !m.read; }).length, count = incoming.length + invites.length + unread;
+    var unread = messages.filter(function (m) { return !m.read; }).length, count = incoming.length + invites.length + unread + chatUnreadTotal();
     badge.textContent = count > 99 ? '99+' : String(count);
     badge.hidden = !count;
     renderMessages();
@@ -2922,7 +3049,7 @@
     $('incomingBlock').hidden = !incoming.length;
     var mine = friends();
     mine.sort(function (a, b) { return personName(a).localeCompare(personName(b), 'de'); }).forEach(function (x) {
-      list.append(personRow(x, [{ label: 'Entfernen', run: function () {
+      list.append(personRow(x, [{ label: 'Chat', cls: 'btn--chat', keep: true, count: unreadChat[x.id] || 0, run: function () { openChat(x); } }, { label: 'Entfernen', run: function () {
         var shared = sharedSongs(x.id).length;
         confirmDialog('Freund entfernen?', personName(x) + ' ist dann nicht mehr in deiner Freundesliste' +
           (shared ? ' und fliegt aus ' + (shared === 1 ? 'eurem gemeinsamen Song' : 'euren ' + shared + ' gemeinsamen Songs') + ' (Feature). Deine eigenen Songs bleiben bei dir, Songs von ' + personName(x) + ' verschwinden aus deiner Liste.' : '.'), 'Entfernen')
