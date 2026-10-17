@@ -142,14 +142,51 @@
 
   function activeProjects() { return projects.filter(function (p) { return !p.deletedAt; }); }
 
+  // ---------- status: in Arbeit / in Bearbeitung / fertig ----------
+  var STATUS = { work: 'In Arbeit', edit: 'In Bearbeitung', done: 'Fertig' };
+  function statusOf(p) { return STATUS[p.status] ? p.status : 'work'; }
+  var statusFilter = 'all';
+  try { statusFilter = localStorage.getItem('raim.statusFilter') || 'all'; } catch (e) { /* private mode */ }
+  document.querySelectorAll('[data-status-filter]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      statusFilter = b.dataset.statusFilter;
+      try { localStorage.setItem('raim.statusFilter', statusFilter); } catch (e) { /* private mode */ }
+      renderProjects();
+    });
+  });
+  function renderStatus() {
+    document.querySelectorAll('[data-status]').forEach(function (b) {
+      var on = b.dataset.status === statusOf(current);
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on);
+    });
+  }
+  document.querySelectorAll('[data-status]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      current.status = b.dataset.status;
+      renderStatus();
+      scheduleSave();
+    });
+  });
+
   function renderProjects() {
     var ul = $('projects'), active = activeProjects(), trashed = projects.length - active.length;
+    var counts = { all: active.length, work: 0, edit: 0, done: 0 };
+    active.forEach(function (p) { counts[statusOf(p)]++; });
+    if (statusFilter !== 'all' && !counts[statusFilter]) statusFilter = 'all';
+    document.querySelectorAll('[data-status-filter]').forEach(function (b) {
+      b.classList.toggle('is-on', b.dataset.statusFilter === statusFilter);
+      b.querySelector('span').textContent = counts[b.dataset.statusFilter];
+    });
+    $('statusFilter').hidden = active.length < 2;
     ul.textContent = '';
-    active.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
+    active.filter(function (p) { return statusFilter === 'all' || statusOf(p) === statusFilter; })
+      .sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
       var li = el('li'), b = el('button', 'project-card');
       b.type = 'button';
       var top = el('div', 'project-top');
       top.append(el('strong', '', p.title || 'Ohne Titel'));
+      top.append(el('span', 'badge badge--' + statusOf(p), STATUS[statusOf(p)]));
       if (p.license.type) top.append(el('span', 'badge', p.license.type));
       if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
       b.append(top);
@@ -186,6 +223,7 @@
     loadSections();
     promptPick = null;
     renderSongInfo();
+    renderStatus();
     hideAi();
     updateStats();
     fillLicense();

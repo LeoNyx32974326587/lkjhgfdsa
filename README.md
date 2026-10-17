@@ -36,6 +36,8 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat v
   - **Synonyme**: Bedeutung eingeben, optional „reimt auf“ – dann nach Reim sortiert. Deutsch offline (OpenThesaurus), Englisch online (Datamuse). Synonyme gibt es nur für Deutsch und Englisch.
   - Reimenden aus deinem Text (farbig gruppiert), Gemerkt-Liste, Verlauf, „Passt nicht“.
 
+Jedes Projekt hat einen **Status**: „In Arbeit“, „In Bearbeitung“ oder „Fertig“. Du stellst ihn oben im Projekt um. In der Projektliste steht er als farbiges Schild an jeder Karte; ab zwei Projekten lässt sich die Liste nach Status filtern.
+
 Gelöschte Projekte landen im **Papierkorb** (unten auf der Projektseite) und werden nach 28 Tagen endgültig gelöscht; bis dahin lassen sie sich wiederherstellen.
 
 Unter Einstellungen (Zahnrad) prüft **„Schlüssel testen“**, ob dein API-Schlüssel funktioniert.

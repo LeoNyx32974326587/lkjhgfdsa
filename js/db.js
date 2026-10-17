@@ -43,6 +43,7 @@
     return {
       id: uid(),
       title: title || '',
+      status: 'work',      // 'work' (in Arbeit), 'edit' (in Bearbeitung), 'done' (fertig)
       text: '',
       langs: ['de'],       // languages sung in, e.g. ['de', 'en']; codes in app.js LANGS
       lang: 'de',          // the one of them the rhyme engine uses ('de' or 'en')
