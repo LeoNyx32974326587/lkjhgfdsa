@@ -45,6 +45,9 @@
     if (/invalid.*email|email.*invalid|unable to validate email/i.test(m)) return 'Bitte gib eine gültige E-Mail-Adresse ein.';
     if (/rate limit|too many|security purposes/i.test(m)) return 'Zu viele Versuche – warte kurz und probier es dann noch mal.';
     if (/failed to fetch|network|load failed/i.test(m)) return 'Keine Verbindung zum Server. Bist du online?';
+    if (/schema cache|does not exist|could not find the (table|function)|column .* of relation/i.test(m)) {
+      return 'Die Datenbank ist noch nicht auf dem neuesten Stand: Bitte supabase/setup.sql in Supabase (SQL Editor) noch einmal ausführen.';
+    }
     return 'Das hat nicht geklappt: ' + m;
   }
 

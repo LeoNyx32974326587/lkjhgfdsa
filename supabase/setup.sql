@@ -56,6 +56,8 @@ create table if not exists public.project_members (
   created_at timestamptz not null default now(),
   primary key (owner, project_id, member)
 );
+-- what the friend may change: {"text": true, "beat": false, "license": false, "info": false, "status": false}
+alter table public.project_members add column if not exists rights jsonb not null default '{}'::jsonb;
 
 -- ---------- helpers (run with full rights, so the rules below don't loop) ----------
 
@@ -77,6 +79,54 @@ create or replace function public.is_member(o uuid, pid text) returns boolean
 language sql security definer stable set search_path = public as $$
   select exists (select 1 from project_members where owner = o and project_id = pid and member = auth.uid());
 $$;
+
+-- may the signed-in user change this part ('text', 'beat', 'license', 'info', 'status') of the project?
+create or replace function public.member_can(o uuid, pid text, what text) returns boolean
+language sql security definer stable set search_path = public as $$
+  select coalesce((select (rights ->> what)::boolean from project_members
+    where owner = o and project_id = pid and member = auth.uid()), false);
+$$;
+
+-- A featured friend's save keeps everything they may not change as it was.
+create or replace function public.guard_member_edit() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  r jsonb;
+  k text;
+  locked text[] := array['features', 'ownerName', 'deletedAt'];   -- only the owner
+begin
+  if auth.uid() is null or auth.uid() = old.user_id then return new; end if;
+  select rights into r from project_members where owner = old.user_id and project_id = old.id and member = auth.uid();
+  r := coalesce(r, '{}'::jsonb);
+  if not coalesce((r ->> 'text')::boolean, false) then locked := locked || array['text']; end if;
+  if not coalesce((r ->> 'beat')::boolean, false) then locked := locked || array['beat', 'youtube']; end if;
+  if not coalesce((r ->> 'license')::boolean, false) then locked := locked || array['license']; end if;
+  if not coalesce((r ->> 'info')::boolean, false) then locked := locked || array['title', 'bpm', 'key', 'genres', 'langs', 'lang', 'topic']; end if;
+  if not coalesce((r ->> 'status')::boolean, false) then locked := locked || array['status']; end if;
+  foreach k in array locked loop
+    if old.data ? k then new.data := jsonb_set(new.data, array[k], old.data -> k);
+    else new.data := new.data - k; end if;
+  end loop;
+  new.user_id := old.user_id;
+  new.id := old.id;
+  return new;
+end;
+$$;
+drop trigger if exists guard_member_edit on public.projects;
+create trigger guard_member_edit before update on public.projects
+  for each row execute function public.guard_member_edit();
+
+-- a deleted project takes its features along
+create or replace function public.drop_project_members() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from project_members where owner = old.user_id and project_id = old.id;
+  return old;
+end;
+$$;
+drop trigger if exists drop_project_members on public.projects;
+create trigger drop_project_members after delete on public.projects
+  for each row execute function public.drop_project_members();
 
 -- find someone by their ID ("#K7M2QX" or "k7m2qx")
 create or replace function public.find_profile(c text)
@@ -119,7 +169,8 @@ drop policy if exists "files delete" on public.files;
 create policy "files read" on public.files for select to authenticated
   using (auth.uid() = user_id or auth.uid() = project_owner or public.is_member(project_owner, project));
 create policy "files insert" on public.files for insert to authenticated
-  with check (auth.uid() = user_id and (auth.uid() = project_owner or public.is_member(project_owner, project)));
+  with check (auth.uid() = user_id and (auth.uid() = project_owner
+    or public.member_can(project_owner, project, 'beat') or public.member_can(project_owner, project, 'license')));
 create policy "files update" on public.files for update to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "files delete" on public.files for delete to authenticated
@@ -151,6 +202,7 @@ create policy "friendships end" on public.friendships for delete to authenticate
 drop policy if exists "members read" on public.project_members;
 drop policy if exists "members add" on public.project_members;
 drop policy if exists "members remove" on public.project_members;
+drop policy if exists "members rights" on public.project_members;
 create policy "members read" on public.project_members for select to authenticated
   using (auth.uid() in (owner, member));
 create policy "members add" on public.project_members for insert to authenticated
@@ -158,6 +210,8 @@ create policy "members add" on public.project_members for insert to authenticate
     and exists (select 1 from public.projects p where p.user_id = owner and p.id = project_id));
 create policy "members remove" on public.project_members for delete to authenticated
   using (auth.uid() in (owner, member));
+create policy "members rights" on public.project_members for update to authenticated
+  using (auth.uid() = owner) with check (auth.uid() = owner and public.are_friends(owner, member));
 
 -- ---------- file storage: private bucket, a folder per user ----------
 
