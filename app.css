@@ -618,6 +618,9 @@ body.prompter-open { overflow: hidden; }
 #infoBeatField .check { display: flex; justify-self: start; align-items: center; gap: 8px; width: auto; }
 #infoBeatField .check input { width: 18px; height: 18px; flex: none; }
 .field-note { font-size: 12px; color: var(--dim); margin-left: 4px; }
+.key-style { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 4px; }
+.key-style .field-note { margin-left: 0; }
+.key-style .seg-btn { padding: 6px 11px; font-size: 13px; }
 #infoGenres, #infoLangs { gap: 6px; }
 #infoGenres .chip, #infoLangs .chip { font-size: 14px; padding: 7px 12px; }
 #rhymeLangNote { margin: 4px 0 0; font-size: 13px; color: var(--muted); }

@@ -708,7 +708,38 @@
   function rhymeLang(langs) { return langs.filter(function (l) { return l !== 'other'; })[0] || 'de'; }
 
   function songBpm(p) { return p.bpm || p.license.bpm || ''; }
-  function songKey(p) { return p.key && p.key !== 'unbekannt' ? p.key : p.license.key || ''; }
+  function songKey(p) { return keyName(p.key && p.key !== 'unbekannt' ? p.key : p.license.key || ''); }
+
+  // Keys are stored in German ("Fis-Moll") and shown in the chosen style:
+  // de "Fis-Moll", en "F# Minor", short "F#m"
+  var keyStyle = 'de';
+  try { keyStyle = localStorage.getItem('raim.keyStyle') || 'de'; } catch (e) { /* private mode */ }
+  function keyName(k) {
+    var de = k && RaimLicenseReader.germanKey(k);
+    if (!de) return k || '';
+    var m = de.match(/^([A-H])(is|es|s)?-(Moll|Dur)$/), minor = m[3] === 'Moll';
+    if (keyStyle === 'de') return de;
+    var note = m[1] === 'H' ? 'B' : m[1] === 'B' ? 'Bb' : m[1];
+    if (m[2] === 'is') note += '#';
+    else if (m[2]) note += 'b';
+    if (keyStyle === 'short') return note + (minor ? 'm' : '');
+    return note + (minor ? ' Minor' : ' Major');
+  }
+  function renderKeyStyle() {
+    document.querySelectorAll('[data-key-style]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.keyStyle === keyStyle); });
+    [].forEach.call($('infoForm').elements.key.options, function (o) {
+      if (o.value && o.value !== 'unbekannt') o.textContent = keyName(o.value);
+    });
+  }
+  document.querySelectorAll('[data-key-style]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      keyStyle = b.dataset.keyStyle;
+      try { localStorage.setItem('raim.keyStyle', keyStyle); } catch (e) { /* private mode */ }
+      renderKeyStyle();
+      if (current) renderSongInfo();
+      renderProjects();
+    });
+  });
   // ["Trap", "140 BPM", "A-Moll"]
   function songFacts(p) {
     var out = [];
@@ -737,6 +768,7 @@
     sel.append(new Option('– wählen –', ''));
     RaimAnalyze.KEYS.forEach(function (k) { sel.append(new Option(k, k)); });
     sel.append(new Option('Weiß ich nicht', 'unbekannt'));
+    renderKeyStyle();
   })();
 
   var infoProject = null, infoBeat = null, infoAuto = {}, infoSeq = 0, infoGenres = [], infoLangs = [];
@@ -790,7 +822,8 @@
 
   function setKeyValue(k) {
     var sel = $('infoForm').elements.key;
-    if (k && ![].some.call(sel.options, function (o) { return o.value === k; })) sel.append(new Option(k, k));
+    k = RaimLicenseReader.germanKey(k) || k;
+    if (k && ![].some.call(sel.options, function (o) { return o.value === k; })) sel.append(new Option(keyName(k), k));
     sel.value = k;
   }
 
