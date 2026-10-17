@@ -301,7 +301,10 @@
       var head = el('h2', 'project-group', STATUS[status]);
       head.append(el('span', '', String(list.length)));
       var ul = el('ul', 'projects projects--' + status);
-      list.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) { ul.append(projectCard(p)); });
+      list.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
+        // one damaged project must not empty the whole list
+        try { ul.append(projectCard(p)); } catch (err) { console.error('Projektkarte', p && p.id, err); }
+      });
       box.append(head, ul);
     });
     $('projectsEmpty').hidden = active.length > 0;

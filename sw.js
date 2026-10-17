@@ -1,14 +1,17 @@
 // Barbook offline: pages and code come fresh from the network when there is one (fallback: the
 // last copy), word lists, pictures and libraries from the cache (refreshed in the background).
 // Accounts and project data (Supabase) always go to the network.
-var CACHE = 'barbook-v1';
+var CACHE = 'barbook-v2';
 var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest',
   'assets/icon.svg', 'assets/icon-192.png', 'js/config.js', 'js/cloud.js', 'js/login.js', 'js/words.js', 'js/rhyme.js',
   'js/song.js', 'js/store.js', 'js/db.js', 'js/ai.js', 'js/license-reader.js', 'js/wav.js', 'js/prompter.js',
   'js/analyze.js', 'js/beats.js', 'js/dictate.js', 'js/app.js'];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
+  // 'reload' skips the browser's HTTP cache, so the offline copy is one consistent version
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return c.addAll(SHELL.map(function (u) { return new Request(u, { cache: 'reload' }); }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
@@ -16,14 +19,15 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-function fromNetwork(req) {
-  return fetch(req).then(function (res) {
+// fresh: ask the server every time (cheap with ETags), never mix a cached page with newer code
+function fromNetwork(req, fresh) {
+  return fetch(fresh ? new Request(req, { cache: 'no-cache' }) : req).then(function (res) {
     if (res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
     return res;
   });
 }
 function networkFirst(req) {
-  return fromNetwork(req).catch(function () {
+  return fromNetwork(req, true).catch(function () {
     return caches.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
   });
 }
