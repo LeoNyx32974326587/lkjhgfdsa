@@ -24,10 +24,9 @@ Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat d
   - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).
   - **PDF**: Songtext mit Beat- und Lizenzinfos als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
-  - Beat-Datei oder YouTube-Link, Loop, Tempo, Aufnahmen mit Sync-Ausgleich (Download als Mix oder nur Stimme).
-  - **Aufnahme ab Startpunkt**: Tipp auf die Wellenform, die Aufnahme startet dort (oder am Loop-Anfang).
-  - **Einzähler** (1 oder 2 Takte) nach BPM; BPM eintragen oder **erkennen** lassen.
-  - **Teleprompter**: beim Aufnehmen (oder mit „Probe mit Text“) läuft der Text groß mit, eine Zeile pro Takt; Tempo mit − / +, Zeile antippen zum Springen.
+  - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
+  - **Teleprompter**: zeigt den Text groß und lässt ihn im Takt mitlaufen (eine Zeile pro Takt), z. B. zum Einsingen in FL Studio. Mit BPM (eintragen oder aus dem Beat erkennen), Einzähler (1 oder 2 Takte), optional mit dem Beat ab der Startstelle; Tempo mit − / +, Zeile antippen zum Springen.
+  - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann RAIM nicht mehr.
   - **Lizenz** als schmale Leiste mit allen Angaben und Datei, dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Reime**
   - Reimsuche nach Klang auf **Deutsch und Englisch**, auch über beide Sprachen hinweg (z. B. „Money“ → honey, funny, Manie). Sprachen per DE/EN an- und ausschalten.
@@ -51,8 +50,8 @@ Alles bleibt lokal im Browser gespeichert (IndexedDB). Unter Einstellungen kanns
 - `js/song.js`: Song-Abschnitte
 - `js/prompter.js`: Teleprompter
 - `js/ai.js`: KI-Ideen über die Claude API
-- `js/beats.js`: Beat-Player, Loop, Tempo, Aufnahmen, YouTube
-- `js/wav.js`: WAV-Kodierung der Aufnahmen
+- `js/beats.js`: Beat-Player, Loop, Tempo, Teleprompter-Steuerung, YouTube, frühere Aufnahmen
+- `js/wav.js`: WAV-Lesen und -Schreiben für frühere Aufnahmen
 - `js/db.js`: Projekte und Dateien (IndexedDB)
 - `js/store.js`: Einstellungen
 - `js/app.js`: Oberfläche

@@ -1,4 +1,4 @@
-// Teleprompter: the lyrics big on screen, scrolling one line per bar while the beat runs.
+// Teleprompter: the lyrics big on screen, scrolling one line per bar (with or without the beat).
 (function (root) {
   'use strict';
 
@@ -11,7 +11,6 @@
   function init(callbacks) {
     cb = callbacks;
     $('prompterClose').addEventListener('click', function () { cb.close(); });
-    $('prompterRec').addEventListener('click', function () { cb.rec(); });
     $('prompterPlay').addEventListener('click', function () { cb.play(); });
     $('prompterSlower').addEventListener('click', function () { setFactor(factor * 1.15); });
     $('prompterFaster').addEventListener('click', function () { setFactor(factor / 1.15); });
@@ -112,13 +111,13 @@
     c.hidden = text === '';
   }
 
-  function setRecording(on) { $('prompterRec').classList.toggle('is-rec', on); }
   function setPlaying(on) { $('prompterPlay').classList.toggle('is-playing', on); }
   function setTime(t) { $('prompterTime').textContent = t; }
   function isOpen() { return !$('prompter').hidden; }
+  function isRunning() { return running; }
 
   root.RaimPrompter = {
     init: init, show: show, hide: hide, start: start, stop: stop, count: count,
-    setRecording: setRecording, setPlaying: setPlaying, setTime: setTime, isOpen: isOpen
+    setPlaying: setPlaying, setTime: setTime, isOpen: isOpen, isRunning: isRunning
   };
 })(this);

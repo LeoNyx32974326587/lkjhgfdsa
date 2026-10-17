@@ -1,4 +1,5 @@
-// Beat tab of a project: the project's beat (file or YouTube), loop, tempo and recorded takes.
+// Beat tab of a project: the project's beat (file or YouTube), loop, tempo, teleprompter
+// and takes recorded with earlier versions.
 (function (root) {
   'use strict';
 
@@ -14,7 +15,7 @@
   audio.preservesPitch = true;
   audio.mozPreservesPitch = true;
   audio.webkitPreservesPitch = true;
-  var ctx = null, mediaSrc = null;
+  var ctx = null;
   var peaks = [], loop = null, looping = false, beatUrl = null, takeUrls = [], decoded = null;
   var countTimers = [];
   var canvas, g;
@@ -51,10 +52,10 @@
       });
     }
     renderTakes(project);
+    updatePrompterCard();
   }
 
   function close() {
-    stopRec();
     cancelCount();
     RaimPrompter.hide();
     audio.pause();
@@ -76,6 +77,7 @@
     if (beatUrl) URL.revokeObjectURL(beatUrl);
     beatUrl = URL.createObjectURL(blob);
     audio.src = beatUrl;
+    updatePrompterCard();
     $('beatName').textContent = name + ' – ersetzen';
     $('deck').hidden = false;
     var id = openId;
@@ -151,7 +153,7 @@
     }
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
     RaimPrompter.setTime(fmt(audio.currentTime));
-    if (!rec) $('recStart').textContent = 'Aufnahme ab ' + fmt(startPos());
+    $('recStart').textContent = 'ab ' + fmt(startPos());
     $('tDur').textContent = fmt(dur);
     $('tLoop').textContent = loop ? 'Loop ' + fmt(loop[0]) + '–' + fmt(loop[1]) : '';
   }
@@ -168,37 +170,18 @@
     draw();
   }
 
-  // ---------- recording ----------
-  // Beat and mic are captured raw from the same audio graph, so both share one sample clock.
-  // What is left is the hardware round trip (beat to headphones, voice back into the mic);
-  // the voice is shifted earlier by that amount when the take is mixed.
-  var rec = null; // running recording: { project, stream, nodes, beatL, beatR, mic (Float32 chunks), hasBeat, sampleRate, offsetMs }
-
-  function autoLatencyMs(ac, stream) {
-    var out = (ac.outputLatency || 0) + (ac.baseLatency || 0);
-    var track = stream && stream.getAudioTracks()[0];
-    var input = track && track.getSettings && track.getSettings().latency || 0.01;
-    return Math.round((out + input) * 1000);
-  }
-  function savedLatency() {
-    try { var v = localStorage.getItem('raim.latencyMs'); return v === null ? null : parseInt(v, 10); } catch (e) { return null; }
-  }
-  function showLatency(ms, auto) {
-    $('latency').value = ms;
-    $('latencyOut').textContent = ms + ' ms';
-    $('latencyAuto').textContent = auto ? 'Auto (an)' : 'Auto';
-  }
-
   // ---------- start point, tempo, count-in ----------
-  // recording starts where the playhead is (or at the loop start)
+  // the beat starts where the playhead is (or at the loop start)
   function startPos() {
     if (looping && loop) return loop[0];
     var d = audio.duration || 0;
     return d && audio.currentTime < d - 0.5 ? audio.currentTime : 0;
   }
+  // the teleprompter plays the beat along only if one is loaded and that box is ticked
+  function withBeat() { return !!audio.src && $('withBeat').checked; }
   function bpm() {
     var b = parseFloat(String($('bpmInput').value).replace(',', '.'));
-    return b >= 40 && b <= 250 ? b * audio.playbackRate : 0;
+    return b >= 40 && b <= 250 ? b * (withBeat() ? audio.playbackRate : 1) : 0;
   }
   // one lyric line per bar of four beats
   function secPerLine() { var b = bpm(); return b ? 4 * 60 / b : 2.6; }
@@ -208,6 +191,7 @@
     countTimers = [];
     RaimPrompter.count('');
   }
+
 
   // clicks for `bars` bars, then done(); without BPM it just waits a moment
   function countIn(done) {
@@ -227,102 +211,44 @@
         countTimers.push(setTimeout(function () { RaimPrompter.count(String(k % 4 + 1)); }, (t - ac.currentTime) * 1000));
       })(k);
     }
-    countTimers.push(setTimeout(function () { RaimPrompter.count(''); done(); }, (t0 + n * beat - ac.currentTime) * 1000));
+    countTimers.push(setTimeout(function () { countTimers = []; RaimPrompter.count(''); done(); }, (t0 + n * beat - ac.currentTime) * 1000));
   }
 
   function lyrics() { return hooks.lyrics(); }
 
-  // beat starts (after the count-in): play and scroll the prompter
-  function rollFrom(pos, onStart) {
-    if (audio.src) audio.currentTime = pos;
+  // after the count-in: the beat (if used) and the scrolling start together
+  function roll() {
+    if (withBeat()) audio.currentTime = startPos();
     countIn(function () {
-      if (onStart && onStart() === false) return;
-      if (audio.src) audio.play();
-      if (RaimPrompter.isOpen()) RaimPrompter.start(secPerLine());
+      if (withBeat()) audio.play();
+      RaimPrompter.start(secPerLine());
+      RaimPrompter.setPlaying(true);
     });
   }
 
   function practice() {
+    audio.pause();
     RaimPrompter.show(lyrics());
-    rollFrom(startPos());
+    roll();
   }
 
-  function startRec() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Aufnehmen wird in diesem Browser nicht unterstützt.'); return; }
-    var ac = audioCtx();
-    audio.pause();
-    RaimPrompter.stop();
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 } })
-      .then(function (stream) {
-        var hasBeat = !!audio.src;
-        if (hasBeat && !mediaSrc) {
-          mediaSrc = ac.createMediaElementSource(audio);
-          mediaSrc.connect(ac.destination);
-        }
-        // beat -> stereo (upmix mono files) -> channels 0/1, mic -> mono -> channel 2
-        var merger = ac.createChannelMerger(3);
-        var beatIn = ac.createGain();
-        beatIn.channelCount = 2; beatIn.channelCountMode = 'explicit'; beatIn.channelInterpretation = 'speakers';
-        var split = ac.createChannelSplitter(2);
-        if (hasBeat) mediaSrc.connect(beatIn);
-        beatIn.connect(split);
-        split.connect(merger, 0, 0);
-        split.connect(merger, 1, 1);
-        var micSrc = ac.createMediaStreamSource(stream);
-        var micIn = ac.createGain();
-        micIn.channelCount = 1; micIn.channelCountMode = 'explicit'; micIn.channelInterpretation = 'speakers';
-        micSrc.connect(micIn);
-        micIn.connect(merger, 0, 2);
-        var proc = ac.createScriptProcessor(4096, 3, 1);
-        merger.connect(proc);
-        proc.connect(ac.destination); // outputs silence; needed so the processor runs
-
-        var manual = savedLatency(), pos = startPos();
-        rec = {
-          project: hooks.project(), stream: stream, hasBeat: hasBeat, sampleRate: ac.sampleRate,
-          offsetMs: manual === null ? autoLatencyMs(ac, stream) : manual,
-          nodes: [beatIn, split, merger, micSrc, micIn, proc],
-          beatL: [], beatR: [], mic: [], capturing: false, from: pos
-        };
-        if (manual === null) showLatency(rec.offsetMs, true);
-        proc.onaudioprocess = function (e) {
-          if (!rec || !rec.capturing) return;
-          var b = e.inputBuffer;
-          rec.beatL.push(new Float32Array(b.getChannelData(0)));
-          rec.beatR.push(new Float32Array(b.getChannelData(1)));
-          rec.mic.push(new Float32Array(b.getChannelData(2)));
-        };
-        setRecUi(true);
-        $('recStart').textContent = 'Aufnahme läuft ab ' + fmt(pos);
-        if ($('prompterOn').checked && !RaimPrompter.isOpen()) RaimPrompter.show(lyrics());
-        var r = rec;
-        rollFrom(pos, function () {
-          if (rec !== r) return false;
-          r.capturing = true;
-        });
-      })
-      .catch(function () { toast('Kein Zugriff aufs Mikrofon.'); });
+  function promptPlay() {
+    if (countTimers.length) { cancelCount(); return; }
+    if (RaimPrompter.isRunning() || !audio.paused) {
+      audio.pause();
+      RaimPrompter.stop();
+      RaimPrompter.setPlaying(false);
+      return;
+    }
+    if (withBeat()) audio.play();
+    RaimPrompter.start(secPerLine());
+    RaimPrompter.setPlaying(true);
   }
 
-  function setRecUi(on) {
-    $('recBtn').classList.toggle('is-rec', on);
-    $('miniRec').classList.toggle('is-rec', on);
-    RaimPrompter.setRecording(on);
-  }
-
-  function stopRec() {
-    if (!rec) return;
-    var r = rec;
-    rec = null;
-    cancelCount();
-    audio.pause();
-    RaimPrompter.stop();
-    r.stream.getTracks().forEach(function (t) { t.stop(); });
-    r.nodes.forEach(function (n) { try { n.disconnect(); } catch (e) { /* gone */ } });
-    if (r.hasBeat) { try { mediaSrc.disconnect(r.nodes[0]); } catch (e) { /* gone */ } }
-    setRecUi(false);
-    draw();
-    saveTake(r);
+  function updatePrompterCard() {
+    $('withBeatLabel').hidden = !audio.src;
+    $('recStart').hidden = !withBeat();
+    $('bpmDetect').hidden = !audio.src;
   }
 
   // ---------- BPM detection: autocorrelation of the onset envelope ----------
@@ -345,30 +271,6 @@
       if (sum > best) { best = sum; bestLag = bpmTry; }
     }
     return Math.round(bestLag);
-  }
-
-  function concat(chunks) {
-    var n = 0, i;
-    for (i = 0; i < chunks.length; i++) n += chunks[i].length;
-    var out = new Float32Array(n), o = 0;
-    for (i = 0; i < chunks.length; i++) { out.set(chunks[i], o); o += chunks[i].length; }
-    return out;
-  }
-
-  function saveTake(r) {
-    var p = r.project, mic = concat(r.mic);
-    if (mic.length < r.sampleRate * 0.3) { toast('Aufnahme zu kurz.'); return; }
-    var n = p.takes.length + 1;
-    var voiceBlob = RaimWav.encode([mic], r.sampleRate);
-    var beatBlob = r.hasBeat ? RaimWav.encode([concat(r.beatL), concat(r.beatR)], r.sampleRate) : null;
-    Promise.all([
-      RaimDB.putFile(p.id, voiceBlob, 'Take ' + n + ' Stimme.wav'),
-      beatBlob ? RaimDB.putFile(p.id, beatBlob, 'Take ' + n + ' Beat.wav') : null
-    ]).then(function (ids) {
-      p.takes.unshift({ voiceId: ids[0], beatId: ids[1], offsetMs: r.offsetMs, name: 'Take ' + n, created: Date.now() });
-      hooks.save();
-      if (openId === p.id) renderTakes(p);
-    }).catch(function () { toast('Aufnahme konnte nicht gespeichert werden – Speicher voll?'); });
   }
 
   // voice shifted earlier by offsetMs, laid over the beat recorded in the same pass
@@ -595,16 +497,14 @@
     function playing(on) {
       $('playBtn').classList.toggle('is-playing', on);
       $('miniPlay').classList.toggle('is-playing', on);
-      RaimPrompter.setPlaying(on);
-      if (!on) RaimPrompter.stop();
+      if (!on && RaimPrompter.isRunning() && withBeat()) { RaimPrompter.stop(); RaimPrompter.setPlaying(false); }
     }
     audio.addEventListener('play', function () { playing(true); requestAnimationFrame(tick); });
     audio.addEventListener('pause', function () { playing(false); draw(); });
-    audio.addEventListener('ended', function () { playing(false); if (rec) stopRec(); });
+    audio.addEventListener('ended', function () { playing(false); });
 
     // when the deck's buttons are scrolled away (e.g. reading the lyrics), show a small bar instead
     $('miniPlay').addEventListener('click', function () { $('playBtn').click(); });
-    $('miniRec').addEventListener('click', function () { $('recBtn').click(); });
     if (window.IntersectionObserver) {
       new IntersectionObserver(function (entries) {
         var e = entries[entries.length - 1];
@@ -622,10 +522,6 @@
       audio.playbackRate = parseFloat(e.target.value);
       $('tempoOut').textContent = Math.round(audio.playbackRate * 100) + ' %';
     });
-    $('recBtn').addEventListener('click', function () {
-      if (rec) stopRec(); else startRec();
-    });
-
     // start point, BPM, count-in, teleprompter
     $('bpmInput').addEventListener('change', function () {
       var p = hooks.project();
@@ -642,44 +538,24 @@
     try {
       var savedCount = localStorage.getItem('raim.countIn');
       if (savedCount !== null) $('countIn').value = savedCount;
-      $('prompterOn').checked = localStorage.getItem('raim.prompterOn') !== '0';
+      $('withBeat').checked = localStorage.getItem('raim.withBeat') !== '0';
     } catch (e) { /* private mode */ }
     $('countIn').addEventListener('change', function (e) {
       try { localStorage.setItem('raim.countIn', e.target.value); } catch (err) { /* private mode */ }
     });
-    $('prompterOn').addEventListener('change', function (e) {
-      try { localStorage.setItem('raim.prompterOn', e.target.checked ? '1' : '0'); } catch (err) { /* private mode */ }
+    $('withBeat').addEventListener('change', function (e) {
+      try { localStorage.setItem('raim.withBeat', e.target.checked ? '1' : '0'); } catch (err) { /* private mode */ }
+      updatePrompterCard();
     });
     $('practiceBtn').addEventListener('click', practice);
 
     RaimPrompter.init({
-      rec: function () { if (rec) stopRec(); else startRec(); },
-      play: function () {
-        if (rec) return;
-        if (!audio.paused) { audio.pause(); cancelCount(); return; }
-        if (audio.src) audio.play();
-        RaimPrompter.start(secPerLine());
-      },
+      play: promptPlay,
       close: function () {
-        if (rec) stopRec();
         cancelCount();
         audio.pause();
         RaimPrompter.hide();
       }
-    });
-
-    var manual = savedLatency();
-    showLatency(manual === null ? 0 : manual, manual === null);
-    if (manual === null) $('latencyOut').textContent = 'auto';
-    $('latency').addEventListener('input', function (e) {
-      try { localStorage.setItem('raim.latencyMs', e.target.value); } catch (err) { /* private mode */ }
-      showLatency(parseInt(e.target.value, 10), false);
-    });
-    $('latencyAuto').addEventListener('click', function () {
-      try { localStorage.removeItem('raim.latencyMs'); } catch (err) { /* private mode */ }
-      showLatency(0, true);
-      $('latencyOut').textContent = 'auto';
-      toast('Sync-Ausgleich wird bei der nächsten Aufnahme automatisch gemessen.');
     });
 
     $('ytForm').addEventListener('submit', function (e) {

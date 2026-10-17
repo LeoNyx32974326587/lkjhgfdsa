@@ -360,9 +360,6 @@ dialog.sheet { width: min(560px, calc(100vw - 24px)); max-width: none; max-heigh
 .link-btn { border: 0; background: none; color: #c9b8ff; cursor: pointer; font-size: 14px; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
 
 /* recording sync */
-.sync-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; color: #e0d8ff; }
-.sync-row input { flex: 1; min-width: 120px; accent-color: #fff; }
-.sync-row output { font-family: "Roboto Mono", monospace; min-width: 58px; }
 .take-sync { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 .take-sync input { flex: 1; accent-color: var(--violet); }
 .take-sync output { font-family: "Roboto Mono", monospace; min-width: 58px; }
@@ -515,7 +512,9 @@ a.btn { color: var(--text); }
 
 /* ---------- recording options ---------- */
 .rec-row { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-top: 14px; font-size: 14px; color: #e0d8ff; }
-.rec-start { font-family: "Roboto Mono", monospace; font-size: 13px; padding: 5px 10px; border-radius: 999px; background: rgba(255, 59, 78, .18); border: 1px solid rgba(255, 59, 78, .45); }
+.rec-start { font-family: "Roboto Mono", monospace; font-size: 13px; padding: 5px 10px; border-radius: 999px; background: rgba(94, 231, 255, .1); border: 1px solid rgba(94, 231, 255, .35); }
+.prompter-card .rec-row { margin-top: 4px; }
+.prompter-card .practice { margin-top: 14px; }
 .mini-field { display: inline-flex; align-items: center; gap: 6px; }
 .mini-field input { width: 56px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--border); background: rgba(10, 8, 30, .6); outline: none; text-align: center; }
 .mini-field select { padding: 6px 8px; border-radius: 10px; border: 1px solid var(--border); background: rgba(40, 30, 90, .8); }

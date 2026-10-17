@@ -152,28 +152,8 @@
               </button>
               <button type="button" class="pill-btn" id="loopBtn" aria-pressed="false">Loop</button>
               <label class="tempo">Tempo <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1"> <output id="tempoOut">100 %</output></label>
-              <button type="button" class="rec" id="recBtn" aria-label="Aufnehmen"><span></span></button>
             </div>
-            <div class="rec-row">
-              <span class="rec-start" id="recStart">Aufnahme ab 0:00</span>
-              <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
-              <button type="button" class="link-btn" id="bpmDetect">erkennen</button>
-              <label class="mini-field">Einzähler
-                <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
-              </label>
-              <label class="check"><input type="checkbox" id="prompterOn" checked> Teleprompter</label>
-            </div>
-            <button type="button" class="pill-btn practice" id="practiceBtn">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-              Probe mit Text
-            </button>
-            <div class="sync-row">
-              <label for="latency">Sync-Ausgleich</label>
-              <input type="range" id="latency" min="0" max="600" step="5">
-              <output id="latencyOut">0 ms</output>
-              <button type="button" class="link-btn" id="latencyAuto">Auto</button>
-            </div>
-            <p class="hint">Zieh auf der Wellenform, um einen Loop-Bereich zu markieren. Für Aufnahmen Kopfhörer nutzen, am besten mit Kabel.</p>
+            <p class="hint">Tipp auf die Wellenform, um die Startstelle zu setzen. Ziehen markiert einen Loop-Bereich.</p>
           </div>
         </div>
 
@@ -192,6 +172,24 @@
             </label>
           </div>
           <p class="hint" id="ytInfo"></p>
+        </div>
+
+        <h2 class="sub">Teleprompter</h2>
+        <div class="card prompter-card">
+          <p>Zeigt deinen Songtext groß und lässt ihn im Takt mitlaufen – zum Beispiel zum Einsingen in FL Studio.</p>
+          <div class="rec-row">
+            <label class="mini-field">BPM <input id="bpmInput" inputmode="decimal" placeholder="–" autocomplete="off"></label>
+            <button type="button" class="link-btn" id="bpmDetect">aus Beat erkennen</button>
+            <label class="mini-field">Einzähler
+              <select id="countIn"><option value="0">aus</option><option value="1" selected>1 Takt</option><option value="2">2 Takte</option></select>
+            </label>
+            <label class="check" id="withBeatLabel"><input type="checkbox" id="withBeat" checked> Beat mitspielen</label>
+            <span class="rec-start" id="recStart" hidden>ab 0:00</span>
+          </div>
+          <button type="button" class="btn btn--primary practice" id="practiceBtn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Teleprompter starten
+          </button>
         </div>
 
         <h2 class="sub">Lizenz</h2>
@@ -271,7 +269,7 @@
           </div>
         </form>
 
-        <h2 class="sub" id="takesHead" hidden>Aufnahmen</h2>
+        <h2 class="sub" id="takesHead" hidden>Frühere Aufnahmen</h2>
         <ul class="takes" id="takes"></ul>
       </section>
 
@@ -334,7 +332,6 @@
         <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
       </button>
       <span class="mini-time" id="miniTime">0:00</span>
-      <button type="button" class="rec rec--sm" id="miniRec" aria-label="Aufnehmen"><span></span></button>
     </div>
 
     <nav class="tabbar" aria-label="Projektbereiche">
@@ -424,7 +421,6 @@
         <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
         <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
       </button>
-      <button type="button" class="rec" id="prompterRec" aria-label="Aufnahme starten oder stoppen"><span></span></button>
     </div>
     <p class="prompter-hint">Tipp auf eine Zeile, um dort weiterzulesen.</p>
   </div>
