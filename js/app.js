@@ -174,7 +174,7 @@
   function renderRelease() {
     var box = $('releaseBox'), p = current;
     box.hidden = !p || statusOf(p) !== 'done';
-    if (box.hidden) return;
+    if (box.hidden) { $('masterAudio').pause(); return; }
     if (!p.release) p.release = {};
     var edit = may('status'), n = releaseDone(p);
     $('releaseSum').textContent = n === RELEASE.length ? 'Alles erledigt' + (p.release.date ? ' · ' + releaseText(p).replace(/^Release(d)? (am )?/, '') : '')
@@ -204,7 +204,78 @@
     $('releaseHint').textContent = warn ? 'Achtung: Bei der Lizenz ist noch etwas offen – schau im Beat-Bereich nach, bevor du veröffentlichst.'
       : !edit ? 'Die Checkliste kann nur ändern, wer den Status ändern darf.' : '';
     $('releaseHint').hidden = !$('releaseHint').textContent;
+    renderMaster(p, edit);
   }
+
+  // the finished song (master) lives in the release card; stored like the beat
+  var MASTER_MAX = 50 * 1024 * 1024, masterShown = null, masterUrl = null;
+  function renderMaster(p, edit) {
+    var m = p.release.master;
+    if (m && masterShown && masterShown !== m.fileId) $('masterAudio').pause();
+    $('masterAdd').hidden = !!m || !edit;
+    $('masterBox').hidden = !m;
+    $('masterReplace').hidden = $('masterDelete').hidden = !edit;
+    if (!m) { showMasterFile(null); return; }
+    $('masterName').textContent = m.name;
+    if (masterShown === m.fileId) return;
+    masterShown = m.fileId;
+    showMasterFile(null);
+    $('masterName').textContent = m.name + ' – lädt …';
+    RaimDB.getFile(m.fileId).then(function (rec) {
+      if (masterShown !== m.fileId) return;
+      $('masterName').textContent = m.name + (rec ? '' : ' – auf diesem Gerät noch nicht da');
+      if (rec) showMasterFile(rec.blob, m.name);
+    });
+  }
+  function showMasterFile(blob, name) {
+    if (masterUrl) { URL.revokeObjectURL(masterUrl); masterUrl = null; }
+    var audio = $('masterAudio'), dl = $('masterDownload');
+    if (!blob) {
+      audio.removeAttribute('src');
+      dl.removeAttribute('href');
+      dl.hidden = true;
+      if (!$('masterBox').hidden) return;
+      masterShown = null;
+      return;
+    }
+    masterUrl = URL.createObjectURL(blob);
+    audio.src = masterUrl;
+    dl.href = masterUrl;
+    dl.download = name;
+    dl.hidden = false;
+  }
+  function uploadMaster(file) {
+    var p = current;
+    if (!file || !p || !may('status')) return;
+    if (!/^audio\//.test(file.type) && !/\.(wav|mp3|flac|aiff?|m4a|aac|ogg)$/i.test(file.name)) { toast('Bitte eine Audiodatei wählen.'); return; }
+    if (file.size > MASTER_MAX) { toast('Die Datei ist größer als 50 MB. Lade den Song als MP3, FLAC oder 16-Bit-WAV hoch.'); return; }
+    var old = p.release.master && p.release.master.fileId;
+    $('masterAdd').disabled = true;
+    RaimDB.putFile(p.id, file).then(function (fileId) {
+      p.release.master = { fileId: fileId, name: file.name };
+      scheduleSave();
+      if (current === p) renderRelease();
+      toast('Fertiger Song gespeichert.');
+      return RaimDB.deleteFile(old);
+    }).catch(function () { toast('Song konnte nicht gespeichert werden – Speicher voll?'); })
+      .then(function () { $('masterAdd').disabled = false; });
+  }
+  $('masterAdd').addEventListener('click', function () { $('masterInput').click(); });
+  $('masterReplace').addEventListener('click', function () { $('masterInput').click(); });
+  $('masterInput').addEventListener('change', function (e) { uploadMaster(e.target.files[0]); e.target.value = ''; });
+  $('masterDelete').addEventListener('click', function () {
+    var p = current, m = p && p.release.master;
+    if (!m) return;
+    confirmDialog('Fertigen Song entfernen?', '„' + m.name + '“ wird aus dem Projekt gelöscht.', 'Entfernen').then(function (yes) {
+      if (!yes || p.release.master !== m) return;
+      delete p.release.master;
+      scheduleSave();
+      RaimDB.deleteFile(m.fileId);
+      if (current === p) renderRelease();
+    });
+  });
+  // the same export menu as in the text area: PDF, lyrics for the distributor, lyrics with sections
+  $('releaseExport').addEventListener('click', function () { $('exportBtn').click(); });
   $('releaseHead').addEventListener('click', function () { releaseOpen = !releaseOpen; renderRelease(); });
   $('releaseDate').addEventListener('change', function (e) {
     if (!current || !may('status')) return;
@@ -2274,6 +2345,7 @@
     p.takes.forEach(function (t) { [t.fileId, t.voiceId, t.beatId].forEach(function (id) { if (id) ids.push(id); }); });
     if (p.beat) ids.push(p.beat.fileId);
     if (p.license.fileId) ids.push(p.license.fileId);
+    if (p.release && p.release.master) ids.push(p.release.master.fileId);
     return ids;
   }
   $('exportAll').addEventListener('click', function () {

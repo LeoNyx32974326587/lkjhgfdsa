@@ -285,7 +285,8 @@ create policy "files read" on public.files for select to authenticated
   using (auth.uid() = user_id or auth.uid() = project_owner or public.is_member(project_owner, project));
 create policy "files insert" on public.files for insert to authenticated
   with check (auth.uid() = user_id and (auth.uid() = project_owner
-    or public.member_can(project_owner, project, 'beat') or public.member_can(project_owner, project, 'license')));
+    or public.member_can(project_owner, project, 'beat') or public.member_can(project_owner, project, 'license')
+    or public.member_can(project_owner, project, 'status')));
 create policy "files update" on public.files for update to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "files delete" on public.files for delete to authenticated

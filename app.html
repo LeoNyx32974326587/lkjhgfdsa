@@ -204,6 +204,30 @@
             <input type="date" id="releaseDate">
           </label>
           <p class="hint" id="releaseHint"></p>
+          <div class="release-tools">
+            <button type="button" class="btn btn--small" id="releaseExport">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/></svg>
+              Export
+            </button>
+            <span class="hint">PDF oder Songtext für den Distributor kopieren</span>
+          </div>
+          <div class="release-master">
+            <span class="release-label">Fertiger Song</span>
+            <input type="file" id="masterInput" accept="audio/*,.wav,.mp3,.flac,.aif,.aiff,.m4a" hidden>
+            <button type="button" class="license-add" id="masterAdd">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>
+              Fertigen Song hochladen (WAV, MP3, FLAC …)
+            </button>
+            <div class="master-box" id="masterBox" hidden>
+              <span class="master-name" id="masterName"></span>
+              <audio id="masterAudio" controls preload="metadata"></audio>
+              <div class="master-actions">
+                <a class="btn btn--small" id="masterDownload" download>Herunterladen</a>
+                <button type="button" class="btn btn--small" id="masterReplace">Ersetzen</button>
+                <button type="button" class="link-btn link-btn--danger" id="masterDelete">Entfernen</button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       <!-- ---------- Text ---------- -->
@@ -598,7 +622,7 @@
       </button>
       <button type="button" class="export-item" id="exportPlain">
         <strong>Text kopieren</strong>
-        <span>Nur die Zeilen, Wiederholungen ausgeschrieben – so wollen ihn Spotify, Apple Music und Musixmatch.</span>
+        <span>Nur die Zeilen, Wiederholungen ausgeschrieben – so wollen ihn der Distributor, Spotify, Apple Music und Musixmatch.</span>
       </button>
       <button type="button" class="export-item" id="exportTagged">
         <strong>Mit Abschnitten kopieren</strong>
