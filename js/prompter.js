@@ -1,4 +1,5 @@
-// Teleprompter: the lyrics big on screen, scrolling one line per bar (with or without the beat).
+// Teleprompter: the lyrics big on screen, rolling up evenly at one line per bar
+// (with or without the beat). No line is highlighted; the text just runs through.
 (function (root) {
   'use strict';
 
@@ -6,7 +7,7 @@
 
   var items = [], lineEls = [], cb = {};
   var secPerLine = 2.6, factor = 1;
-  var running = false, origin = 0, startLine = 0, current = -1, raf = null;
+  var running = false, origin = 0, startLine = 0, raf = null, scrolledByHand = false;
 
   function init(callbacks) {
     cb = callbacks;
@@ -14,6 +15,10 @@
     $('prompterPlay').addEventListener('click', function () { cb.play(); });
     $('prompterSlower').addEventListener('click', function () { setFactor(factor * 1.15); });
     $('prompterFaster').addEventListener('click', function () { setFactor(factor / 1.15); });
+    // while paused you can scroll by hand; playing continues from there
+    ['wheel', 'touchmove'].forEach(function (ev) {
+      $('prompterText').addEventListener(ev, function () { if (!running) scrolledByHand = true; }, { passive: true });
+    });
   }
 
   function setFactor(f) {
@@ -53,8 +58,8 @@
       }
       box.append(e);
     });
-    startLine = 0; current = -1; running = false;
-    highlight(0, true);
+    startLine = 0; running = false; scrolledByHand = false;
+    scrollToLine(0);
     count('');
     $('prompter').hidden = false;
     document.body.classList.add('prompter-open');
@@ -73,6 +78,7 @@
 
   // seconds per line from the BPM; fresh: back to exactly that tempo (drops − / + changes)
   function start(seconds, speedLabel, fresh) {
+    if (scrolledByHand) { startLine = lineAtScroll(); scrolledByHand = false; }
     secPerLine = seconds;
     if (speedLabel !== undefined) label = speedLabel;
     if (fresh) factor = 1;
@@ -83,34 +89,45 @@
     loop();
   }
   function stop() {
-    if (running) startLine = Math.floor(elapsedLines());
+    if (running) startLine = elapsedLines();
     running = false;
     cancelAnimationFrame(raf);
   }
   function loop() {
     if (!running) return;
-    highlight(Math.floor(elapsedLines()));
+    scrollToLine(elapsedLines());
     raf = requestAnimationFrame(loop);
   }
 
   function jump(n) {
     startLine = n;
     origin = performance.now();
-    highlight(n, true);
+    scrolledByHand = false;
+    scrollToLine(n);
   }
 
-  function highlight(n, force) {
-    n = Math.min(n, lineEls.length - 1);
-    if (n === current && !force) return;
-    if (lineEls[current]) lineEls[current].classList.remove('is-now');
-    current = n;
-    lineEls.forEach(function (e, i) { e.classList.toggle('is-past', i < n); });
-    var e = lineEls[n];
-    if (!e) return;
-    e.classList.add('is-now');
-    var box = $('prompterText');
-    // keep the current line in the middle of the screen
-    box.scrollTo({ top: e.offsetTop + e.offsetHeight / 2 - box.clientHeight / 2, behavior: 'smooth' });
+  function mid(e) { return e.offsetTop + e.offsetHeight / 2; }
+
+  // pos is a line number with fraction: 2.5 = halfway from line 3 to line 4.
+  // The text glides between line positions, so headers in between just roll past.
+  function scrollToLine(pos) {
+    var n = lineEls.length, box = $('prompterText');
+    if (!n) return;
+    pos = Math.max(0, Math.min(pos, n - 1));
+    var i = Math.floor(pos), f = pos - i, a = mid(lineEls[i]);
+    var y = i + 1 < n ? a + (mid(lineEls[i + 1]) - a) * f : a;
+    box.scrollTop = y - box.clientHeight / 2;
+  }
+
+  // the reverse: which line position is in the middle of the screen right now
+  function lineAtScroll() {
+    var box = $('prompterText'), y = box.scrollTop + box.clientHeight / 2, n = lineEls.length;
+    if (!n || y <= mid(lineEls[0])) return 0;
+    for (var i = 0; i + 1 < n; i++) {
+      var a = mid(lineEls[i]), b = mid(lineEls[i + 1]);
+      if (y < b) return i + (y - a) / (b - a);
+    }
+    return n - 1;
   }
 
   function count(text) {

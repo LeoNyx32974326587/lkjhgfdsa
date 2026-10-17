@@ -17,15 +17,15 @@ python3 -m http.server 8000   # dann http://localhost:8000/app.html öffnen
 Alles ist in **Projekte** organisiert, ein Projekt pro Song. Jedes Projekt hat drei Bereiche:
 
 - **Text**
-  - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
+  - Songtext in Abschnitten (Intro, Hook, Part, Bridge, Outro) als einklappbare Karten; ein neuer Song startet mit dem Hinzufügen eines Abschnitts; Reihenfolge ändern, umbenennen, löschen. Eine Zeile wie `[Hook]` im Text startet ebenfalls einen Abschnitt.
   - **Hook / Bridge wiederholen**: Ein leerer Abschnitt mit gleichem Namen wiederholt den Text von oben (im Teleprompter und PDF ausgeschrieben). Schreibst du etwas hinein, gilt nur noch dein eigener Text; leerst du ihn wieder, wird wiederholt.
   - Sprache des Songs: **Deutsch** oder **English**.
   - Unten Reime auf dein letztes Wort (rosa = andere Sprache) und deine gemerkten Wörter.
   - **KI-Ideen**: 2 oder 4 neue Zeilen passend zum Song (Claude von Anthropic, eigener API-Schlüssel).
-  - **PDF**: Songtext mit Beat- und Lizenzinfos als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
+  - **PDF**: Songtext mit BPM und Tonart als PDF (lädt beim ersten Mal den PDF-Baustein jsPDF aus dem Netz).
 - **Beat**
   - Beat-Datei oder YouTube-Link, Loop, Tempo. Tipp auf die Wellenform setzt die Startstelle.
-  - **Teleprompter**: zeigt den Text groß und lässt ihn im Takt mitlaufen (eine Zeile pro Takt), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
+  - **Teleprompter**: zeigt den Text groß und lässt ihn gleichmäßig von unten nach oben durchlaufen, ohne Hervorhebung (eine Zeile pro Takt; pausiert lässt er sich von Hand scrollen), z. B. zum Einsingen in FL Studio. Das Tempo kommt aus den BPM des Beats: eintragen, aus der Lizenz übernehmen oder beim Hochladen automatisch erkennen lassen. Dazu „Takte pro Zeile“ (½, 1, 2, 4) und Einzähler (1 oder 2 Takte); ohne BPM startet er nicht. Unter „Was soll laufen?“ wählst du den ganzen Song oder nur einzelne Abschnitte (z. B. nur Intro, nur Hook, Hook + Part 1). Optional mit dem Beat ab der Startstelle; − / + zum Feinjustieren (wird beim nächsten Start zurückgesetzt), Zeile antippen zum Springen.
   - Aufnahmen aus früheren Versionen bleiben unter „Frühere Aufnahmen“ abspiel- und ladbar; neu aufnehmen kann RAIM nicht mehr.
   - **Lizenz** als schmale Leiste mit allen Angaben und Datei, dazu **Lizenzwarnungen** (fehlende Lizenz, Free/Lease-Grenzen, fehlende Lizenzdatei …; kein Rechtsrat).
 - **Reime**

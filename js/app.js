@@ -307,10 +307,16 @@
   var sections = [], collapsed = new Set(), activeTA = null, activeIdx = 0;
 
   function loadSections() {
-    sections = RaimSong.parse(current.text);
+    sections = parseSections(current.text);
     collapsed = new Set();
     activeIdx = 0;
     renderSections();
+  }
+
+  // an empty song has no cards at all: writing starts by adding Intro, Hook, Part …
+  function parseSections(text) {
+    var secs = RaimSong.parse(text);
+    return secs.length === 1 && secs[0].name === null && !secs[0].body.trim() ? [] : secs;
   }
 
   function syncText() {
@@ -334,6 +340,9 @@
   function renderSections(focusIndex) {
     var box = $('sections');
     box.textContent = '';
+    box.classList.toggle('is-empty', !sections.length);
+    $('addSection').classList.toggle('is-first', !sections.length);
+    if (!sections.length) box.append(el('p', 'sec-empty', 'Füge einen Abschnitt hinzu, um zu schreiben:'));
     sections.forEach(function (s, i) {
       var card = el('div', 'sec' + (s.name === null ? ' sec--plain' : '') + (sections.length === 1 ? ' sec--only' : '') + (collapsed.has(i) ? ' is-collapsed' : ''));
       card.dataset.i = i;
@@ -416,7 +425,7 @@
       var repeating = !!cand && !s.body.trim();
       preview.textContent = repeating ? cand.body : '';
       preview.hidden = !repeating || collapsed.has(i);
-      ta.placeholder = s.name === null ? 'Schreib deine erste Zeile …'
+      ta.placeholder = s.name === null ? ''
         : cand ? 'Leer lassen = ' + s.name + ' von oben wiederholen. Oder eigenen Text schreiben.'
         : 'Text für ' + s.name + ' …';
       var meta = card.querySelector('.sec-meta');
@@ -430,7 +439,7 @@
 
   function loadSectionsFromText() {
     current.text = RaimSong.serialize(sections);
-    sections = RaimSong.parse(current.text);
+    sections = parseSections(current.text);
     collapsed = new Set();
     activeIdx = 0;
     renderSections();
@@ -445,15 +454,8 @@
       var parts = sections.filter(function (s) { return /^part\b/i.test(s.name || ''); }).length;
       name = 'Part ' + (parts + 1);
     }
-    // a plain first card that is still empty becomes the new section
-    var at;
-    if (sections.length === 1 && sections[0].name === null && !sections[0].body.trim()) {
-      sections[0] = { name: name, body: '' };
-      at = 0;
-    } else {
-      at = activeIndex() + 1;
-      sections.splice(at, 0, { name: name, body: '' });
-    }
+    var at = activeIndex() + 1;
+    sections.splice(at, 0, { name: name, body: '' });
     activeIdx = at;
     collapsed = new Set();
     syncText();
@@ -476,7 +478,6 @@
     var s = sections[i];
     var go = function () {
       sections.splice(i, 1);
-      if (!sections.length) sections.push({ name: null, body: '' });
       collapsed = new Set();
       activeIdx = Math.max(0, i - 1);
       syncText();
@@ -566,12 +567,8 @@
       doc.text(pdfSafe('Songtext · ' + (p.lang === 'en' ? 'Englisch' : 'Deutsch') + ' · Stand ' + new Date().toLocaleDateString('de-DE')), M, 26);
       y = 46;
 
-      // beat and license info
+      // only tempo and key: no beat, producer or license in the PDF
       var l = p.license, info = [];
-      if (p.beat) info.push(['Beat', p.beat.name.replace(/\.\w+$/, '')]);
-      else if (p.youtube) info.push(['Beat', p.youtube]);
-      if (l.producer) info.push(['Produzent', l.producer]);
-      if (l.type) info.push(['Lizenz', l.type]);
       if (p.bpm || l.bpm) info.push(['BPM', p.bpm || l.bpm]);
       if (l.key) info.push(['Tonart', l.key]);
       if (info.length) {
@@ -751,6 +748,7 @@
 
   // whole song up to the end of the caret's line (repeats filled in): what the new lines continue
   function textBeforeInsertPoint() {
+    if (!sections.length) return '';
     var ta = activeTA, i = activeIndex();
     var v = ta ? ta.value : '', nl = ta ? v.indexOf('\n', ta.selectionStart) : -1;
     var upTo = sections.slice(0, i).concat([{ name: sections[i].name, body: nl < 0 ? v : v.slice(0, nl) }]);
@@ -759,6 +757,7 @@
 
   function runAi() {
     if (aiBusy) return;
+    if (!sections.length) { toast('Füge zuerst einen Abschnitt hinzu, z. B. Intro oder Hook.'); return; }
     var key = Store.apiKey();
     if (!key) {
       toast('Trag zuerst deinen API-Schlüssel in den Einstellungen ein.');

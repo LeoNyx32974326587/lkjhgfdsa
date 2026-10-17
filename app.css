@@ -539,9 +539,7 @@ body.prompter-open { overflow: hidden; }
 }
 .prompter-text > * { max-width: 900px; margin-left: auto !important; margin-right: auto !important; }
 .prompter-text h4 { margin: 28px 0 8px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); font-weight: 700; }
-.prompter-text p { margin: 0; padding: 8px 0; font-size: clamp(24px, 6.4vw, 40px); line-height: 1.3; font-weight: 700; color: rgba(245, 243, 255, .5); cursor: pointer; transition: color .25s, transform .25s; transform-origin: center; }
-.prompter-text p.is-past { color: rgba(245, 243, 255, .22); }
-.prompter-text p.is-now { color: #fff; transform: scale(1.06); text-shadow: 0 0 24px rgba(140, 110, 255, .6); }
+.prompter-text p { margin: 0; padding: 8px 0; font-size: clamp(24px, 6.4vw, 40px); line-height: 1.3; font-weight: 700; color: #f5f3ff; cursor: pointer; }
 .prompter-text .prompter-empty { color: var(--dim); font-size: 18px; font-weight: 400; }
 .prompter-count {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -571,3 +569,12 @@ body.prompter-open { overflow: hidden; }
 .sec-pick-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .chip--pick { background: rgba(40, 30, 90, .6); border-color: var(--border); color: #d8d0ff; cursor: pointer; }
 .chip--pick.is-on { background: var(--violet-2); border-color: rgba(120, 210, 255, .6); color: #fff; box-shadow: 0 0 12px rgba(110, 80, 255, .45); }
+
+/* empty song: start by adding a section */
+.sec-empty { margin: 8px 0 0; color: var(--muted); font-size: 16px; }
+.add-section.is-first { margin-top: 10px; gap: 8px; }
+.add-section.is-first > span { display: none; }
+.add-section.is-first button {
+  padding: 12px 18px; font-size: 15px; border-style: solid; border-color: rgba(120, 210, 255, .5);
+  background: linear-gradient(100deg, rgba(138, 107, 255, .35), rgba(74, 36, 201, .35));
+}
