@@ -1331,3 +1331,12 @@ html[data-theme="light"] .album-track { background: #fff; }
 .album-pick-text { display: grid; min-width: 0; }
 .album-pick-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .album-pick-text span { font-size: 13px; color: var(--dim); }
+
+/* ---------- writing together live ---------- */
+.live-people { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 10px; }
+.live-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 13px; background: rgba(94, 231, 255, .1); border: 1px solid rgba(94, 231, 255, .35); color: var(--text); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #3ee08f; box-shadow: 0 0 6px #3ee08f; }
+.live-chip.is-typing .live-dot { animation: mic-pulse 1.2s ease-out infinite; background: #5ee7ff; box-shadow: none; }
+.sec-live { flex: none; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #5ee7ff; color: #07060f; margin-right: 4px; white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
+.sec--plain > .sec-live { position: absolute; top: 12px; right: 52px; }
+html[data-theme="light"] .live-chip { background: rgba(10, 126, 160, .08); border-color: rgba(10, 126, 160, .3); }

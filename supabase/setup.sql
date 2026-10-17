@@ -550,6 +550,31 @@ begin
 end;
 $$;
 
+-- live writing in the same song: private Realtime channels "song:<owner>:<project id>",
+-- open only to the owner and accepted features of that song
+create or replace function public.song_channel_ok(topic text) returns boolean
+language plpgsql security definer stable set search_path = public as $$
+declare o uuid; pid text;
+begin
+  if topic not like 'song:%:%' then return false; end if;
+  begin o := split_part(topic, ':', 2)::uuid; exception when others then return false; end;
+  pid := substr(topic, length('song:' || split_part(topic, ':', 2) || ':') + 1);
+  return auth.uid() = o or is_member(o, pid);
+end;
+$$;
+revoke execute on function public.song_channel_ok(text) from anon, public;
+grant execute on function public.song_channel_ok(text) to authenticated;
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'realtime' and table_name = 'messages') then
+    execute 'drop policy if exists "song channel read" on realtime.messages';
+    execute 'drop policy if exists "song channel write" on realtime.messages';
+    execute 'create policy "song channel read" on realtime.messages for select to authenticated using (public.song_channel_ok(realtime.topic()))';
+    execute 'create policy "song channel write" on realtime.messages for insert to authenticated with check (public.song_channel_ok(realtime.topic()))';
+  end if;
+end;
+$$;
+
 -- ---------- file storage: private bucket, a folder per user ----------
 
 insert into storage.buckets (id, name, public, file_size_limit)

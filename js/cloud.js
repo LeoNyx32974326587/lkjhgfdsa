@@ -244,6 +244,29 @@
       ch.subscribe();
     },
 
+    // live writing in one song: a private channel for its owner and features (policies in setup.sql)
+    // on: { text(payload), people(list of states), status(text) } -> { send, track, leave } or null
+    joinSong: function (owner, projectId, me, on) {
+      if (!sb || !sb.channel || !uid) return null;
+      var ch = sb.channel('song:' + owner + ':' + projectId, { config: { private: true, broadcast: { self: false }, presence: { key: uid } } });
+      var joined = false;
+      ch.on('broadcast', { event: 'text' }, function (m) { on.text(m.payload); });
+      ch.on('presence', { event: 'sync' }, function () {
+        var state = ch.presenceState(), out = [];
+        Object.keys(state).forEach(function (k) { if (state[k] && state[k][0]) out.push(state[k][state[k].length - 1]); });
+        on.people(out);
+      });
+      ch.subscribe(function (status) {
+        if (status === 'SUBSCRIBED') { joined = true; ch.track(me); }
+        if (on.status) on.status(status);
+      });
+      return {
+        send: function (payload) { if (joined) ch.send({ type: 'broadcast', event: 'text', payload: payload }); },
+        track: function (state) { me = state; if (joined) ch.track(state); },
+        leave: function () { joined = false; try { sb.removeChannel(ch); } catch (e) { /* already gone */ } }
+      };
+    },
+
     // ---------- Claude, through the Edge Function "claude" (the API key stays on the server) ----------
     // -> { stop_reason, text }; errors carry .status and .code ('limit', 'not_signed_in', 'not_configured', 'claude')
     claude: function (task, content) {

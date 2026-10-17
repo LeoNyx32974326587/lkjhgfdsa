@@ -455,6 +455,7 @@
     RaimBeats.open(p);
     setTextMode('write');
     loadComments();
+    joinLive(p);
     lastVersionAt = Date.now();
     saveVersion(p);
     showTab('text');
@@ -469,6 +470,7 @@
   function closeProject() {
     clearTimeout(saveTimer);
     var p = current;
+    leaveLive();
     RaimDictate.stop();
     $('masterAudio').pause();   // the finished song only plays while its project is open
     RaimBeats.close();
@@ -657,6 +659,101 @@
     current.text = RaimSong.serialize(sections);
     scheduleSave();
     updateStats();
+    liveSend();
+  }
+
+  // ---------- writing together live: who is in the song, and their text as they type ----------
+  var live = null, livePeople = [], liveTimer2 = null, lastLocalInput = 0, liveHeld = null, liveHeldTimer = null;
+  function sharedSong(p) { return !!p && !!account && (!!p._owner || !!(p.features && p.features.length)); }
+  function liveMe() {
+    var sec = sections[activeIdx], typing = Date.now() - lastLocalInput < 4000;
+    return { id: account.id, name: profile.artist || profile.name || account.email, sec: sec ? (sec.name || '') : '', secIdx: activeIdx, typing: typing };
+  }
+  function joinLive(p) {
+    leaveLive();
+    if (!sharedSong(p)) return;
+    var owner = p._owner || account.id;
+    live = RaimCloud.joinSong(owner, p.id, liveMe(), {
+      text: function (m) { if (current === p && m && typeof m.text === 'string') applyRemoteText(m.text, m.from); },
+      people: function (list) { if (current !== p) return; livePeople = list.filter(function (x) { return x.id !== account.id; }); renderLive(); },
+      status: function () {}
+    });
+  }
+  function leaveLive() {
+    if (live) live.leave();
+    live = null;
+    livePeople = [];
+    clearTimeout(liveHeldTimer);
+    liveHeld = null;
+    renderLive();
+  }
+  function liveSend() {
+    if (!live || !current) return;
+    clearTimeout(liveTimer2);
+    liveTimer2 = setTimeout(function () {
+      if (!live || !current) return;
+      live.send({ text: current.text, from: account.id });
+      live.track(liveMe());
+    }, 250);
+    // "schreibt …" ends a moment after the last key
+    clearTimeout(liveSend.idle);
+    liveSend.idle = setTimeout(function () { if (live) live.track(liveMe()); }, 4300);
+  }
+  // who is here, and where they write
+  function renderLive() {
+    var box = $('livePeople');
+    box.textContent = '';
+    box.hidden = !livePeople.length;
+    livePeople.forEach(function (x) {
+      var chip = el('span', 'live-chip' + (x.typing ? ' is-typing' : ''));
+      chip.append(el('span', 'live-dot'), document.createTextNode(x.name + (x.typing ? ' schreibt' + (x.sec ? ' im ' + x.sec : '') + ' …' : ' ist hier')));
+      box.append(chip);
+    });
+    $('sections').querySelectorAll('.sec').forEach(function (card, i) {
+      var tag = card.querySelector('.sec-live');
+      var here = livePeople.filter(function (x) { return x.typing && x.secIdx === i; }).map(function (x) { return x.name; });
+      if (!here.length) { if (tag) tag.remove(); return; }
+      if (!tag) {
+        tag = el('span', 'sec-live');
+        var head = card.querySelector('.sec-head');
+        if (head) head.insertBefore(tag, head.querySelector('.sec-tools')); else card.prepend(tag);
+      }
+      tag.textContent = here.join(', ') + ' ✎';
+    });
+  }
+  // a friend's text: take their sections, keep the one I am typing in right now
+  function applyRemoteText(text, from) {
+    if (!current || text === current.text) return;
+    var ta = document.activeElement, typing = ta && ta.classList && ta.classList.contains('sec-text') && Date.now() - lastLocalInput < 2000;
+    var mine = typing ? activeIdx : -1, remote = parseSections(text);
+    var same = remote.length === sections.length && remote.every(function (r, i) { return r.name === sections[i].name; });
+    if (!same) {
+      // new, moved or renamed sections: wait until I pause typing, then take the friend's structure
+      if (typing) { liveHeld = { text: text, from: from }; clearTimeout(liveHeldTimer); liveHeldTimer = setTimeout(function () { var h = liveHeld; liveHeld = null; if (h) applyRemoteText(h.text, h.from); }, 2100); return; }
+      var open = new Set(sections.filter(function (s, i) { return !collapsed.has(i); }).map(function (s) { return s.name; }));
+      sections = remote;
+      collapsed = new Set();
+      sections.forEach(function (s, i) { if (s.name !== null && !open.has(s.name)) collapsed.add(i); });
+      if (activeIdx >= sections.length) activeIdx = sections.length - 1;
+      renderSections();
+    } else {
+      var tas = $('sections').querySelectorAll('.sec-text');
+      remote.forEach(function (r, i) {
+        if (i === mine || r.body === sections[i].body) return;
+        sections[i].body = r.body;
+        var t = tas[i];
+        if (!t) return;
+        var focused = t === document.activeElement, pos = t.selectionStart;
+        t.value = r.body;
+        if (focused) t.selectionStart = t.selectionEnd = Math.min(pos, r.body.length);
+        autosize(t);
+      });
+      refreshRepeats();
+    }
+    current.text = RaimSong.serialize(sections);
+    scheduleSave();
+    updateStats();
+    renderLive();
   }
 
   function autosize(ta) {
@@ -730,6 +827,7 @@
       ta.readOnly = !may('text');
       ta.spellcheck = false;
       ta.addEventListener('input', function () {
+        lastLocalInput = Date.now();
         s.body = ta.value;
         autosize(ta);
         syncText();
@@ -739,7 +837,7 @@
       ta.addEventListener('blur', function () {
         if (ta.value.split('\n').some(RaimSong.isHeader)) { loadSectionsFromText(); }
       });
-      ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; });
+      ta.addEventListener('focus', function () { activeTA = ta; activeIdx = i; if (live) live.track(liveMe()); });
       card.append(ta);
       if (s.name === null && may('text')) {
         var pmic = micButton('sec-tool mic-btn--corner');
@@ -750,6 +848,7 @@
       if (!collapsed.has(i)) autosize(ta);
     });
     refreshRepeats();
+    renderLive();
     if (activeIdx >= sections.length) activeIdx = sections.length - 1;
     activeTA = box.querySelectorAll('.sec-text')[activeIdx] || null;
     if (focusIndex !== undefined && focusIndex >= 0) {
