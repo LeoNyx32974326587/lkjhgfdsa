@@ -407,6 +407,7 @@
     clearTimeout(saveTimer);
     var p = current;
     RaimDictate.stop();
+    $('masterAudio').pause();   // the finished song only plays while its project is open
     RaimBeats.close();
     $('miniBar').hidden = true;
     if (snapshot(p) !== openedAs) saveNow(p);
