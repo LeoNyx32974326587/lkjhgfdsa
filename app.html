@@ -26,13 +26,7 @@
         <h1>Projekte</h1>
         <button class="btn btn--primary" id="newProject" type="button">+ Neues Projekt</button>
       </div>
-      <div class="seg status-filter" id="statusFilter" role="group" aria-label="Nach Status filtern" hidden>
-        <button type="button" class="seg-btn is-on" data-status-filter="all">Alle <span></span></button>
-        <button type="button" class="seg-btn" data-status-filter="work">In Arbeit <span></span></button>
-        <button type="button" class="seg-btn" data-status-filter="edit">In Bearbeitung <span></span></button>
-        <button type="button" class="seg-btn" data-status-filter="done">Fertig <span></span></button>
-      </div>
-      <ul class="projects" id="projects"></ul>
+      <div id="projects"></div>
       <div class="empty-state" id="projectsEmpty" hidden>
         <img src="assets/icon.svg" alt="" width="96" height="96">
         <p>Ein Projekt pro Song: Text, Beat mit Lizenz und deine Reime an einem Ort.</p>
@@ -77,7 +71,6 @@
       <div class="status-row">
         <span class="chip-label">Status</span>
         <div class="seg" id="projectStatus" role="group" aria-label="Status des Songs">
-          <button type="button" class="seg-btn" data-status="work">In Arbeit</button>
           <button type="button" class="seg-btn" data-status="edit">In Bearbeitung</button>
           <button type="button" class="seg-btn" data-status="done">Fertig</button>
         </div>

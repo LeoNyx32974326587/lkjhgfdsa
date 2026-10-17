@@ -142,18 +142,9 @@
 
   function activeProjects() { return projects.filter(function (p) { return !p.deletedAt; }); }
 
-  // ---------- status: in Arbeit / in Bearbeitung / fertig ----------
-  var STATUS = { work: 'In Arbeit', edit: 'In Bearbeitung', done: 'Fertig' };
-  function statusOf(p) { return STATUS[p.status] ? p.status : 'work'; }
-  var statusFilter = 'all';
-  try { statusFilter = localStorage.getItem('raim.statusFilter') || 'all'; } catch (e) { /* private mode */ }
-  document.querySelectorAll('[data-status-filter]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      statusFilter = b.dataset.statusFilter;
-      try { localStorage.setItem('raim.statusFilter', statusFilter); } catch (e) { /* private mode */ }
-      renderProjects();
-    });
-  });
+  // ---------- status: in Bearbeitung / fertig ----------
+  var STATUS = { edit: 'In Bearbeitung', done: 'Fertig' };
+  function statusOf(p) { return p.status === 'done' ? 'done' : 'edit'; }
   function renderStatus() {
     document.querySelectorAll('[data-status]').forEach(function (b) {
       var on = b.dataset.status === statusOf(current);
@@ -169,46 +160,48 @@
     });
   });
 
+  // projects in progress on top, finished ones below
   function renderProjects() {
-    var ul = $('projects'), active = activeProjects(), trashed = projects.length - active.length;
-    var counts = { all: active.length, work: 0, edit: 0, done: 0 };
-    active.forEach(function (p) { counts[statusOf(p)]++; });
-    if (statusFilter !== 'all' && !counts[statusFilter]) statusFilter = 'all';
-    document.querySelectorAll('[data-status-filter]').forEach(function (b) {
-      b.classList.toggle('is-on', b.dataset.statusFilter === statusFilter);
-      b.querySelector('span').textContent = counts[b.dataset.statusFilter];
-    });
-    $('statusFilter').hidden = active.length < 2;
-    ul.textContent = '';
-    active.filter(function (p) { return statusFilter === 'all' || statusOf(p) === statusFilter; })
-      .sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
-      var li = el('li'), b = el('button', 'project-card');
-      b.type = 'button';
-      var top = el('div', 'project-top');
-      top.append(el('strong', '', p.title || 'Ohne Titel'));
-      top.append(el('span', 'badge badge--' + statusOf(p), STATUS[statusOf(p)]));
-      if (p.license.type) top.append(el('span', 'badge', p.license.type));
-      if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
-      b.append(top);
-      var first = RaimSong.lines(p.text)[0];
-      b.append(el('p', 'project-line', first || 'Noch kein Text'));
-      var meta = songFacts(p);
-      if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
-      else if (p.youtube) meta.push('♪ YouTube-Beat');
-      if (p.license.producer) meta.push(p.license.producer);
-      var lines = RaimSong.lines(p.text).length;
-      meta.push(lines + (lines === 1 ? ' Zeile' : ' Zeilen'));
-      if (p.takes.length) meta.push(p.takes.length + (p.takes.length === 1 ? ' Aufnahme' : ' Aufnahmen'));
-      meta.push(new Date(p.updated).toLocaleDateString('de-DE'));
-      b.append(el('span', 'project-meta', meta.join(' · ')));
-      b.addEventListener('click', function () { openProject(p); });
-      li.append(b);
-      ul.append(li);
+    var box = $('projects'), active = activeProjects(), trashed = projects.length - active.length;
+    box.textContent = '';
+    ['edit', 'done'].forEach(function (status) {
+      var list = active.filter(function (p) { return statusOf(p) === status; });
+      if (!list.length) return;
+      var head = el('h2', 'project-group', STATUS[status]);
+      head.append(el('span', '', String(list.length)));
+      var ul = el('ul', 'projects projects--' + status);
+      list.sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) { ul.append(projectCard(p)); });
+      box.append(head, ul);
     });
     $('projectsEmpty').hidden = active.length > 0;
     $('newProject').hidden = active.length === 0;
     $('openTrash').hidden = !trashed;
     $('trashCount').textContent = '(' + trashed + ')';
+  }
+
+  function projectCard(p) {
+    var li = el('li'), b = el('button', 'project-card');
+    b.type = 'button';
+    var top = el('div', 'project-top');
+    top.append(el('strong', '', p.title || 'Ohne Titel'));
+    if (statusOf(p) === 'done') top.append(el('span', 'badge badge--done', 'Fertig'));
+    if (p.license.type) top.append(el('span', 'badge', p.license.type));
+    if (licenseWarnings(p).some(function (w) { return w[0] === 'warn'; })) top.append(el('span', 'badge badge--warn', 'Lizenz prüfen'));
+    b.append(top);
+    var first = RaimSong.lines(p.text)[0];
+    b.append(el('p', 'project-line', first || 'Noch kein Text'));
+    var meta = songFacts(p);
+    if (p.beat) meta.push('♪ ' + p.beat.name.replace(/\.\w+$/, ''));
+    else if (p.youtube) meta.push('♪ YouTube-Beat');
+    if (p.license.producer) meta.push(p.license.producer);
+    var lines = RaimSong.lines(p.text).length;
+    meta.push(lines + (lines === 1 ? ' Zeile' : ' Zeilen'));
+    if (p.takes.length) meta.push(p.takes.length + (p.takes.length === 1 ? ' Aufnahme' : ' Aufnahmen'));
+    meta.push(new Date(p.updated).toLocaleDateString('de-DE'));
+    b.append(el('span', 'project-meta', meta.join(' · ')));
+    b.addEventListener('click', function () { openProject(p); });
+    li.append(b);
+    return li;
   }
 
   function createProject() { openInfo(null); }

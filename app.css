@@ -303,12 +303,12 @@ dialog p { color: var(--muted); }
 .project-top { display: flex; align-items: center; gap: 10px; }
 .project-top strong { font-size: 20px; letter-spacing: -.01em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge { flex: none; font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: rgba(94, 231, 255, .14); color: var(--cyan); border: 1px solid rgba(94, 231, 255, .3); }
-.badge--work { background: rgba(160, 130, 255, .16); color: #cbbcff; border-color: rgba(160, 130, 255, .4); }
-.badge--edit { background: rgba(94, 231, 255, .14); color: var(--cyan); border-color: rgba(94, 231, 255, .3); }
 .badge--done { background: rgba(90, 230, 150, .15); color: #7dffb4; border-color: rgba(90, 230, 150, .4); }
-.status-filter { display: flex; flex-wrap: wrap; border-radius: 22px; margin-top: 14px; }
-.status-filter .seg-btn { flex: 1 1 auto; padding: 8px 10px; }
-.status-filter .seg-btn span { opacity: .7; font-size: 12px; }
+.project-group { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 0; font-size: 13px; font-weight: 600;
+  color: #c9bdff; text-transform: uppercase; letter-spacing: .08em; }
+.project-group span { color: var(--dim); font-weight: 500; }
+.projects--done .project-card { opacity: .78; background: linear-gradient(180deg, rgba(36, 24, 100, .6), rgba(20, 14, 64, .6)); }
+.projects--done .project-card:hover { opacity: 1; }
 .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
 .status-row .seg-btn { padding: 7px 12px; font-size: 13px; }
 #projectStatus .seg-btn[data-status="done"].is-on { background: #1f9d5c; }
