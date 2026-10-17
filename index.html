@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>RAIM – Reime, die klingen.</title>
+  <meta name="description" content="Dein Schreibblock für Rap und Songs – mit deutschen Doppelreimen, die nach Klang gesucht werden, nicht nach Buchstaben.">
+  <meta name="theme-color" content="#07060f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Roboto:wght@400;500;700;800&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="waves" id="waves" aria-hidden="true"></svg>
+
+  <header class="site-header">
+    <a class="brand" href="#top">
+      <img src="assets/icon.svg" alt="" width="36" height="36">
+      <span>RAIM</span>
+    </a>
+    <nav>
+      <a href="#support">Support</a>
+      <a href="#datenschutz">Datenschutz</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <svg class="logo" viewBox="0 0 1000 340" role="img" aria-label="RAIM">
+        <defs>
+          <filter id="neon" x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="letterFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1b2a6b"/>
+            <stop offset="1" stop-color="#0d1240"/>
+          </linearGradient>
+        </defs>
+        <g id="logoLayers" font-family="Michroma, 'Arial Black', sans-serif" font-size="210" text-anchor="middle" stroke-linejoin="round"></g>
+      </svg>
+
+      <h1>Reime, die klingen.</h1>
+      <p class="lead">Dein Schreibblock für Rap und Songs – mit deutschen Doppelreimen, die nach Klang gesucht werden, nicht nach Buchstaben.</p>
+
+      <a class="cta" href="#">
+        <span class="cta-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5"/><path d="M12 7v9m-4-4 4 4 4-4"/></svg>
+        </span>
+        Laden im App Store
+      </a>
+      <p class="fineprint">Für iPhone. Gratis laden, RAIM Pro monatlich oder jährlich.</p>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <h2 class="section-title">Vom ersten Wort<br>bis zur Aufnahme.</h2>
+
+      <!-- Reimsuche -->
+      <article class="feature">
+        <div class="card card--hatch">
+          <div class="panel">
+            <div class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <span>Nachrichtendienst</span>
+            </div>
+            <div class="group">
+              <div class="group-head">
+                <strong>–dienst</strong><em>Endungsreime</em>
+                <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+              <div class="group-sub">Nachtgottesdienst, Mädchennotdienst, …</div>
+            </div>
+            <ul class="results">
+              <li><span class="score" style="--s:1">1,00</span>Amphetamin</li>
+              <li><span class="score" style="--s:.98">0,98</span>Zahnmedizin</li>
+              <li><span class="score" style="--s:.98">0,98</span>Adrenalin</li>
+              <li><span class="score" style="--s:.97">0,97</span>Tagesverdienst</li>
+            </ul>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="shimmer">Reimsuche</span></span>
+        <h3>Doppelreime nach Klang</h3>
+        <p>Gib ein Wort ein: RAIM findet Doppelreime, Mehrsilbenreime und Endungsreime – die besten oben.</p>
+      </article>
+
+      <!-- Schreibblock -->
+      <article class="feature">
+        <div class="card card--waves">
+          <div class="panel panel--editor">
+            <p class="line">Sie sagt, dass ich phänomenal bin,</p>
+            <p class="line">und bekomm jetzt sechsstellige <span class="caret"></span>Festivalgagen</p>
+            <div class="chips">
+              <span class="chip chip--muted">phänomenal bin</span>
+              <span class="chip">Festivalgagen</span>
+              <span class="chip">Todesfall</span>
+            </div>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg><span class="shimmer">Schreibblock</span></span>
+        <h3>Reime beim Schreiben</h3>
+        <p>Unter deinem Text erscheinen Reime auf dein letztes Wort. Antippen, weiterschreiben.</p>
+      </article>
+
+      <!-- KI-Ideen -->
+      <article class="feature">
+        <div class="card card--waves">
+          <div class="panel panel--editor">
+            <p class="line">Sie sagt, dass ich phänomenal bin</p>
+            <p class="line"><span class="hl">und bekomm jetzt sechsstellige Festivalgagen</span></p>
+            <p class="line line--ai">5 Sterne auf der <span class="hl">Hotelzimmerkarte</span></p>
+            <p class="line line--ai">für die ich die <span class="hl">Rechnung bezahle</span></p>
+            <div class="ai-actions">
+              <button type="button" class="accept"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Übernehmen</button>
+              <button type="button" aria-label="Neu generieren"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg></button>
+              <button type="button" aria-label="Verwerfen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6Z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8Z"/></svg><span class="shimmer">KI-Ideen</span></span>
+        <h3>KI-Ideen, wenn<br>du festhängst</h3>
+        <p>Zwei oder vier Zeilen passend zu deinem Song, auf Wunsch genau auf dein Reimende. Ab 18. 3 KI-Ideen gratis zum Ausprobieren, in Pro 20 im Monat.</p>
+      </article>
+
+      <!-- Beats -->
+      <article class="feature">
+        <div class="card card--waves card--beats">
+          <div class="panel panel--wave">
+            <div class="wave" id="waveform">
+              <div class="loop"></div>
+            </div>
+            <span class="rec" aria-hidden="true"></span>
+          </div>
+          <div class="beat-chips">
+            <span>Loop</span><span>Tempo</span><span>Aufnehmen</span>
+          </div>
+        </div>
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4M21 12h0"/></svg><span class="shimmer">Beats</span></span>
+        <h3>Beats und Aufnahmen</h3>
+        <p>Spiel deinen Beat oder einen YouTube-Beat ab und loop ihn. Zu deinen eigenen Beats nimmst du dich direkt auf.</p>
+      </article>
+    </section>
+
+    <!-- Datenschutz -->
+    <section class="privacy" id="datenschutz">
+      <div class="privacy-card">
+        <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="shimmer">Datenschutz</span></span>
+        <h2>Kein Konto,<br>keine Werbung,<br>kein Tracking.</h2>
+        <p>Deine Songs bleiben auf deinem iPhone. Für die Reimsuche geht nur das Suchwort an unseren Server in Deutschland, dauerhaft gespeichert wird es nicht – außer als Wortpaar, wenn du einen Reim mit „Passt nicht“ wegwischst. Für KI-Ideen gehen bis zu 24 Zeilen deines Songs – erst nach deiner ausdrücklichen Zustimmung – über unseren Server an Claude von Anthropic. <a href="#datenschutz">Mehr dazu im Datenschutz</a>.</p>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final">
+      <img class="app-icon" src="assets/icon.svg" alt="RAIM App-Icon" width="300" height="300">
+      <h2>Schreib deinen<br>nächsten Song.</h2>
+      <a class="cta" href="#">
+        <span class="cta-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5"/><path d="M12 7v9m-4-4 4 4 4-4"/></svg>
+        </span>
+        Laden im App Store
+      </a>
+      <p class="fineprint">Für iPhone. Gratis laden, RAIM Pro monatlich oder jährlich.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="support">
+    <div class="footer-top">
+      <a class="brand" href="#top">
+        <img src="assets/icon.svg" alt="" width="36" height="36">
+        <span>RAIM</span>
+      </a>
+      <a class="cta-small" href="#">Laden im App Store</a>
+    </div>
+    <nav class="footer-links">
+      <a href="#datenschutz">Datenschutz</a>
+      <a href="#">Nutzungsbedingungen</a>
+      <a href="#support">Support</a>
+      <a href="#">Impressum</a>
+    </nav>
+    <p class="copy">© 2026 Dein Name</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
