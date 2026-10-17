@@ -68,8 +68,11 @@
   });
   function whenReady(fn) { dictPromise.then(fn); }
 
-  // rhymes in the languages switched on for the current project
-  function rhymeLangs() { return current && current.rhymes.langs.length ? current.rhymes.langs : ['de', 'en']; }
+  // rhymes come from the song's languages (song infos): German, English or both, also across them
+  function rhymeLangs() {
+    var l = current ? current.langs.filter(function (x) { return x === 'de' || x === 'en'; }) : [];
+    return l.length ? l : ['de'];
+  }
   function searchRhymes(q, limit) {
     return engine.search(q, { langs: rhymeLangs(), primary: current.lang, limit: limit, exclude: blockedSet() });
   }
@@ -825,6 +828,8 @@
           $('bpmInput').value = p.bpm;
           $('bpmInput').dispatchEvent(new Event('input'));
           renderSongInfo();
+          renderRhymeLangs();
+          if ($('searchInput').value.trim().length >= 2) runSearch(false);
         }
         toast('Song-Infos gespeichert.');
       } else {
@@ -1402,30 +1407,21 @@
     return i < 0;
   }
 
-  // which languages rhymes may come from, per project
+  // which languages rhymes come from: shown in the rhymes tab, changed in the song infos
   function renderRhymeLangs() {
-    var on = rhymeLangs();
-    // the rhyme search knows German and English only
+    var on = rhymeLangs(), note = $('rhymeLangNote');
     var others = current.langs.filter(function (l) { return l !== 'de' && l !== 'en'; }).map(langName);
-    $('rhymeLangNote').textContent = others.length
-      ? 'Die Reimsuche kennt Deutsch und Englisch. Für ' + others.join(' und ') + ' helfen dir die KI-Ideen.' : '';
-    $('rhymeLangNote').hidden = !others.length;
-    document.querySelectorAll('[data-rlang]').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(on.indexOf(b.dataset.rlang) >= 0));
-      b.classList.toggle('is-on', on.indexOf(b.dataset.rlang) >= 0);
-    });
+    var known = current.langs.some(function (l) { return l === 'de' || l === 'en'; });
+    var text = !known ? 'Die Reimsuche kennt nur Deutsch und Englisch und sucht darum deutsche Reime.'
+      : on.length > 1 ? 'Reime auf Deutsch und Englisch – auch deutsche Wörter auf englische und umgekehrt.'
+      : on[0] === 'en' ? 'Reime auf Englisch.' : 'Reime auf Deutsch.';
+    if (others.length) text += ' Für ' + others.join(' und ') + ' helfen dir die KI-Ideen.';
+    note.textContent = text + ' ';
+    var edit = el('button', 'link-btn', 'Sprachen ändern');
+    edit.type = 'button';
+    edit.addEventListener('click', function () { openInfo(current); });
+    note.append(edit);
   }
-  document.querySelectorAll('[data-rlang]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var on = rhymeLangs().slice(), l = b.dataset.rlang, i = on.indexOf(l);
-      if (i >= 0 && on.length === 1) { toast('Mindestens eine Sprache muss an sein.'); return; }
-      if (i >= 0) on.splice(i, 1); else on.push(l);
-      current.rhymes.langs = on;
-      scheduleSave();
-      renderRhymeLangs();
-      if ($('searchInput').value.trim().length >= 2) runSearch(false);
-    });
-  });
 
   // ---------- Reime / Synonyme switch ----------
   function setMode(mode) {
