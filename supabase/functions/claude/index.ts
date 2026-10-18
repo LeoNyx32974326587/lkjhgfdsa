@@ -2,11 +2,14 @@
 // The Anthropic API key lives only here, as the secret ANTHROPIC_API_KEY – never in the website's code.
 // Only signed-in Barbook users can call it, only for Barbook's two jobs (song lines, reading a license),
 // and each account has a daily limit (secret AI_DAILY_LIMIT, default 50).
+// Barbook Pro: once Stripe is set up (secret STRIPE_SECRET_KEY), free accounts get FREE_AI_PER_MONTH requests
+// a month (default 5) and reading licenses with Claude needs Pro.
 import Anthropic from "npm:@anthropic-ai/sdk@0.131.0";
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
 const MODEL = "claude-opus-5-5";
 const DAILY_LIMIT = Number(Deno.env.get("AI_DAILY_LIMIT") ?? "50");
+const FREE_PER_MONTH = Deno.env.get("STRIPE_SECRET_KEY") ? Number(Deno.env.get("FREE_AI_PER_MONTH") ?? "5") : null;
 const MAX_SONG_CHARS = 60_000;
 const MAX_FILE_CHARS = 12_000_000; // base64 of a license file, about 9 MB
 
@@ -91,10 +94,11 @@ Deno.serve(async (req) => {
   const task = body.task ?? "";
   if (!(task in SCHEMAS) || !validContent(task, body.content)) return json({ error: "bad_request" }, 400);
 
-  // one request off today's allowance (counted in the table ai_usage)
-  const { data: allowed, error: quotaError } = await sb.rpc("ai_take", { max_per_day: DAILY_LIMIT });
+  // one request off the allowance (counted in the table ai_usage): Pro, free requests of the month, daily limit
+  const { data: verdict, error: quotaError } = await sb.rpc("ai_allow", { max_per_day: DAILY_LIMIT, free_per_month: FREE_PER_MONTH, pro_only: task === "license" });
   if (quotaError) return json({ error: "quota_check", message: quotaError.message }, 500);
-  if (!allowed) return json({ error: "limit", limit: DAILY_LIMIT }, 429);
+  if (verdict === "upgrade") return json({ error: "upgrade", free: FREE_PER_MONTH, task }, 402);
+  if (verdict !== "ok") return json({ error: "limit", limit: DAILY_LIMIT }, 429);
 
   const client = new Anthropic({ apiKey });
   try {

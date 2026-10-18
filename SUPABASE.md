@@ -79,6 +79,29 @@ Auf dem iPhone gehen Benachrichtigungen nur, wenn Barbook über „Teilen → Zu
 
 Neue Schlüssel erzeugen (falls nötig): `npx web-push generate-vapid-keys`.
 
+## 8. Barbook Pro verkaufen (Stripe, optional)
+
+Solange hier nichts eingerichtet ist, bleibt alles wie bisher (KI für alle mit Tageslimit). Sobald das Secret `STRIPE_SECRET_KEY` gesetzt ist, gilt: **5 KI-Ideen pro Monat kostenlos**, danach und für das Auslesen von Lizenzen mit Claude braucht man **Barbook Pro** (4,99 €/Monat oder 39,99 €/Jahr). Kartendaten laufen nur über Stripe, nie über Barbook.
+
+1. **Stripe-Konto** auf [stripe.com](https://stripe.com) anlegen. Erst alles im **Testmodus** (Schalter oben rechts) einrichten und ausprobieren.
+2. **Produkt anlegen:** Produktkatalog → **Produkt hinzufügen**: Name „Barbook Pro“, zwei **wiederkehrende** Preise: 4,99 € monatlich und 39,99 € jährlich. Die Preis-IDs (`price_…`) kopieren.
+3. **Kundenportal einschalten:** Einstellungen → Billing → **Kundenportal** → aktivieren (Kündigen und Zahlungsmethode ändern erlauben) → Speichern.
+4. **Secrets** in Supabase (Edge Functions → Secrets):
+   - `STRIPE_SECRET_KEY` = Entwickler → API-Schlüssel → Geheimschlüssel (`sk_test_…`, später `sk_live_…`)
+   - `STRIPE_PRICE_MONTH` = Preis-ID des Monatspreises, `STRIPE_PRICE_YEAR` = Preis-ID des Jahrespreises
+   - optional `FREE_AI_PER_MONTH` (kostenlose KI-Ideen pro Monat, Standard 5)
+5. **Zwei Funktionen anlegen** (Deploy a new function → Via Editor), jeweils **„Verify JWT“ ausschalten**:
+   - `billing` mit dem Inhalt von `supabase/functions/billing/index.ts` (prüft die Anmeldung selbst)
+   - `stripe-webhook` mit dem Inhalt von `supabase/functions/stripe-webhook/index.ts` (Stripe hat keine Barbook-Anmeldung; die Funktion prüft stattdessen die Stripe-Signatur)
+6. **Webhook in Stripe:** Entwickler → Webhooks → **Endpunkt hinzufügen**: URL `https://<projekt>.supabase.co/functions/v1/stripe-webhook`, Ereignisse `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Danach das **Signatur-Secret** (`whsec_…`) als Secret `STRIPE_WEBHOOK_SECRET` in Supabase eintragen.
+7. Die Funktion **`claude` neu deployen** (aktuellen Inhalt von `supabase/functions/claude/index.ts` hineinkopieren) und `supabase/setup.sql` noch einmal ausführen.
+8. **Testen:** In der App 6 KI-Ideen anfordern → das Pro-Fenster erscheint → mit der Testkarte `4242 4242 4242 4242` (beliebiges Ablaufdatum in der Zukunft, beliebige Prüfziffer) bezahlen. Zurück in Barbook steht im Profil „Pro“. Kündigen über `kuendigen.html` ausprobieren.
+9. Läuft alles: in Stripe auf den **Live-Modus** wechseln, Produkt, Preise, Webhook und Portal dort genauso anlegen und die Secrets durch die Live-Werte ersetzen.
+
+**Kündigungen und Widerrufe:** Angemeldete Pro-Kunden kündigen auf `kuendigen.html` mit einem Klick (gilt zum Laufzeitende) oder widerrufen innerhalb von 14 Tagen (sofortiges Ende). Jede Kündigung landet zusätzlich in der Tabelle `cancel_requests` (Table Editor). Einträge mit `done_automatically = false` kamen über das Formular ohne Anmeldung: Diese bitte selbst in Stripe kündigen, per E-Mail bestätigen und `handled` auf `true` setzen. Bei einem Widerruf die anteilige Erstattung in Stripe (Zahlung → Erstatten) selbst auslösen.
+
+**Vor dem echten Verkauf:** Impressum mit vollständigen Angaben, Umsatzsteuer klären (als Kleinunternehmer nach § 19 UStG den Hinweis „inkl. USt“ in den Nutzungsbedingungen anpassen; in Stripe ggf. Stripe Tax), Nutzungsbedingungen und Widerrufsbelehrung rechtlich prüfen lassen.
+
 ## Wie die Daten laufen
 
 - Jede Änderung wird sofort auf dem Gerät gespeichert und im Hintergrund hochgeladen. Offline geht alles weiter; hochgeladen wird beim nächsten Öffnen mit Internet.

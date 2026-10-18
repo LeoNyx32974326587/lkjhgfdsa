@@ -1846,6 +1846,7 @@
         }, function (err) {
           if (current !== p) return;
           $('aiResult').hidden = true;
+          if (err.message === 'UPGRADE') { loadPlan(); openPro('ai'); return; }
           $('aiMsg').textContent = err.message;
           $('aiMsg').hidden = false;
         })
@@ -2026,6 +2027,8 @@
   // signed in, Claude reads the file (also photos); otherwise Barbook reads PDFs itself
   function licenseEngine() {
     if (!account) return Promise.resolve('local');
+    // with Barbook Pro in place, Claude reads licenses for Pro accounts only
+    if (plan && !plan.pro && plan.billing) return Promise.resolve('local');
     var choice = null;
     try { choice = localStorage.getItem('raim.licenseAi'); } catch (e) { /* private mode */ }
     if (choice) return Promise.resolve(choice === 'yes' ? 'claude' : 'local');
@@ -2044,14 +2047,22 @@
     licenseEngine().then(function (engine) {
       if (seq !== readSeq) return null;
       if (engine === 'local' && isImage) {
+        if (account && plan && plan.billing && !plan.pro) {
+          licenseStatus('Fotos liest nur Claude – das gehört zu Barbook Pro. Trag die Angaben bitte selbst ein oder lade ein PDF hoch.', 'warn');
+          openPro('license');
+          return null;
+        }
         licenseStatus('Fotos kann Barbook nur mit Claude auslesen (dafür anmelden). Trag die Angaben bitte selbst ein.', 'warn');
         return null;
       }
       var job = engine === 'claude' ? RaimAI.readLicense(file) : RaimLicenseReader.read(file);
       return job.then(function (r) { return { r: r, engine: engine }; }, function (err) {
-        if (engine !== 'claude' || isImage) throw err;
-        // Claude not reachable: fall back to reading the PDF ourselves
-        return RaimLicenseReader.read(file).then(function (r) { return { r: r, engine: 'local', note: err.message }; });
+        if (engine !== 'claude') throw err;
+        var pro = err.message === 'UPGRADE';
+        if (pro) { loadPlan(); if (isImage) { openPro('license'); throw new Error('Fotos liest nur Claude – das gehört zu Barbook Pro. Trag die Angaben bitte selbst ein oder lade ein PDF hoch.'); } }
+        if (isImage) throw err;
+        // Claude not reachable (or Pro needed): fall back to reading the PDF ourselves
+        return RaimLicenseReader.read(file).then(function (r) { return { r: r, engine: 'local', note: pro ? 'Mit Barbook Pro liest Claude Lizenzen genauer, auch aus Fotos.' : err.message }; });
       });
     }).then(function (out) {
       if (!out || seq !== readSeq || !licenseEditing) return;
@@ -2677,6 +2688,8 @@
     $('deleteAccount').hidden = !account;
     profileMsg('');
     renderPush();
+    renderPro();
+    loadPlan();
     $('profileDlg').showModal();
   });
   $('closeProfile').addEventListener('click', function () { $('profileDlg').close(); });
@@ -2733,6 +2746,92 @@
       profileMsg(RaimCloud.message(err));
     }).then(function () { $('profileSave').disabled = false; });
   });
+
+  // ---------- Barbook Pro: more AI, paid through Stripe ----------
+  var plan = null;   // { pro, plan, until, cancels, used_month } or null (no account / older database)
+  var FREE_AI = 5;
+  function loadPlan() {
+    if (!account || !RaimCloud.online()) return Promise.resolve(null);
+    return Promise.all([
+      RaimCloud.plan(),
+      RaimCloud.billing('status').catch(function () { return { configured: false }; })   // function not there yet: no Pro
+    ]).then(function (r) {
+      plan = r[0];
+      plan.billing = !!r[1].configured;
+      if (r[1].free >= 0) FREE_AI = r[1].free;
+      renderPro();
+      return plan;
+    }, function () { plan = null; renderPro(); return null; });
+  }
+  function untilText(iso) { return iso ? new Date(iso).toLocaleDateString('de-DE') : ''; }
+  function renderPro() {
+    $('proField').hidden = !account || !plan || (!plan.billing && !plan.pro);
+    if ($('proField').hidden) return;
+    var btn = $('proButton');
+    if (plan.pro) {
+      $('proState').textContent = 'Pro ' + (plan.plan === 'year' ? '(jährlich)' : plan.plan === 'month' ? '(monatlich)' : '');
+      $('proState').classList.add('is-on');
+      $('proNote').textContent = plan.cancels ? 'Gekündigt – Pro läuft noch bis ' + untilText(plan.until) + '.' : plan.until ? 'Verlängert sich am ' + untilText(plan.until) + '.' : '';
+      btn.textContent = 'Abo verwalten';
+      btn.classList.remove('btn--primary');
+    } else {
+      var left = Math.max(0, FREE_AI - (plan.used_month || 0));
+      $('proState').textContent = 'Kostenlos';
+      $('proState').classList.remove('is-on');
+      $('proNote').textContent = 'Diesen Monat noch ' + left + ' von ' + FREE_AI + ' KI-Ideen frei.';
+      btn.textContent = 'Upgrade';
+      btn.classList.add('btn--primary');
+    }
+  }
+  // why: 'ai' (free requests used up), 'license' (license reading is Pro), or nothing (opened by hand)
+  function openPro(why) {
+    $('proWhy').textContent = why === 'ai' ? 'Deine ' + FREE_AI + ' kostenlosen KI-Ideen für diesen Monat sind aufgebraucht. Am 1. gibt es wieder neue – oder du machst gleich mit Pro weiter.'
+      : why === 'license' ? 'Das Auslesen von Lizenzen mit Claude gehört zu Barbook Pro. Ohne Pro liest Barbook PDFs selbst aus.'
+      : 'Mehr KI für deine Songs.';
+    $('proError').hidden = true;
+    $('proConsent').checked = false;
+    $('proGo').disabled = true;
+    $('proDlg').showModal();
+  }
+  $('proConsent').addEventListener('change', function (e) { $('proGo').disabled = !e.target.checked; });
+  $('closePro').addEventListener('click', function () { $('proDlg').close(); });
+  $('proGo').addEventListener('click', function () {
+    var btn = $('proGo'), choice = document.querySelector('input[name=proPlan]:checked').value;
+    btn.disabled = true;
+    btn.textContent = 'Öffne Bezahlseite …';
+    RaimCloud.billing('checkout', choice).then(function (r) { location.href = r.url; }, function (err) {
+      $('proError').textContent = err.code === 'not_configured' ? 'Pro ist noch nicht verfügbar – die Bezahlung wird gerade eingerichtet.' : 'Die Bezahlseite konnte nicht geöffnet werden: ' + err.message;
+      $('proError').hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Weiter zur Bezahlung';
+    });
+  });
+  $('proButton').addEventListener('click', function () {
+    if (!plan || !plan.pro) { $('profileDlg').close(); openPro(); return; }
+    var btn = $('proButton');
+    btn.disabled = true;
+    RaimCloud.billing('portal').then(function (r) { location.href = r.url; }, function (err) {
+      toast(err.code === 'no_customer' ? 'Kein Stripe-Konto gefunden.' : 'Das Kundenportal konnte nicht geöffnet werden.');
+      btn.disabled = false;
+    });
+  });
+  // back from Stripe: app.html#pro=ok (the webhook may need a few seconds)
+  function proReturn() {
+    if (!/^#pro=/.test(location.hash)) return;
+    var ok = location.hash === '#pro=ok';
+    history.replaceState(null, '', location.pathname + location.search);
+    if (!ok) { toast('Bezahlung abgebrochen – nichts passiert.'); return; }
+    toast('Danke! Pro wird aktiviert …');
+    var tries = 0;
+    (function poll() {
+      loadPlan().then(function (p) {
+        if (p && p.pro) { toast('Barbook Pro ist aktiv. Viel Spaß beim Schreiben!'); return; }
+        if (++tries < 10) setTimeout(poll, 2000);
+        else toast('Die Zahlung ist angekommen, Pro wird gleich freigeschaltet. Lade die Seite in einer Minute neu.');
+      });
+    })();
+  }
+  window.addEventListener('hashchange', proReturn);
 
   // ---------- push notifications: chat messages, requests and invitations while Barbook is closed ----------
   function base64UrlBytes(s) {
@@ -4135,6 +4234,7 @@
     $('openFriends').hidden = !account;
     loadFriends().then(openFromHash);
     refreshPush();
+    loadPlan().then(proReturn);
     return RaimDB.projects();
   }).then(function (list) {
     projects = list.map(normalize);

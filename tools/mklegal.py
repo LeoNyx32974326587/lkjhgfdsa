@@ -1,9 +1,9 @@
 import os
 OUT = '/home/user/lkjhgfdsa/'
 PAGES = [('impressum.html', 'Impressum'), ('datenschutz.html', 'Datenschutz'),
-         ('nutzungsbedingungen.html', 'Nutzungsbedingungen'), ('support.html', 'Support')]
+         ('nutzungsbedingungen.html', 'Nutzungsbedingungen'), ('support.html', 'Support'), ('kuendigen.html', 'Verträge hier kündigen')]
 
-def page(file, title, body):
+def page(file, title, body, scripts=''):
     nav = '\n'.join('      <a href="%s"%s>%s</a>' % (f, ' aria-current="page"' if f == file else '', t) for f, t in PAGES)
     return '''<!doctype html>
 <html lang="de">
@@ -38,9 +38,9 @@ def page(file, title, body):
     </nav>
   </footer>
   <script src="js/legal.js"></script>
-</body>
+%(scripts)s</body>
 </html>
-''' % {'title': title, 'nav': nav, 'body': body}
+''' % {'title': title, 'nav': nav, 'body': body, 'scripts': scripts}
 
 ADDR = '''<p class="legal-address">
         <span data-legal="name"></span><br>
@@ -94,7 +94,10 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
       <p>Damit Chat, Nachrichten und gemeinsames Schreiben sofort ankommen, hält die App eine Verbindung zu Supabase Realtime. Beim gemeinsamen Schreiben sehen die Beteiligten eines Songs, wer gerade im Song ist und in welchem Abschnitt er schreibt; diese Angaben werden nicht gespeichert.</p>
       <p>Schaltest du im Profil <strong>Benachrichtigungen</strong> ein, speichern wir die Push-Adresse deines Geräts. Benachrichtigungen (Absender, kurzer Text) laufen über den Push-Dienst deines Browser- bzw. Geräteherstellers (z. B. Google bei Chrome und Android, Apple bei Safari und iPhone, Mozilla bei Firefox); der Inhalt ist dabei verschlüsselt. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Ausschalten geht jederzeit im Profil oder in den Einstellungen des Geräts.</p>
 
-      <h2>4a. E-Mails</h2>
+      <h2>4a. Bezahlung von Barbook Pro (Stripe)</h2>
+      <p>Wenn du Barbook Pro kaufst, wickelt <strong>Stripe</strong> (Stripe Payments Europe, Limited, 1 Grand Canal Street Lower, Dublin 2, Irland) die Zahlung ab. Deine Zahlungsdaten (z. B. Kartennummer) gibst du direkt bei Stripe ein; wir sehen und speichern sie nicht. Wir erhalten von Stripe und speichern: eine Kunden- und Abo-Kennung, den Abo-Status, die gewählte Laufzeit und das Ende der bezahlten Zeit. Stripe verarbeitet außerdem deine E-Mail-Adresse, Zahlungs- und Rechnungsdaten sowie Daten zur Betrugsvermeidung, teils als eigener Verantwortlicher; Stripe kann Daten in die USA übermitteln (EU-US Data Privacy Framework, EU-Standardvertragsklauseln). Rechtsgrundlage ist die Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO); Rechnungs- und Buchungsdaten bewahren wir so lange auf, wie es das Steuer- und Handelsrecht verlangt (bis zu zehn Jahre). Kündigungen und Widerrufe, die du über „Verträge hier kündigen“ schickst, speichern wir zur Bearbeitung und als Nachweis.</p>
+
+      <h2>4b. E-Mails</h2>
       <p>Bestätigungs- und „Passwort vergessen“-Mails werden über den Mail-Server von Google (Gmail) verschickt (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland). Verarbeitet werden deine E-Mail-Adresse und der Inhalt der Mail. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Eine Übermittlung an Google LLC in den USA ist möglich; sie erfolgt auf Grundlage des EU-US Data Privacy Framework.</p>
 
       <h2>5. Speicher auf deinem Gerät</h2>
@@ -111,7 +114,7 @@ datenschutz = '''      <p class="legal-lead">Kurz gesagt: Barbook zeigt keine We
       <h2>7. Funktionen, die du selbst einschaltest</h2>
       <ul>
         <li><strong>YouTube-Beats:</strong> Fügst du einen YouTube-Link ein, wird der YouTube-Player von Google geladen (Google Ireland Limited). Dabei gehen u. a. deine IP-Adresse und Nutzungsdaten an Google; Google kann Cookies setzen. Das passiert erst, wenn du einen Link einfügst (Art. 6 Abs. 1 lit. a DSGVO, Einwilligung durch deine Aktion).</li>
-        <li><strong>KI-Ideen und Lizenz-Erkennung:</strong> Nur wenn du sie nutzt und nach deiner ausdrücklichen Bestätigung schickt Barbook bis zu 80 Zeilen des Songs, Song-Infos und deine Anweisung bzw. die Lizenzdatei über unseren Server bei Supabase (Edge Function) an Claude von Anthropic (Anthropic PBC, San Francisco, USA). Dabei wird pro Account und Tag gezählt, wie viele Anfragen gestellt wurden (für ein Tageslimit; die Zähler werden nach 7 Tagen gelöscht). Inhalte speichern wir dabei nicht. Anthropic verarbeitet die Daten als unser Dienstleister nach seinen kommerziellen Bedingungen und nutzt sie nicht zum Training seiner Modelle; die Übermittlung in die USA erfolgt auf Grundlage der EU-Standardvertragsklauseln. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</li>
+        <li><strong>KI-Ideen und Lizenz-Erkennung:</strong> Nur wenn du sie nutzt und nach deiner ausdrücklichen Bestätigung schickt Barbook bis zu 80 Zeilen des Songs, Song-Infos und deine Anweisung bzw. die Lizenzdatei über unseren Server bei Supabase (Edge Function) an Claude von Anthropic (Anthropic PBC, San Francisco, USA). Dabei wird pro Account und Tag gezählt, wie viele Anfragen gestellt wurden (für das Tages- und Monatslimit; die Zähler werden nach zwei Monaten gelöscht). Inhalte speichern wir dabei nicht. Anthropic verarbeitet die Daten als unser Dienstleister nach seinen kommerziellen Bedingungen und nutzt sie nicht zum Training seiner Modelle; die Übermittlung in die USA erfolgt auf Grundlage der EU-Standardvertragsklauseln. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</li>
         <li><strong>Englische Synonyme:</strong> Bei der Synonymsuche für englische Wörter wird das gesuchte Wort an Datamuse (datamuse.com, USA) geschickt. Reime und deutsche Synonyme werden komplett auf deinem Gerät gesucht.</li>
         <li><strong>Spracheingabe (Mikrofon):</strong> Wenn du das Mikrofon antippst, nimmt die Spracherkennung deines Browsers deine Stimme auf und wandelt sie in Text um. Je nach Browser geschieht das auf Servern des Browser-Herstellers (z. B. Google bei Chrome, Apple bei Safari). Barbook selbst speichert keine Sprachaufnahmen.</li>
         <li><strong>Leselink:</strong> Schaltest du einen Leselink an, kann jede Person mit dem Link den Text des Songs lesen, bis du den Link wieder ausschaltest.</li>
@@ -156,13 +159,36 @@ nutzung = '''      <p class="legal-lead">Diese Bedingungen gelten für die Nutzu
       <p>Lädst du Freunde zu einem Song oder einer Idee ein, sehen sie diesen Song und dürfen ihn im Rahmen der von dir vergebenen Rechte bearbeiten. Wer an einem Song mitschreibt, regelt Credits und Rechte am Song mit den anderen Beteiligten selbst. Ein Leselink macht den Text für jede Person mit dem Link lesbar, bis du ihn ausschaltest.</p>
 
       <h2>6. KI-Ideen</h2>
-      <p>KI-Ideen und die Lizenz-Erkennung sind für angemeldete Nutzer kostenlos, mit einem Tageslimit pro Account. Wir können das Limit anpassen oder die Funktion einstellen. Vorschläge der KI sind ohne Gewähr; prüfe sie, bevor du sie verwendest. Die Rechte an übernommenen Zeilen liegen wie bei deinen anderen Texten bei dir.</p>
+      <p>Angemeldete Nutzer bekommen jeden Monat eine Anzahl KI-Ideen kostenlos (derzeit 5); mit Barbook Pro unbegrenzt, mit einem Tageslimit zum Schutz vor Missbrauch. Vorschläge der KI sind ohne Gewähr; prüfe sie, bevor du sie verwendest. Die Rechte an übernommenen Zeilen liegen wie bei deinen anderen Texten bei dir.</p>
+
+      <h2 id="pro">6a. Barbook Pro (kostenpflichtig)</h2>
+      <ul>
+        <li><strong>Leistung:</strong> unbegrenzt KI-Ideen (mit Tageslimit zum Schutz vor Missbrauch) und das Auslesen von Lizenzen mit Claude. Alle übrigen Funktionen bleiben kostenlos.</li>
+        <li><strong>Preise:</strong> 4,99 € im Monat oder 39,99 € im Jahr, jeweils inklusive gesetzlicher Umsatzsteuer, im Voraus zu zahlen. Maßgeblich ist der auf der Bezahlseite angezeigte Preis.</li>
+        <li><strong>Vertragsschluss:</strong> Mit dem Klick auf „Weiter zur Bezahlung“ und dem Abschluss der Zahlung auf der Bezahlseite unseres Zahlungsdienstleisters Stripe kommt der Vertrag zustande.</li>
+        <li><strong>Laufzeit und Kündigung:</strong> Das Abo verlängert sich automatisch um die gewählte Laufzeit, wenn du nicht vorher kündigst. Du kannst jederzeit zum Ende der laufenden Laufzeit kündigen – über <a href="kuendigen.html">„Verträge hier kündigen“</a>, im Profil unter „Abo verwalten“ oder formlos per E-Mail.</li>
+        <li><strong>Zahlung:</strong> über Stripe (Karte, Apple Pay, Google Pay, PayPal und weitere angebotene Verfahren). Schlägt eine Zahlung fehl, kann Pro nach kurzer Zeit enden.</li>
+        <li><strong>Preisänderungen</strong> teilen wir dir mindestens sechs Wochen vorher mit; du kannst bis dahin kündigen.</li>
+      </ul>
+
+      <h2 id="widerruf">6b. Widerrufsbelehrung</h2>
+      <p><strong>Widerrufsrecht:</strong> Du hast das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses. Um dein Widerrufsrecht auszuüben, musst du uns (<span data-legal="name"></span>, <span data-legal="street"></span>, <span data-legal="city"></span>, E-Mail: <span data-legal="email"></span>) mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder eine E-Mail) über deinen Entschluss, diesen Vertrag zu widerrufen, informieren. Du kannst dafür das untenstehende Muster-Widerrufsformular oder die Widerrufsfunktion auf <a href="kuendigen.html">„Verträge hier kündigen“</a> verwenden, was jedoch nicht vorgeschrieben ist. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.</p>
+      <p><strong>Folgen des Widerrufs:</strong> Wenn du diesen Vertrag widerrufst, haben wir dir alle Zahlungen, die wir von dir erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über deinen Widerruf dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das du bei der ursprünglichen Transaktion eingesetzt hast, es sei denn, mit dir wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden dir wegen dieser Rückzahlung Entgelte berechnet. Hast du verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen sollen, so hast du uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem du uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags unterrichtest, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.</p>
+      <p><strong>Muster-Widerrufsformular</strong> (Wenn du den Vertrag widerrufen willst, dann fülle bitte dieses Formular aus und sende es zurück.)</p>
+      <p class="legal-form">An <span data-legal="name"></span>, <span data-legal="street"></span>, <span data-legal="city"></span>, E-Mail: <span data-legal="email"></span>:<br>
+      Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung: Barbook Pro<br>
+      Bestellt am (*)/erhalten am (*):<br>
+      Name des/der Verbraucher(s):<br>
+      Anschrift des/der Verbraucher(s):<br>
+      Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier):<br>
+      Datum:<br>
+      (*) Unzutreffendes streichen.</p>
 
       <h2>7. Sicherung deiner Daten</h2>
       <p>Wir speichern deine Daten sorgfältig, können einen Verlust aber nicht völlig ausschließen. Exportiere wichtige Songs regelmäßig im Text-Bereich über „Export“ als PDF oder Text.</p>
 
       <h2>8. Haftung</h2>
-      <p>Barbook ist kostenlos. Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit sowie nach dem Produkthaftungsgesetz. Bei leichter Fahrlässigkeit haften wir nur für die Verletzung wesentlicher Pflichten und begrenzt auf den typischerweise vorhersehbaren Schaden. Im Übrigen ist die Haftung ausgeschlossen, insbesondere für Datenverlust, soweit er durch regelmäßige Sicherung vermeidbar gewesen wäre.</p>
+      <p>Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit sowie nach dem Produkthaftungsgesetz. Bei leichter Fahrlässigkeit haften wir nur für die Verletzung wesentlicher Pflichten und begrenzt auf den typischerweise vorhersehbaren Schaden. Im Übrigen ist die Haftung ausgeschlossen, insbesondere für Datenverlust, soweit er durch regelmäßige Sicherung vermeidbar gewesen wäre.</p>
 
       <h2>9. Kündigung</h2>
       <p>Du kannst Barbook jederzeit nicht mehr nutzen und die Löschung deines Accounts verlangen (siehe <a href="datenschutz.html#account-loeschen">Datenschutz</a>). Wir können die Nutzung mit angemessener Frist beenden, bei schweren Verstößen auch sofort.</p>
@@ -215,12 +241,51 @@ support = '''      <p class="legal-lead">Hier findest du Antworten auf die häuf
     faq('Wie installiere ich Barbook als App?', '<p><strong>iPhone:</strong> In Safari auf „Teilen“ → „Zum Home-Bildschirm“. <strong>Android:</strong> In Chrome im Menü (⋮) auf „App installieren“ bzw. „Zum Startbildschirm hinzufügen“. <strong>PC:</strong> In Chrome oder Edge rechts in der Adressleiste auf das Installieren-Symbol.</p>'),
     faq('Das Mikrofon funktioniert nicht.', '<p>Die Spracheingabe geht in Chrome, Edge und Safari, nicht in Firefox, und braucht Internet. Erlaube der Seite den Zugriff aufs Mikrofon (Schloss-Symbol neben der Adresse). Auf dem iPhone muss unter Einstellungen → Allgemein → Tastatur „Diktierfunktion“ an sein.</p>'),
     faq('Nach einem Update sieht etwas komisch aus oder Projekte fehlen.', '<p>Lade die Seite einmal neu (am PC: Strg + Umschalt + R). Als installierte App: ganz schließen und neu öffnen. Deine Daten sind dabei sicher.</p>'),
+    faq('Was ist Barbook Pro und wie kündige ich?', '<p>Jeden Monat sind 5 KI-Ideen kostenlos. Barbook Pro (4,99 € im Monat oder 39,99 € im Jahr) bringt unbegrenzt KI-Ideen und das Auslesen von Lizenzen mit Claude. Upgrade und „Abo verwalten“ findest du im Profil. Kündigen geht jederzeit zum Ende der Laufzeit über <a href="kuendigen.html">Verträge hier kündigen</a>.</p>'),
     faq('Die KI-Ideen gehen nicht.', '<p>KI-Ideen gehen nur, wenn du angemeldet und online bist. Pro Account gibt es ein Tageslimit; ist es erreicht, geht es am nächsten Tag weiter.</p>'),
 ])
 
+kuendigen = '''      <p class="legal-lead">Hier kündigst du dein Barbook-Pro-Abo oder widerrufst es innerhalb von 14 Tagen nach Abschluss.</p>
+      <div id="cancelSignedIn" hidden>
+        <div class="card cancel-card">
+          <p id="cancelPlan"></p>
+          <div class="cancel-kind">
+            <label class="check"><input type="radio" name="cancelKind" value="cancel" checked> <span><strong>Kündigen</strong> – Pro läuft bis zum Ende der bezahlten Zeit weiter und verlängert sich nicht mehr.</span></label>
+            <label class="check"><input type="radio" name="cancelKind" value="withdraw"> <span><strong>Widerrufen</strong> (innerhalb von 14 Tagen nach Abschluss) – Pro endet sofort, du bekommst dein Geld anteilig zurück.</span></label>
+          </div>
+          <button class="btn btn--danger" type="button" id="cancelNow">jetzt kündigen</button>
+        </div>
+      </div>
+      <form class="card cancel-card" id="cancelForm" hidden novalidate>
+        <p id="cancelFormIntro">Du bist nicht angemeldet oder hast kein laufendes Abo in diesem Account. Schick uns die Kündigung hier – wir bestätigen sie per E-Mail.</p>
+        <div class="cancel-kind">
+          <label class="check"><input type="radio" name="kind" value="kuendigung" checked> <span><strong>Kündigung</strong> zum nächstmöglichen Zeitpunkt</span></label>
+          <label class="check"><input type="radio" name="kind" value="widerruf"> <span><strong>Widerruf</strong> (innerhalb von 14 Tagen nach Abschluss)</span></label>
+        </div>
+        <label class="field">Vertrag<input name="contract" value="Barbook Pro" readonly></label>
+        <label class="field">Name<input name="name" autocomplete="name" maxlength="200"></label>
+        <label class="field">E-Mail-Adresse deines Accounts<input name="email" type="email" autocomplete="email" maxlength="320" required></label>
+        <label class="field">Anmerkung (optional)<textarea name="note" rows="2" maxlength="2000"></textarea></label>
+        <p class="form-error" id="cancelError" role="alert" hidden></p>
+        <button class="btn btn--danger" type="submit">jetzt kündigen</button>
+      </form>
+      <div class="card cancel-done" id="cancelDone" hidden>
+        <h2>Eingegangen</h2>
+        <p id="cancelDoneText"></p>
+        <p class="hint">Bitte speichere oder drucke diese Bestätigung.</p>
+        <button class="btn" type="button" onclick="print()">Drucken / als PDF speichern</button>
+      </div>
+      <p class="legal-updated">Fragen? <span data-legal="email"></span></p>'''
+
 for f, title, body in [('impressum.html', 'Impressum', impressum), ('datenschutz.html', 'Datenschutzerklärung', datenschutz),
-                       ('nutzungsbedingungen.html', 'Nutzungsbedingungen', nutzung), ('support.html', 'Support', support)]:
-    html = page(f, title, body)
+                       ('nutzungsbedingungen.html', 'Nutzungsbedingungen', nutzung), ('support.html', 'Support', support),
+                       ('kuendigen.html', 'Verträge hier kündigen', kuendigen)]:
+    scripts = '''  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/kuendigen.js"></script>
+''' if f == 'kuendigen.html' else ''
+    html = page(f, title, body, scripts)
     html = html.replace('<h2>10. Account löschen</h2>', '<h2 id="account-loeschen">10. Account löschen</h2>')
     open(OUT + f, 'w').write(html)
 print('ok')

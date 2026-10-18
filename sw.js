@@ -1,7 +1,7 @@
 // Barbook offline: pages and code come fresh from the network when there is one (fallback: the
 // last copy), word lists, pictures and libraries from the cache (refreshed in the background).
 // Accounts and project data (Supabase) always go to the network.
-var CACHE = 'barbook-v4';
+var CACHE = 'barbook-v5';
 var SHELL = ['app.html', 'login.html', 'index.html', 'app.css', 'styles.css', 'script.js', 'manifest.webmanifest', 'assets/fonts/fonts.css',
   'assets/icon.svg', 'assets/icon-192.png', 'js/config.js', 'js/cloud.js', 'js/login.js', 'js/words.js', 'js/rhyme.js',
   'js/song.js', 'js/store.js', 'js/db.js', 'js/ai.js', 'js/license-reader.js', 'js/wav.js', 'js/prompter.js',

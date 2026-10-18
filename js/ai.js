@@ -60,6 +60,7 @@
 
   function describe(err) {
     var status = err && err.status, code = err && err.code, msg = (err && err.message) || '';
+    if (code === 'upgrade') return 'UPGRADE';
     if (code === 'limit') return 'Für heute sind die KI-Anfragen aufgebraucht (' + (err.limit || 50) + ' pro Tag). Morgen geht es weiter.';
     if (code === 'not_signed_in' || status === 401) return 'Für KI-Ideen musst du angemeldet sein.';
     if (code === 'not_configured') return 'Die KI ist auf dem Server noch nicht eingerichtet (Schlüssel fehlt, siehe SUPABASE.md).';

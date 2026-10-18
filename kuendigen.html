@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Verträge hier kündigen – Barbook</title>
+  <meta name="theme-color" content="#07060f">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="legal-page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/icon.svg" alt="" width="30" height="30"><span>Barbook</span></a>
+    <a class="legal-back" href="app.html">Zur App</a>
+  </header>
+  <main class="legal">
+    <nav class="legal-nav" aria-label="Rechtliches">
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="nutzungsbedingungen.html">Nutzungsbedingungen</a>
+      <a href="support.html">Support</a>
+      <a href="kuendigen.html" aria-current="page">Verträge hier kündigen</a>
+    </nav>
+    <article>
+      <h1>Verträge hier kündigen</h1>
+      <p class="legal-lead">Hier kündigst du dein Barbook-Pro-Abo oder widerrufst es innerhalb von 14 Tagen nach Abschluss.</p>
+      <div id="cancelSignedIn" hidden>
+        <div class="card cancel-card">
+          <p id="cancelPlan"></p>
+          <div class="cancel-kind">
+            <label class="check"><input type="radio" name="cancelKind" value="cancel" checked> <span><strong>Kündigen</strong> – Pro läuft bis zum Ende der bezahlten Zeit weiter und verlängert sich nicht mehr.</span></label>
+            <label class="check"><input type="radio" name="cancelKind" value="withdraw"> <span><strong>Widerrufen</strong> (innerhalb von 14 Tagen nach Abschluss) – Pro endet sofort, du bekommst dein Geld anteilig zurück.</span></label>
+          </div>
+          <button class="btn btn--danger" type="button" id="cancelNow">jetzt kündigen</button>
+        </div>
+      </div>
+      <form class="card cancel-card" id="cancelForm" hidden novalidate>
+        <p id="cancelFormIntro">Du bist nicht angemeldet oder hast kein laufendes Abo in diesem Account. Schick uns die Kündigung hier – wir bestätigen sie per E-Mail.</p>
+        <div class="cancel-kind">
+          <label class="check"><input type="radio" name="kind" value="kuendigung" checked> <span><strong>Kündigung</strong> zum nächstmöglichen Zeitpunkt</span></label>
+          <label class="check"><input type="radio" name="kind" value="widerruf"> <span><strong>Widerruf</strong> (innerhalb von 14 Tagen nach Abschluss)</span></label>
+        </div>
+        <label class="field">Vertrag<input name="contract" value="Barbook Pro" readonly></label>
+        <label class="field">Name<input name="name" autocomplete="name" maxlength="200"></label>
+        <label class="field">E-Mail-Adresse deines Accounts<input name="email" type="email" autocomplete="email" maxlength="320" required></label>
+        <label class="field">Anmerkung (optional)<textarea name="note" rows="2" maxlength="2000"></textarea></label>
+        <p class="form-error" id="cancelError" role="alert" hidden></p>
+        <button class="btn btn--danger" type="submit">jetzt kündigen</button>
+      </form>
+      <div class="card cancel-done" id="cancelDone" hidden>
+        <h2>Eingegangen</h2>
+        <p id="cancelDoneText"></p>
+        <p class="hint">Bitte speichere oder drucke diese Bestätigung.</p>
+        <button class="btn" type="button" onclick="print()">Drucken / als PDF speichern</button>
+      </div>
+      <p class="legal-updated">Fragen? <span data-legal="email"></span></p>
+    </article>
+  </main>
+  <footer class="legal-foot">
+    <span>© 2026 <span data-legal="name"></span></span>
+    <nav>
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="nutzungsbedingungen.html">Nutzungsbedingungen</a>
+      <a href="support.html">Support</a>
+      <a href="kuendigen.html" aria-current="page">Verträge hier kündigen</a>
+    </nav>
+  </footer>
+  <script src="js/legal.js"></script>
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/kuendigen.js"></script>
+</body>
+</html>

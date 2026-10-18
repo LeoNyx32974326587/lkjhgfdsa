@@ -95,7 +95,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>
         Papierkorb <span id="trashCount"></span>
       </button>
-      <nav class="app-legal"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="nutzungsbedingungen.html">Nutzungsbedingungen</a><a href="support.html">Support</a></nav>
+      <nav class="app-legal"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="nutzungsbedingungen.html">Nutzungsbedingungen</a><a href="support.html">Support</a><a href="kuendigen.html">Verträge hier kündigen</a></nav>
     </main>
   </div>
 
@@ -668,6 +668,29 @@
     <ul class="bar-list bar-list--pick" id="barPickList"></ul>
   </dialog>
 
+  <dialog id="proDlg" class="sheet pro-dlg">
+    <div class="sheet-head">
+      <h2>Barbook Pro</h2>
+      <button class="icon-btn" type="button" id="closePro" aria-label="Schließen">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="pro-why" id="proWhy"></p>
+    <ul class="pro-list">
+      <li><strong>Unbegrenzt KI-Ideen</strong> – Weiterschreiben, Intro, Hook, Part, Bridge, Outro</li>
+      <li><strong>Lizenz-Erkennung mit Claude</strong> – auch aus Fotos und eingescannten Verträgen</li>
+      <li>Alles andere bleibt für alle kostenlos.</li>
+    </ul>
+    <div class="pro-plans" role="radiogroup" aria-label="Laufzeit">
+      <label class="pro-plan"><input type="radio" name="proPlan" value="year" checked><span><strong>Jährlich</strong><em>39,99 € im Jahr · entspricht 3,33 € im Monat</em></span><b class="pro-save">−33 %</b></label>
+      <label class="pro-plan"><input type="radio" name="proPlan" value="month"><span><strong>Monatlich</strong><em>4,99 € im Monat</em></span></label>
+    </div>
+    <label class="check pro-consent"><input type="checkbox" id="proConsent"> Ich möchte, dass Pro sofort startet. Mir ist bekannt, dass ich bei einem Widerruf innerhalb von 14 Tagen den Anteil bis dahin zahle.</label>
+    <p class="form-error" id="proError" role="alert" hidden></p>
+    <button class="btn btn--primary pro-go" type="button" id="proGo" disabled>Weiter zur Bezahlung</button>
+    <p class="hint">Sichere Bezahlung über Stripe (Karte, Apple Pay, Google Pay, PayPal …). Verlängert sich automatisch, jederzeit zum Ende der Laufzeit kündbar. Es gelten die <a href="nutzungsbedingungen.html#pro" target="_blank">Nutzungsbedingungen</a> und die <a href="nutzungsbedingungen.html#widerruf" target="_blank">Widerrufsbelehrung</a>.</p>
+  </dialog>
+
   <dialog id="attachDlg" class="sheet">
     <div class="sheet-head">
       <h2>Schicken</h2>
@@ -777,6 +800,13 @@
           <button type="button" class="seg-btn" data-theme-pick="light">Hell</button>
           <button type="button" class="seg-btn" data-theme-pick="auto" title="Wie im Handy oder Computer eingestellt">System</button>
         </div>
+      </div>
+      <div class="field pro-field" id="proField" hidden>Barbook Pro
+        <div class="push-row">
+          <span class="pro-state" id="proState"></span>
+          <button type="button" class="btn btn--small btn--primary" id="proButton"></button>
+        </div>
+        <span class="field-note" id="proNote"></span>
       </div>
       <div class="field push-field" id="pushField" hidden>Benachrichtigungen aufs Gerät
         <div class="push-row">

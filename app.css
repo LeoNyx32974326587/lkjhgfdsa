@@ -1344,3 +1344,33 @@ html[data-theme="light"] .live-chip { background: rgba(10, 126, 160, .08); borde
 .push-state { font-weight: 600; color: var(--dim); }
 .push-state.is-on { color: #3ee08f; }
 html[data-theme="light"] .push-state.is-on { color: #11804a; }
+
+/* ---------- Barbook Pro ---------- */
+.pro-state { font-weight: 600; color: var(--dim); }
+.pro-state.is-on { background: linear-gradient(90deg, #ffd23f, #ff9be3); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pro-why { color: var(--text) !important; font-size: 15px; margin: 0 0 10px; }
+.pro-list { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); font-size: 14px; }
+.pro-list strong { color: var(--text); }
+.pro-plans { display: grid; gap: 8px; margin-bottom: 12px; }
+.pro-plan { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--border); cursor: pointer; background: rgba(28, 20, 70, .5); }
+.pro-plan:has(input:checked) { border-color: var(--violet); background: rgba(90, 60, 230, .25); }
+html[data-theme="light"] .pro-plan { background: #fff; }
+html[data-theme="light"] .pro-plan:has(input:checked) { background: #f1ecff; }
+.pro-plan input { accent-color: var(--violet-2); width: 18px; height: 18px; flex: none; }
+.pro-plan span { flex: 1; display: grid; }
+.pro-plan em { font-style: normal; font-size: 13px; color: var(--dim); }
+.pro-save { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #ffd23f; color: #1b1050; }
+.pro-consent { font-size: 13px; color: var(--muted); align-items: flex-start; margin-bottom: 10px; }
+.pro-consent input { margin-top: 3px; }
+.pro-go { width: 100%; justify-content: center; }
+.pro-dlg .hint { font-size: 12px; margin-top: 10px; }
+.pro-dlg .hint a { color: var(--cyan); }
+.cancel-card { display: grid; gap: 12px; margin: 14px 0; }
+.cancel-card p { margin: 0; }
+.cancel-kind { display: grid; gap: 10px; }
+.cancel-kind .check { align-items: flex-start; }
+.cancel-kind input { margin-top: 4px; }
+.cancel-done { margin: 14px 0; border-color: rgba(90, 230, 150, .5); }
+.cancel-done h2 { margin-top: 0; color: #3ee08f; }
+.legal-form { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--border); }
+@media print { .topbar, .legal-nav, .legal-foot, .cancel-done .btn { display: none !important; } body { background: #fff; color: #000; } }

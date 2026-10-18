@@ -82,6 +82,8 @@ Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB
 
 **Benachrichtigungen aufs Gerät:** Im Profil einschalten – dann kommen Chat-Nachrichten, Freundschaftsanfragen, Einladungen und Nachrichten auch, wenn Barbook geschlossen ist (Web Push). Antippen öffnet direkt den Chat bzw. den Freunde-Bereich. Auf dem iPhone nur als installierte App (Home-Bildschirm). Einrichtung: SUPABASE.md, Schritt 7.
 
+**Barbook Pro (optional):** Ist Stripe eingerichtet, gibt es 5 KI-Ideen pro Monat kostenlos; mit Pro (4,99 €/Monat oder 39,99 €/Jahr) unbegrenzt (bis zum Tageslimit) und dazu das Auslesen von Lizenzen mit Claude. Abschluss über die sichere Bezahlseite von Stripe, Verwaltung und Kündigung im Profil oder auf `kuendigen.html` („Verträge hier kündigen“). Ohne Stripe bleibt alles kostenlos. Einrichtung: SUPABASE.md, Schritt 8.
+
 **Chat:** In der Freundesliste steht neben „Entfernen“ der Knopf **Chat** (mit Zahl für ungelesene). Darin schreibt ihr euch wie im Messenger: eigene Nachrichten rechts, die des Freundes links, Tagestrenner, Uhrzeit, ✓ gesendet / ✓✓ gelesen, Mikrofon zum Einsprechen. Nachrichten kommen live an; ungelesene zählen in die rote Zahl am Freunde-Symbol und werden kurz eingeblendet. Schreiben können sich nur Freunde. Über **+** im Chat schickst du einen Song, eine Idee oder eine Bar als Karte (eine Kopie des aktuellen Texts); dein Freund kann den Song lesen und **als Idee übernehmen** oder die Bar **in seine Sammlung** legen.
 
 **Nachrichten:** Im Freunde-Bereich stehen Nachrichten, z. B. wenn dich jemand als Freund entfernt, deine Anfrage annimmt oder ablehnt, bei deinem Song einsteigt, ihn verlässt, eine Einladung ablehnt oder dich aus einem Song nimmt. Die rote Zahl am Freunde-Symbol zählt neue Nachrichten, Anfragen und Einladungen; sie springt live hoch, ohne Neuladen (Supabase Realtime), und neue Nachrichten werden kurz eingeblendet.
@@ -100,6 +102,7 @@ Mit Account liegen die Projekte in der Cloud und als Kopie im Browser (IndexedDB
 - `js/song.js`: Song-Abschnitte
 - `js/prompter.js`: Teleprompter
 - `js/ai.js`: KI-Ideen und Lizenz-Auslesen über die Claude API
+- `js/kuendigen.js`: Kündigen- und Widerrufsseite für Barbook Pro
 - `js/license-reader.js`: Lizenz-PDFs ohne KI auslesen
 - `js/analyze.js`: BPM- und Tonart-Erkennung
 - `js/beats.js`: Beat-Player, Loop, Tempo, Teleprompter-Steuerung, YouTube, frühere Aufnahmen
@@ -130,6 +133,6 @@ Wegen DeReWo (nicht-kommerziell) sollte die deutsche Wortliste für eine kommerz
 
 ## Impressum, Datenschutz, Nutzungsbedingungen, Support
 
-Die Seiten `impressum.html`, `datenschutz.html`, `nutzungsbedingungen.html` und `support.html` sind verlinkt (Startseite unten, Anmeldung, App unten, Leselink-Seite). Name, Anschrift, E-Mail und die Supabase-Region stehen an einer Stelle: `js/legal.js`. Solange dort etwas fehlt, zeigen die Seiten einen gelben Platzhalter. Die Texte sind eine sorgfältige Vorlage, aber keine Rechtsberatung.
+Die Seiten `impressum.html`, `datenschutz.html`, `nutzungsbedingungen.html`, `support.html` und `kuendigen.html` („Verträge hier kündigen“) sind verlinkt (Startseite unten, Anmeldung, App unten, Leselink-Seite). Name, Anschrift, E-Mail und die Supabase-Region stehen an einer Stelle: `js/legal.js`. Solange dort etwas fehlt, zeigen die Seiten einen gelben Platzhalter. Die Texte sind eine sorgfältige Vorlage, aber keine Rechtsberatung.
 
 Schriften (Roboto, Roboto Mono, Michroma) liegen in `assets/fonts/` und werden nicht mehr von Google geladen.

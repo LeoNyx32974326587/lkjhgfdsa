@@ -285,6 +285,29 @@
       });
     },
 
+    // ---------- Barbook Pro ----------
+    // -> { pro, plan, until, cancels, used_month }
+    plan: function () { return sb.rpc('my_plan').then(ok); },
+    // action 'checkout' (plan 'month' | 'year') or 'portal' -> { url } of Stripe's page
+    billing: function (action, plan) {
+      return sb.functions.invoke('billing', { body: { action: action, plan: plan } }).then(function (res) {
+        if (!res.error) return res.data;
+        var ctx = res.error.context;
+        return (ctx && typeof ctx.json === 'function' ? ctx.json().catch(function () { return {}; }) : Promise.resolve({})).then(function (b) {
+          var e = new Error((b && b.message) || res.error.message);
+          e.code = b && b.error;
+          e.status = ctx && ctx.status;
+          throw e;
+        });
+      });
+    },
+
+    // "Verträge hier kündigen" without an account or subscription: { kind, name, email, note }
+    cancelRequest: function (row) {
+      if (uid) row.user_id = uid;
+      return sb.from('cancel_requests').insert(row).then(ok);
+    },
+
     // ---------- push notifications: this device's subscription ----------
     pushKey: function () { return cfg.vapidPublicKey || ''; },
     pushSubscribe: function (sub) {

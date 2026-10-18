@@ -159,6 +159,31 @@ create table if not exists public.push_config (id int primary key default 1 chec
 insert into public.push_config (id, url) values (1, 'https://pfveinhwrptajnqclhtw.supabase.co/functions/v1/push')
   on conflict (id) do nothing;
 
+-- Barbook Pro: the subscription as Stripe reports it (written only by the Edge Function "stripe-webhook")
+create table if not exists public.subscriptions (
+  user_id uuid primary key references auth.users on delete cascade,
+  status text not null default 'none',          -- Stripe: active, trialing, past_due, canceled, …
+  plan text not null default '',                -- 'month' or 'year'
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  stripe_customer text,
+  stripe_subscription text,
+  updated timestamptz not null default now()
+);
+
+-- cancellations and withdrawals sent through kuendigen.html (also without an account); only the operator reads them
+create table if not exists public.cancel_requests (
+  id bigint generated always as identity primary key,
+  created timestamptz not null default now(),
+  kind text not null check (kind in ('kuendigung', 'widerruf')),
+  name text not null default '' check (length(name) <= 200),
+  email text not null check (length(email) between 3 and 320),
+  note text not null default '' check (length(note) <= 2000),
+  user_id uuid default auth.uid(),
+  done_automatically boolean not null default false,
+  handled boolean not null default false
+);
+
 -- AI requests per account and day (the Edge Function "claude" counts them; nobody reads this table directly)
 create table if not exists public.ai_usage (
   user_id uuid not null references auth.users on delete cascade,
@@ -412,7 +437,7 @@ language plpgsql security definer set search_path = public as $$
 declare n int;
 begin
   if auth.uid() is null then return false; end if;
-  delete from ai_usage where user_id = auth.uid() and day < current_date - 7;
+  delete from ai_usage where user_id = auth.uid() and day < current_date - 62;
   insert into ai_usage (user_id, day, count) values (auth.uid(), current_date, 1)
   on conflict (user_id, day) do update set count = ai_usage.count + 1 where ai_usage.count < max_per_day
   returning count into n;
@@ -421,6 +446,46 @@ end;
 $$;
 revoke execute on function public.ai_take(int) from anon, public;
 grant execute on function public.ai_take(int) to authenticated;
+
+-- Pro: a paid, running subscription (a few days of grace for a late renewal)
+create or replace function public.is_pro(u uuid) returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from subscriptions s where s.user_id = u
+    and s.status in ('active', 'trialing', 'past_due') and coalesce(s.current_period_end, now()) > now() - interval '3 days');
+$$;
+revoke execute on function public.is_pro(uuid) from anon, public;
+
+-- one AI request: 'ok', 'limit' (daily safety limit), 'upgrade' (free requests of the month used up, or a Pro-only job)
+-- free_per_month null = no monthly limit (Stripe not set up yet)
+create or replace function public.ai_allow(max_per_day int, free_per_month int, pro_only boolean) returns text
+language plpgsql security definer set search_path = public as $$
+declare pro boolean := is_pro(auth.uid()); month_used int;
+begin
+  if auth.uid() is null then return 'limit'; end if;
+  if not pro and free_per_month is not null then
+    if pro_only then return 'upgrade'; end if;
+    select coalesce(sum(count), 0) into month_used from ai_usage where user_id = auth.uid() and day >= date_trunc('month', current_date)::date;
+    if month_used >= free_per_month then return 'upgrade'; end if;
+  end if;
+  if not ai_take(max_per_day) then return 'limit'; end if;
+  return 'ok';
+end;
+$$;
+revoke execute on function public.ai_allow(int, int, boolean) from anon, public;
+grant execute on function public.ai_allow(int, int, boolean) to authenticated;
+
+-- for the app: am I Pro, and how many free AI requests are left this month
+create or replace function public.my_plan() returns jsonb
+language sql security definer stable set search_path = public as $$
+  select jsonb_build_object(
+    'pro', is_pro(auth.uid()),
+    'plan', coalesce((select plan from subscriptions where user_id = auth.uid()), ''),
+    'until', (select current_period_end from subscriptions where user_id = auth.uid()),
+    'cancels', coalesce((select cancel_at_period_end from subscriptions where user_id = auth.uid()), false),
+    'used_month', coalesce((select sum(count) from ai_usage where user_id = auth.uid() and day >= date_trunc('month', current_date)::date), 0));
+$$;
+revoke execute on function public.my_plan() from anon, public;
+grant execute on function public.my_plan() to authenticated;
 
 revoke execute on function public.delete_my_account() from anon, public;
 grant execute on function public.delete_my_account() to authenticated;
@@ -439,6 +504,8 @@ alter table public.share_links enable row level security;
 alter table public.notifications enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.ai_usage enable row level security;
+alter table public.subscriptions enable row level security;
+alter table public.cancel_requests enable row level security;   -- read through my_plan(); written by the Stripe webhook
 alter table public.push_subscriptions enable row level security;   -- only push_subscribe()/push_unsubscribe() and the Edge Function
 alter table public.push_sent enable row level security;
 alter table public.push_config enable row level security;   -- no policies: only ai_take() touches it
@@ -543,6 +610,10 @@ drop policy if exists "chat write" on public.chat_messages;
 create policy "chat read" on public.chat_messages for select to authenticated using (auth.uid() in (sender, recipient));
 create policy "chat write" on public.chat_messages for insert to authenticated
   with check (sender = auth.uid() and read_at is null and public.are_friends(sender, recipient));
+
+drop policy if exists "cancel requests send" on public.cancel_requests;
+create policy "cancel requests send" on public.cancel_requests for insert to anon, authenticated
+  with check (not handled and not done_automatically and (user_id is null or user_id = auth.uid()));
 
 drop policy if exists "own bars" on public.bars;
 create policy "own bars" on public.bars for all to authenticated
