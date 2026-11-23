@@ -487,6 +487,41 @@ $$;
 revoke execute on function public.my_plan() from anon, public;
 grant execute on function public.my_plan() to authenticated;
 
+-- ---------- admin: the Anthropic API key, changeable in the app (Profil -> KI-Schlüssel) ----------
+-- Who is admin is set once by hand in the SQL Editor (SUPABASE.md, step 6):
+--   insert into public.app_admins (user_id) select id from auth.users where email = 'deine@adresse.de';
+-- The key itself is only written and read by the Edge Function "claude" (service role); no API role can read it.
+create table if not exists public.app_admins (user_id uuid primary key references auth.users on delete cascade);
+create table if not exists public.app_secrets (
+  name text primary key,
+  value text not null,
+  hint text not null default '',            -- last characters, to recognise the key
+  updated timestamptz not null default now(),
+  updated_by uuid references auth.users on delete set null
+);
+alter table public.app_admins enable row level security;    -- no policies: only is_admin() and the SQL Editor
+alter table public.app_secrets enable row level security;   -- no policies: only the Edge Function (service role)
+revoke all on public.app_secrets from anon, authenticated;
+revoke all on public.app_admins from anon, authenticated;
+
+create or replace function public.is_admin() returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from app_admins where user_id = auth.uid());
+$$;
+revoke execute on function public.is_admin() from anon, public;
+grant execute on function public.is_admin() to authenticated;
+
+-- for the admin field: is a key stored, since when, which one (never the key itself); null for everyone else
+create or replace function public.ai_key_status() returns jsonb
+language sql security definer stable set search_path = public as $$
+  select case when is_admin() then
+    coalesce((select jsonb_build_object('set', true, 'hint', hint, 'updated', updated) from app_secrets where name = 'ANTHROPIC_API_KEY'),
+             jsonb_build_object('set', false))
+  end;
+$$;
+revoke execute on function public.ai_key_status() from anon, public;
+grant execute on function public.ai_key_status() to authenticated;
+
 revoke execute on function public.delete_my_account() from anon, public;
 grant execute on function public.delete_my_account() to authenticated;
 

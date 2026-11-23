@@ -21,6 +21,22 @@
     if (res.error) throw res.error;
     return res.data;
   }
+  // the Edge Function "claude"; errors carry .status, .code and .limit from its answer
+  function callClaude(payload) {
+    if (!sb) return Promise.reject(Object.assign(new Error('offline'), { status: 0 }));
+    return sb.functions.invoke('claude', { body: payload }).then(function (res) {
+      if (!res.error) return res.data;
+      var ctx = res.error.context;
+      var read = ctx && typeof ctx.json === 'function' ? ctx.json().catch(function () { return {}; }) : Promise.resolve({});
+      return read.then(function (body) {
+        var e = new Error((body && body.message) || res.error.message || 'Fehler');
+        e.code = body && body.error;
+        e.status = (body && body.status) || (ctx && ctx.status) || 0;
+        e.limit = body && body.limit;
+        throw e;
+      });
+    });
+  }
 
   // -> the signed-in user or null. Offline (library not loaded) the stored session is used.
   function currentUser() {
@@ -269,21 +285,11 @@
 
     // ---------- Claude, through the Edge Function "claude" (the API key stays on the server) ----------
     // -> { stop_reason, text }; errors carry .status and .code ('limit', 'not_signed_in', 'not_configured', 'claude')
-    claude: function (task, content) {
-      if (!sb) return Promise.reject(Object.assign(new Error('offline'), { status: 0 }));
-      return sb.functions.invoke('claude', { body: { task: task, content: content } }).then(function (res) {
-        if (!res.error) return res.data;
-        var ctx = res.error.context;
-        var read = ctx && typeof ctx.json === 'function' ? ctx.json().catch(function () { return {}; }) : Promise.resolve({});
-        return read.then(function (body) {
-          var e = new Error((body && body.message) || res.error.message || 'Fehler');
-          e.code = body && body.error;
-          e.status = (body && body.status) || (ctx && ctx.status) || 0;
-          e.limit = body && body.limit;
-          throw e;
-        });
-      });
-    },
+    claude: function (task, content) { return callClaude({ task: task, content: content }); },
+    // admin only: null for everyone else, otherwise { set, hint, updated } (never the key itself)
+    aiKeyStatus: function () { return sb.rpc('ai_key_status').then(ok); },
+    // admin only: the function checks the key with Anthropic, then stores it -> { ok, hint }; errors: 'bad_key', 'not_admin'
+    setAiKey: function (key) { return callClaude({ task: 'set_key', key: key }); },
 
     // ---------- Barbook Pro ----------
     // -> { pro, plan, until, cancels, used_month }

@@ -1341,6 +1341,7 @@ html[data-theme="light"] .album-track { background: #fff; }
 .sec--plain > .sec-live { position: absolute; top: 12px; right: 52px; }
 html[data-theme="light"] .live-chip { background: rgba(10, 126, 160, .08); border-color: rgba(10, 126, 160, .3); }
 .push-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.key-field input { flex: 1; min-width: 0; font-family: ui-monospace, monospace; }
 .push-state { font-weight: 600; color: var(--dim); }
 .push-state.is-on { color: #3ee08f; }
 html[data-theme="light"] .push-state.is-on { color: #11804a; }

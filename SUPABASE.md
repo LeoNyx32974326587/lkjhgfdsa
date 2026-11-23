@@ -61,6 +61,14 @@ Die KI läuft über eine kleine Supabase-Funktion. Der Anthropic-API-Schlüssel 
 3. In den Einstellungen der Funktion **„Verify JWT“ (Enforce JWT verification) ausschalten** – die Funktion prüft die Anmeldung selbst; mit dem Schalter lehnt Supabase bei neuen Schlüsseln manchmal gültige Anfragen ab.
 4. `supabase/setup.sql` noch einmal ausführen (legt den Zähler für das Tageslimit an).
 
+**Schlüssel später in der App wechseln:** Einmal im SQL Editor festlegen, wer Admin ist (deine E-Mail-Adresse einsetzen):
+
+```sql
+insert into public.app_admins (user_id) select id from auth.users where email = 'deine@adresse.de';
+```
+
+Danach steht bei dir im **Profil** das Feld **„KI-Schlüssel“**: neuen Schlüssel einfügen → **Speichern**. Barbook prüft ihn vorher bei Anthropic und nutzt ihn sofort; das Secret `ANTHROPIC_API_KEY` wird dann nicht mehr gebraucht (es bleibt als Ersatz, solange in der App keiner gespeichert ist). Der Schlüssel liegt in der Tabelle `app_secrets`, die nur die Funktion lesen kann – auch du siehst in der App nur die letzten vier Zeichen. Andere Nutzer sehen das Feld nicht.
+
 Danach gehen KI-Ideen und das Auslesen von Lizenzen für alle angemeldeten Nutzer, ohne Einstellungen. Die Kosten laufen über dein Anthropic-Konto; dort kannst du unter *Limits* zusätzlich ein Monatslimit setzen.
 
 ## 7. Benachrichtigungen aufs Handy (Push)

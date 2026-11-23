@@ -1,5 +1,7 @@
 // Barbook's connection to Claude (Supabase Edge Function "claude").
-// The Anthropic API key lives only here, as the secret ANTHROPIC_API_KEY – never in the website's code.
+// The Anthropic API key lives only on the server – never in the website's code: either set by the admin in the app
+// (Profil -> KI-Schlüssel, stored in the table app_secrets, readable only with the service role) or as the secret
+// ANTHROPIC_API_KEY. The key from the app wins.
 // Only signed-in Barbook users can call it, only for Barbook's two jobs (song lines, reading a license),
 // and each account has a daily limit (secret AI_DAILY_LIMIT, default 50).
 // Barbook Pro: once Stripe is set up (secret STRIPE_SECRET_KEY), free accounts get FREE_AI_PER_MONTH requests
@@ -75,9 +77,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method" }, 405);
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return json({ error: "not_configured" }, 503);
-
   // who is asking: the user's own session, checked by Supabase Auth
   const authorization = req.headers.get("Authorization") ?? "";
   const publicKey = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -89,9 +88,37 @@ Deno.serve(async (req) => {
   const { data: who } = await sb.auth.getUser(authorization.replace(/^Bearer\s+/i, ""));
   if (!who?.user) return json({ error: "not_signed_in" }, 401);
 
-  let body: { task?: string; content?: unknown };
+  let body: { task?: string; content?: unknown; key?: string };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400); }
   const task = body.task ?? "";
+  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const db = service ? createClient(Deno.env.get("SUPABASE_URL")!, service, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
+
+  // admin: store a new API key (checked with Anthropic first)
+  if (task === "set_key") {
+    const { data: admin } = await sb.rpc("is_admin");
+    if (admin !== true) return json({ error: "not_admin" }, 403);
+    if (!db) return json({ error: "not_configured" }, 503);
+    const key = typeof body.key === "string" ? body.key.trim() : "";
+    if (!/^sk-ant-[A-Za-z0-9_-]{20,300}$/.test(key)) return json({ error: "bad_key" }, 400);
+    try {
+      await new Anthropic({ apiKey: key }).models.list({ limit: 1 });
+    } catch (err) {
+      if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) return json({ error: "bad_key" }, 400);
+      return json({ error: "check_failed", message: String(err) }, 502);
+    }
+    const { error } = await db.from("app_secrets").upsert({ name: "ANTHROPIC_API_KEY", value: key, hint: key.slice(-4), updated: new Date().toISOString(), updated_by: who.user.id });
+    if (error) return json({ error: "save_failed", message: error.message }, 500);
+    return json({ ok: true, hint: key.slice(-4) });
+  }
+
+  let apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  if (db) {
+    const { data: stored } = await db.from("app_secrets").select("value").eq("name", "ANTHROPIC_API_KEY").maybeSingle();
+    if (stored?.value) apiKey = stored.value;
+  }
+  if (!apiKey) return json({ error: "not_configured" }, 503);
+
   if (!(task in SCHEMAS) || !validContent(task, body.content)) return json({ error: "bad_request" }, 400);
 
   // one request off the allowance (counted in the table ai_usage): Pro, free requests of the month, daily limit

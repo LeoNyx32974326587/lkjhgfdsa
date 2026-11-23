@@ -2690,6 +2690,7 @@
     renderPush();
     renderPro();
     loadPlan();
+    loadKeyStatus();
     $('profileDlg').showModal();
   });
   $('closeProfile').addEventListener('click', function () { $('profileDlg').close(); });
@@ -2745,6 +2746,36 @@
     }, function (err) {
       profileMsg(RaimCloud.message(err));
     }).then(function () { $('profileSave').disabled = false; });
+  });
+
+  // ---------- admin: change the Anthropic API key without opening Supabase ----------
+  function keyNote(text) { $('keyNote').textContent = text; }
+  function loadKeyStatus() {
+    $('keyField').hidden = true;
+    if (!account || !RaimCloud.online()) return;
+    RaimCloud.aiKeyStatus().then(function (st) {
+      if (!st) return;   // not the admin
+      $('keyField').hidden = false;
+      $('keyInput').value = '';
+      keyNote(st.set ? 'Aktiv: Schlüssel …' + st.hint + ', gespeichert am ' + new Date(st.updated).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) + '.'
+        : 'Noch kein Schlüssel in der App gespeichert – es gilt das Secret ANTHROPIC_API_KEY in Supabase.');
+    }, function () { /* older database: no field */ });
+  }
+  $('keySave').addEventListener('click', function () {
+    var key = $('keyInput').value.trim(), btn = $('keySave');
+    if (!/^sk-ant-/.test(key)) { keyNote('Das sieht nicht nach einem Anthropic-Schlüssel aus (er beginnt mit „sk-ant-“).'); return; }
+    btn.disabled = true;
+    keyNote('Prüfe den Schlüssel bei Anthropic …');
+    RaimCloud.setAiKey(key).then(function (r) {
+      $('keyInput').value = '';
+      keyNote('Gespeichert: Schlüssel …' + r.hint + ' ist ab sofort aktiv.');
+      toast('Neuer KI-Schlüssel ist aktiv.');
+    }, function (err) {
+      keyNote(err.code === 'bad_key' ? 'Anthropic kennt diesen Schlüssel nicht. Bitte prüfe, ob du ihn vollständig kopiert hast.'
+        : err.code === 'not_admin' ? 'Nur der Admin kann den Schlüssel ändern.'
+        : err.status === 404 || err.code === 'bad_request' ? 'Die Funktion „claude“ in Supabase ist noch die alte – bitte neu deployen (SUPABASE.md, Schritt 6).'
+        : 'Speichern ging nicht: ' + err.message);
+    }).then(function () { btn.disabled = false; });
   });
 
   // ---------- Barbook Pro: more AI, paid through Stripe ----------
