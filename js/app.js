@@ -474,7 +474,6 @@
     RaimDictate.stop();
     $('masterAudio').pause();   // the finished song only plays while its project is open
     RaimBeats.close();
-    $('miniBar').hidden = true;
     if (snapshot(p) !== openedAs) saveNow(p);
     saveVersion(p);
     current = null;
@@ -590,7 +589,7 @@
     var wasText = !document.querySelector('.view[data-view="text"]').hidden && document.querySelector('.tab.is-on[data-tab="text"]');
     document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('is-on', t.dataset.tab === name); });
     document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.dataset.view !== name; });
-    if (name !== 'beat') { RaimBeats.pause(); $('miniBar').hidden = true; }
+    RaimBeats.setTab(name);
     if (name !== 'text') RaimDictate.stop();
     if (name === 'beat') RaimBeats.redraw();
     if (name === 'text') {

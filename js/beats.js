@@ -20,6 +20,9 @@
   var countTimers = [];
   var canvas, g;
   var openId = null; // project currently shown, guards against late async results
+  // small player: in the beat tab while the deck is scrolled away, in the other tabs while the beat keeps playing
+  var tab = 'text', deckAway = false, keepPlaying = false, seeking = false, miniSmall = false;
+  try { miniSmall = localStorage.getItem('barbook.miniSmall') === '1'; } catch (e) { /* no storage */ }
 
   function audioCtx() {
     if (!ctx) {
@@ -68,6 +71,35 @@
     takeUrls = [];
     stopYt();
     openId = null;
+    keepPlaying = false;
+    updateMini();
+  }
+
+  // ---------- small player ----------
+  function updateMini() {
+    var show = !!audio.src && (tab === 'beat' ? deckAway : keepPlaying);
+    $('miniBar').hidden = !show || miniSmall;
+    $('miniDot').hidden = !show || !miniSmall;
+    document.body.classList.toggle('has-mini', show && !miniSmall);
+  }
+  // the project switched tabs: the beat file keeps playing in text and rhymes (YouTube beats stop);
+  // the teleprompter starts it itself, so there it stops
+  function setTab(name) {
+    if (name === 'prompter') {
+      pause();
+      keepPlaying = false;
+    } else if (name !== 'beat') {
+      // still playing (started in the beat tab or the teleprompter): show the small player
+      keepPlaying = tab === 'beat' ? !audio.paused : keepPlaying || !audio.paused;
+      if (tab === 'beat' && yt && yt.pauseVideo) yt.pauseVideo();
+    }
+    tab = name;
+    updateMini();
+  }
+  function setMiniSmall(on) {
+    miniSmall = on;
+    try { localStorage.setItem('barbook.miniSmall', on ? '1' : '0'); } catch (e) { /* no storage */ }
+    updateMini();
   }
 
   function played() { if (hooks.played) hooks.played(); }
@@ -223,8 +255,8 @@
   }
 
   function draw() {
-    if ($('deck').hidden) return;
     showTimes();
+    if ($('deck').hidden) return;
     var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w) return;
     if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
@@ -267,6 +299,8 @@
   // the clocks also run while the waveform is out of sight (teleprompter tab)
   function showTimes() {
     $('tCur').textContent = $('miniTime').textContent = fmt(audio.currentTime);
+    $('miniDur').textContent = fmt(audio.duration || 0);
+    if (!seeking) $('miniSeek').value = audio.duration ? Math.round(audio.currentTime / audio.duration * 1000) : 0;
     RaimPrompter.setTime(fmt(audio.currentTime));
     $('recStart').textContent = startLabel();
     if (!markerTyped && document.activeElement !== $('markerTime')) $('markerTime').value = fmt(audio.currentTime);
@@ -628,6 +662,7 @@
     function playing(on) {
       $('playBtn').classList.toggle('is-playing', on);
       $('miniPlay').classList.toggle('is-playing', on);
+      $('miniDot').classList.toggle('is-playing', on);
       if (!on && RaimPrompter.isRunning() && withBeat()) { RaimPrompter.stop(); RaimPrompter.setPlaying(false); }
     }
     audio.addEventListener('play', function () { playing(true); requestAnimationFrame(tick); });
@@ -636,10 +671,20 @@
 
     // when the deck's buttons are scrolled away (e.g. reading the lyrics), show a small bar instead
     $('miniPlay').addEventListener('click', function () { $('playBtn').click(); });
+    $('miniSeek').addEventListener('input', function (e) {
+      seeking = true;
+      if (audio.duration) audio.currentTime = e.target.value / 1000 * audio.duration;
+      $('miniTime').textContent = fmt(audio.currentTime);
+      draw();
+    });
+    $('miniSeek').addEventListener('change', function () { seeking = false; });
+    $('miniMin').addEventListener('click', function () { setMiniSmall(true); });
+    $('miniDot').addEventListener('click', function () { setMiniSmall(false); });
     if (window.IntersectionObserver) {
       new IntersectionObserver(function (entries) {
         var e = entries[entries.length - 1];
-        $('miniBar').hidden = e.isIntersecting || !e.rootBounds || !$('deck').offsetParent;
+        deckAway = !(e.isIntersecting || !e.rootBounds || !$('deck').offsetParent);
+        updateMini();
       }).observe(document.querySelector('#deck .deck-controls'));
     }
     audio.addEventListener('loadedmetadata', draw);
@@ -739,5 +784,5 @@
     draw();
   }
 
-  root.RaimBeats = { init: init, open: open, close: close, pause: pause, redraw: redraw, refreshPrompter: refreshPrompter };
+  root.RaimBeats = { init: init, open: open, close: close, pause: pause, setTab: setTab, redraw: redraw, refreshPrompter: refreshPrompter };
 })(this);

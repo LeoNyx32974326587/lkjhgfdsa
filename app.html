@@ -622,12 +622,20 @@
     </main>
 
     <div class="mini-bar" id="miniBar" hidden>
-      <button type="button" class="round round--sm" id="miniPlay" aria-label="Abspielen">
+      <button type="button" class="round round--sm" id="miniPlay" aria-label="Abspielen / Pause">
         <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7Z"/></svg>
         <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
       </button>
       <span class="mini-time" id="miniTime">0:00</span>
+      <input type="range" class="mini-seek" id="miniSeek" min="0" max="1000" step="1" value="0" aria-label="Vor- und zurückspulen">
+      <span class="mini-time mini-dur" id="miniDur">0:00</span>
+      <button type="button" class="icon-btn mini-min" id="miniMin" aria-label="Player verkleinern" title="Verkleinern">
+        <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </div>
+    <button type="button" class="mini-dot" id="miniDot" hidden aria-label="Beat-Player öffnen" title="Beat-Player öffnen">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+    </button>
 
     <nav class="tabbar" aria-label="Projektbereiche">
       <button type="button" class="tab is-on" data-tab="text">
@@ -636,11 +644,11 @@
       <button type="button" class="tab" data-tab="beat">
         <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4"/></svg>Beat
       </button>
-      <button type="button" class="tab" data-tab="prompter">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>Prompter
-      </button>
       <button type="button" class="tab" data-tab="rhymes">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Reime
+      </button>
+      <button type="button" class="tab tab--small" data-tab="prompter">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>Prompter
       </button>
     </nav>
   </div>
