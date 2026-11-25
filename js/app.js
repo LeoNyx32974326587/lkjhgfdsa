@@ -1426,7 +1426,7 @@
     ['fa', 'Persisch'], ['other', 'Andere']
   ];
   var GENRES = ['Deutschrap / Hip-Hop', 'Trap', 'Drill', 'Boom Bap', 'Cloud Rap', 'Emo Rap', 'R&B', 'Pop', 'Afro / Dancehall',
-    'Latin / Reggaeton', 'Rock / Punk', 'Elektro', 'Andere'];
+    'Latin / Reggaeton', 'Rock / Punk', 'Metal', 'Deathcore', 'Slam', 'Elektro', 'Andere'];
   function langName(code) { var x = LANGS.filter(function (l) { return l[0] === code; })[0]; return x ? x[1] : code; }
   // "Deutsch + Englisch"
   function langsText(p) { return p.langs.map(langName).join(' + '); }
